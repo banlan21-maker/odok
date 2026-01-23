@@ -1,0 +1,58 @@
+// src/utils/aiService.js
+// AI 생성 로직 통합 서비스
+
+import { httpsCallable } from 'firebase/functions';
+import { functions } from '../firebase';
+
+/**
+ * AI를 사용하여 책 생성
+ * @param {Object} options - 생성 옵션
+ * @param {string} options.category - 메인 카테고리 ID
+ * @param {string} options.subCategory - 서브 카테고리 ID
+ * @param {string} options.genre - 세부 장르
+ * @param {string} options.keywords - 주제/키워드
+ * @param {boolean} options.isSeries - 시리즈 여부
+ * @param {string} options.previousContext - 이전 줄거리 (시리즈 연속 생성 시)
+ * @returns {Promise<{title: string, content: string, summary: string}>}
+ */
+export const generateBook = async ({ 
+  category, 
+  subCategory, 
+  genre, 
+  keywords, 
+  isSeries,
+  previousContext = null 
+}) => {
+  try {
+    const generateBookAI = httpsCallable(functions, 'generateBookAI');
+    
+    const result = await generateBookAI({
+      category: category,
+      subCategory: subCategory,
+      genre: genre,
+      keywords: keywords || '',
+      isSeries: isSeries || false,
+      previousContext: previousContext || null
+    });
+    
+    const bookData = result.data;
+
+    // 결과 검증
+    if (!bookData || !bookData.title || !bookData.content) {
+      throw new Error('AI가 올바른 형식의 응답을 반환하지 않았습니다.');
+    }
+
+    return {
+      title: bookData.title,
+      content: bookData.content,
+      summary: bookData.summary || bookData.content.substring(0, 100) + '...'
+    };
+  } catch (error) {
+    console.error('[AI Service] 책 생성 오류:', error);
+    
+    // 에러 메시지 추출
+    const errorMessage = error?.message || error?.details?.message || '책 생성에 실패했습니다. 다시 시도해주세요.';
+    
+    throw new Error(errorMessage);
+  }
+};
