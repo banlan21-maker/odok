@@ -97,15 +97,19 @@ exports.generateBookAI = onCall(
         throw new HttpsError("failed-precondition", "Gemini API 키가 설정되지 않았습니다.");
       }
 
-      const {category, subCategory, genre, keywords, isSeries, previousContext} = request.data;
+      const {category, subCategory, genre, keywords, isSeries, previousContext, endingStyle} = request.data;
 
       // 소설류 여부 확인
       const isNovel = category === "webnovel" || category === "novel" || category === "series";
       const temperature = isNovel ? 0.8 : 0.5;
 
       // 시스템 프롬프트
+      const endingInstruction = endingStyle
+        ? `\n\nIMPORTANT: 이 이야기의 결말은 반드시 '${endingStyle}' 형태로 끝내야 합니다. 그 스타일에 맞는 톤과 분위기를 유지하세요.`
+        : "";
+
       const systemPrompt = isNovel
-        ? `당신은 베스트셀러 작가입니다. 창의적이고 몰입감 있는 소설을 작성하세요. 절대로 이전 문장을 그대로 반복하지 마십시오. 이야기를 반드시 새로운 국면으로 전개시키십시오. 등장인물의 대사나 행동을 통해 사건을 구체화하십시오.`
+        ? `당신은 베스트셀러 작가입니다. 창의적이고 몰입감 있는 소설을 작성하세요. 절대로 이전 문장을 그대로 반복하지 마십시오. 이야기를 반드시 새로운 국면으로 전개시키십시오. 등장인물의 대사나 행동을 통해 사건을 구체화하십시오.${endingInstruction}`
         : `당신은 유명한 에세이 작가입니다. 논리적이고 공감대를 형성하는 에세이를 작성하세요. 절대로 이전 문장을 그대로 반복하지 마십시오. 새로운 관점이나 통찰을 제공하십시오.`;
 
       // 단계 정의

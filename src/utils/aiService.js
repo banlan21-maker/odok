@@ -13,6 +13,7 @@ import { functions } from '../firebase';
  * @param {string} options.keywords - 주제/키워드
  * @param {boolean} options.isSeries - 시리즈 여부
  * @param {string} options.previousContext - 이전 줄거리 (시리즈 연속 생성 시)
+ * @param {string|null} options.endingStyle - 결말 스타일 (소설 전용)
  * @returns {Promise<{title: string, content: string, summary: string}>}
  */
 export const generateBook = async ({ 
@@ -21,7 +22,8 @@ export const generateBook = async ({
   genre, 
   keywords, 
   isSeries,
-  previousContext = null 
+  previousContext = null,
+  endingStyle = null
 }) => {
   try {
     const generateBookAI = httpsCallable(functions, 'generateBookAI');
@@ -32,7 +34,8 @@ export const generateBook = async ({
       genre: genre,
       keywords: keywords || '',
       isSeries: isSeries || false,
-      previousContext: previousContext || null
+      previousContext: previousContext || null,
+      endingStyle: endingStyle || null
     });
     
     const bookData = result.data;

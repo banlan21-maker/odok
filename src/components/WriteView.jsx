@@ -57,6 +57,14 @@ const seriesSubTypes = [
   { id: 'novel', name: '일반소설형', description: '전통 소설 스타일' }
 ];
 
+const endingStyles = [
+  '닫힌 결말 (해피 엔딩)',
+  '닫힌 결말 (비극/새드 엔딩)',
+  '열린 결말 (여운을 남김)',
+  '반전 결말 (충격적인 반전)',
+  '수미상관 (처음과 끝이 연결됨)'
+];
+
 const WriteView = ({ user, userProfile, onBookGenerated, slotStatus, setView, setSelectedBook, error, setError }) => {
   // 메인 카테고리 목록 (6개)
   const categories = [
@@ -73,6 +81,7 @@ const WriteView = ({ user, userProfile, onBookGenerated, slotStatus, setView, se
   const [seriesSubType, setSeriesSubType] = useState(null); // 시리즈의 웹소설형/일반소설형
   const [selectedTopic, setSelectedTopic] = useState(null); // 비문학 주제
   const [keywords, setKeywords] = useState(''); // 소설류 키워드
+  const [endingStyle, setEndingStyle] = useState(''); // 소설 결말 스타일
   const [isCustomInput, setIsCustomInput] = useState(false); // 직접 입력 모드
   const [isGenerating, setIsGenerating] = useState(false);
   const [localError, setLocalError] = useState(null);
@@ -136,6 +145,7 @@ const WriteView = ({ user, userProfile, onBookGenerated, slotStatus, setView, se
     setSeriesSubType(null);
     setSelectedTopic(null);
     setKeywords('');
+    setEndingStyle('');
     setIsCustomInput(false);
     setLocalError(null);
     if (setError) setError(null);
@@ -268,12 +278,14 @@ const WriteView = ({ user, userProfile, onBookGenerated, slotStatus, setView, se
     if (setError) setError(null);
 
     try {
+      const endingStyleToSend = selectedCategory.id === 'novel' ? endingStyle : null;
       const result = await generateBook({
         category: selectedCategory.id === 'series' ? 'series' : selectedCategory.id,
         subCategory: selectedGenre.id,
         genre: selectedGenre.name,
         keywords: keywords.trim(),
-        isSeries: selectedCategory.id === 'series'
+        isSeries: selectedCategory.id === 'series',
+        endingStyle: endingStyleToSend
       });
 
       if (onBookGenerated) {
@@ -291,6 +303,7 @@ const WriteView = ({ user, userProfile, onBookGenerated, slotStatus, setView, se
       setSelectedGenre(null);
       setSeriesSubType(null);
       setKeywords('');
+      setEndingStyle('');
       setIsCustomInput(false);
     } catch (err) {
       console.error('❌ [WriteView] 소설 생성 오류 - 전체 에러:', err);
@@ -584,6 +597,27 @@ const WriteView = ({ user, userProfile, onBookGenerated, slotStatus, setView, se
                       </button>
                     </div>
                   )}
+                </div>
+              )}
+
+              {/* 결말 스타일 (소설 카테고리 전용) */}
+              {selectedCategory.id === 'novel' && (
+                <div className="space-y-2">
+                  <label className="text-sm font-bold text-slate-700">
+                    결말 스타일
+                  </label>
+                  <select
+                    value={endingStyle}
+                    onChange={(e) => setEndingStyle(e.target.value)}
+                    className="w-full bg-slate-50 border-2 border-slate-200 rounded-xl py-3 px-4 text-sm focus:border-orange-500 focus:bg-white outline-none transition-colors"
+                  >
+                    <option value="">선택 안 함</option>
+                    {endingStyles.map((style) => (
+                      <option key={style} value={style}>
+                        {style}
+                      </option>
+                    ))}
+                  </select>
                 </div>
               )}
 
