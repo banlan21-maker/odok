@@ -236,16 +236,28 @@ exports.generateBookAI = onCall(
           ? fullContent.substring(Math.max(0, fullContent.length - 500)) 
           : (previousContext || "");
         
-        const stepContent = await generateStep(
-          systemPrompt,
-          topic,
-          step,
-          previousStorySummary,
-          temperature,
-          isNovel
-        );
+        try {
+          const stepContent = await generateStep(
+            systemPrompt,
+            topic,
+            step,
+            previousStorySummary,
+            temperature,
+            isNovel
+          );
 
-        fullContent += stepContent + "\n\n";
+          if (!stepContent || !stepContent.trim()) {
+            throw new Error("빈 응답이 반환되었습니다.");
+          }
+
+          fullContent += stepContent + "\n\n";
+        } catch (error) {
+          logger.error(`[generateBookAI] 단계 실패: ${step.name}`, {
+            message: error?.message,
+            stack: error?.stack
+          });
+          throw error;
+        }
       }
 
       // 제목 생성
@@ -263,7 +275,10 @@ exports.generateBookAI = onCall(
         summary: summary
       };
     } catch (error) {
-      logger.error("[generateBookAI] 에러:", error.message);
+      logger.error("[generateBookAI] 에러:", {
+        message: error?.message,
+        stack: error?.stack
+      });
       
       if (error instanceof HttpsError) {
         throw error;
