@@ -193,7 +193,7 @@ exports.generateBookAI = onCall(
   {
     region: REGION,
     maxInstances: 10,
-    timeoutSeconds: 300
+    timeoutSeconds: 540
   },
   async (request) => {
     try {
