@@ -13,7 +13,7 @@ import {
 } from 'firebase/auth';
 import { httpsCallable } from 'firebase/functions';
 import { auth, db, functions } from './firebase';
-import { startOfDay, subDays, endOfDay, format } from 'date-fns';
+import { startOfDay, subDays, endOfDay, format, startOfWeek, endOfWeek } from 'date-fns';
 
 // 데이터와 컴포넌트 불러오기
 import { T, genres } from './data';
@@ -34,6 +34,11 @@ const rawAppId = typeof __app_id !== 'undefined' ? __app_id : 'odok-app-default'
 const appId = rawAppId.replace(/\//g, '_');
 
 const MAX_LEVEL = 99;
+const INK_MAX = 999;
+const INITIAL_INK = 25;
+const REWARD_INK = 25;
+const EXTRA_WRITE_INK_COST = 50;
+const READ_INK_COST = 1;
 
 const getLevelInfo = (totalExp) => {
   const safeExp = Number(totalExp) || 0;
@@ -78,6 +83,7 @@ const App = () => {
   
   const [stories, setStories] = useState([]);
   const [favorites, setFavorites] = useState([]);
+  const [bookFavorites, setBookFavorites] = useState([]);
   const [notices, setNotices] = useState([]);
   const [ratings, setRatings] = useState([]);
   const [comments, setComments] = useState([]);
@@ -284,7 +290,7 @@ const App = () => {
             exp: 0,
             level: 1,
             maxExp: 100,
-            ink: 50,
+            ink: INITIAL_INK,
             bookCount: 0,
             dailyGenerationCount: 0,
             dailyFreeReadUsed: false,
@@ -320,7 +326,7 @@ const App = () => {
         // 레벨링 시스템 필드 초기화 (필드가 없으면 기본값 설정)
         const needsUpdate = {};
         if (data.ink === undefined || data.ink === null) {
-          needsUpdate.ink = 50;
+          needsUpdate.ink = INITIAL_INK;
         }
         if (data.level === undefined || data.level === null) {
           needsUpdate.level = 1;
@@ -451,7 +457,8 @@ const App = () => {
       // Step 3: 홈 화면용 데이터 계산
       const todayDateKey = getTodayDateKey(); // 오늘 날짜 키 (한 번만 선언)
       const today = startOfDay(new Date());
-      const sevenDaysAgo = subDays(today, 7);
+      const weekStart = startOfWeek(today, { weekStartsOn: 1 });
+      const weekEnd = endOfWeek(today, { weekStartsOn: 1 });
       
       // 오늘 생성된 책들 (dateKey로 필터링 - 단순화)
       const todayBooksList = booksData.filter(book => {
@@ -469,14 +476,14 @@ const App = () => {
       });
       setTodayBooks(todayBooksList);
       
-      // 주간 베스트셀러 (최근 7일간 views + likes 합계 기준 TOP 5)
+      // 주간 베스트셀러 (월~일, 조회+좋아요+즐겨찾기+완독 합계 기준 TOP 3)
       const weeklyBooks = booksData.filter(book => {
         const createdAt = book.createdAt?.toDate?.() || (book.createdAt?.seconds ? new Date(book.createdAt.seconds * 1000) : null);
-        return createdAt && createdAt >= sevenDaysAgo;
+        return createdAt && createdAt >= weekStart && createdAt <= weekEnd;
       }).map(book => ({
         ...book,
-        score: (book.views || 0) + (book.likes || 0) * 2 // likes에 가중치 부여
-      })).sort((a, b) => b.score - a.score).slice(0, 5);
+        score: (book.views || 0) + (book.likes || 0) + (book.favorites || 0) + (book.completions || 0)
+      })).sort((a, b) => b.score - a.score).slice(0, 3);
       setWeeklyBestBooks(weeklyBooks);
       
       // Step 5: 글로벌 일일 생성 제한 - 슬롯 상태 확인 (단순화된 버전: dateKey 사용)
@@ -600,49 +607,42 @@ const App = () => {
     };
   }, [user]);
   
-  // Step 3: 주간 집필왕 데이터 가져오기 (최적화: books 변경 시에만 재계산)
+  // Step 3: 주간 집필왕 (월~일 기준, 주간 집필 수 TOP 3)
   useEffect(() => {
     if (!user || books.length === 0) return;
-    
-    // debounce를 위한 타이머
-    const timer = setTimeout(async () => {
-      try {
-        // 모든 유저 프로필에서 bookCount가 있는 것들을 가져오기
-        // 주의: 이 방식은 Firestore 읽기 비용이 많이 들 수 있으므로, 
-        // 나중에 Cloud Function으로 최적화하는 것을 권장합니다.
-        const usersCollection = collection(db, 'artifacts', appId, 'users');
-        const usersSnapshot = await getDocs(usersCollection);
-        
-        const writersData = [];
-        for (const userDoc of usersSnapshot.docs) {
-          const profileRef = doc(db, 'artifacts', appId, 'users', userDoc.id, 'profile', 'info');
-          const profileSnap = await getDoc(profileRef);
-          
-          if (profileSnap.exists()) {
-            const profileData = profileSnap.data();
-            if (profileData.bookCount > 0) {
-              writersData.push({
-                id: userDoc.id,
-                nickname: profileData.nickname || '익명',
-                bookCount: profileData.bookCount || 0
-              });
-            }
-          }
+    const timer = setTimeout(() => {
+      const today = startOfDay(new Date());
+      const weekStart = startOfWeek(today, { weekStartsOn: 1 });
+      const weekEnd = endOfWeek(today, { weekStartsOn: 1 });
+
+      const weeklyBooks = books.filter(book => {
+        const createdAt = book.createdAt?.toDate?.() || (book.createdAt?.seconds ? new Date(book.createdAt.seconds * 1000) : null);
+        return createdAt && createdAt >= weekStart && createdAt <= weekEnd;
+      });
+
+      const counts = weeklyBooks.reduce((acc, book) => {
+        const authorId = book.authorId;
+        if (!authorId) return acc;
+        if (!acc[authorId]) {
+          acc[authorId] = {
+            id: authorId,
+            nickname: book.authorName || '익명',
+            bookCount: 0
+          };
         }
-        
-        // bookCount 기준으로 정렬하고 상위 10명만
-        const topWritersList = writersData
-          .sort((a, b) => b.bookCount - a.bookCount)
-          .slice(0, 10);
-        
-        setTopWriters(topWritersList);
-      } catch (err) {
-        console.error("Top writers fetch error:", err);
-      }
-    }, 500); // 500ms debounce
-    
+        acc[authorId].bookCount += 1;
+        return acc;
+      }, {});
+
+      const topWritersList = Object.values(counts)
+        .sort((a, b) => b.bookCount - a.bookCount)
+        .slice(0, 3);
+
+      setTopWriters(topWritersList);
+    }, 200);
+
     return () => clearTimeout(timer);
-  }, [user, books.length]); // books.length만 의존성으로 사용하여 불필요한 재실행 방지
+  }, [user, books]);
 
   // Step 5: 슬롯 키 생성 헬퍼 함수 (7개 슬롯 체제 - 시리즈 분리)
   const getSlotKey = (category, isSeries, subCategory) => {
@@ -706,7 +706,7 @@ const App = () => {
       // 잉크를 사용하는 경우 잉크 확인
       if (useInk) {
         const currentInk = userProfile?.ink || 0;
-        const requiredInk = 100;
+        const requiredInk = EXTRA_WRITE_INK_COST;
         
         if (currentInk < requiredInk) {
           setError('잉크가 부족합니다! 💧 잉크를 충전해주세요.');
@@ -829,34 +829,35 @@ const App = () => {
       // 유저 통계 업데이트: bookCount 증가 + 집필 보상 (수정 3: 잉크 소비 시에만 경험치 획득하므로 집필 시에는 잉크만 보상)
       const profileRef = doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'info');
       try {
-        const rewardInk = 50;
+        const rewardInk = REWARD_INK;
         
         // 수정 1: 집필 시에는 잉크만 보상하고, 경험치는 주지 않음 (잉크 소비 시에만 경험치 획득)
         // 수정 1: lastBookCreatedDate를 오늘 날짜 문자열로 저장
+        const nextInk = Math.min(INK_MAX, (userProfile?.ink || 0) + rewardInk);
         const updateData = {
           bookCount: increment(1),
-          ink: increment(rewardInk),
+          ink: nextInk,
           lastBookCreatedDate: todayDateKey // 수정 1: 하루 1권 제한용 날짜 문자열 (YYYY-MM-DD)
         };
         
         await updateDoc(profileRef, updateData);
         
         // 집필 완료 알림 (수정 3: 경험치 제거)
-        console.log('✅ 집필 완료! 잉크 +50 획득 (경험치는 잉크 소비 시에만 획득)');
+        console.log(`✅ 집필 완료! 잉크 +${REWARD_INK} 획득 (경험치는 잉크 소비 시에만 획득)`);
       } catch (profileErr) {
         // 프로필 문서가 없거나 필드가 없을 경우 초기화
         console.warn('프로필 업데이트 오류, 초기화 시도:', profileErr);
         try {
           const profileSnap = await getDoc(profileRef);
           if (profileSnap.exists()) {
-            const rewardInk = 50;
+            const rewardInk = REWARD_INK;
             
             // 수정 1: 집필 시에는 잉크만 보상하고 경험치는 주지 않음
             // 수정 1: lastBookCreatedDate를 오늘 날짜 문자열로 저장
             const todayDateKey = getTodayDateKey();
             const updateData = {
               bookCount: (profileSnap.data().bookCount || 0) + 1,
-              ink: (profileSnap.data().ink || 0) + rewardInk,
+              ink: Math.min(INK_MAX, (profileSnap.data().ink || 0) + rewardInk),
               lastBookCreatedDate: todayDateKey // 수정 1: 하루 1권 제한용 날짜 문자열
             };
             
@@ -866,7 +867,7 @@ const App = () => {
             const todayDateKey = getTodayDateKey();
             await setDoc(profileRef, { 
               bookCount: 1, 
-              ink: 50,
+              ink: INITIAL_INK,
               level: 1,
               exp: 0,  // 수정 3: 초기 경험치는 0 (잉크 소비 시에만 획득)
               maxExp: 100,
@@ -885,7 +886,7 @@ const App = () => {
       
       // 집필 완료 토스트 메시지 (간단한 알림)
       setTimeout(() => {
-        console.log('📚 집필 완료! 잉크 50과 경험치를 획득했습니다!');
+        console.log(`📚 집필 완료! 잉크 ${REWARD_INK}과 경험치를 획득했습니다!`);
       }, 100);
     } catch (err) {
       console.error('책 저장 오류:', err);
@@ -966,9 +967,12 @@ const App = () => {
     if (!user || !userProfile) return false;
     const profileRef = doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'info');
     try {
-      // 잉크만 충전, 경험치는 획득하지 않음
+      // 잉크만 충전, 경험치는 획득하지 않음 (최대치 999)
+      const profileSnap = await getDoc(profileRef);
+      const currentInk = profileSnap.exists() ? (profileSnap.data().ink || 0) : (userProfile?.ink || 0);
+      const nextInk = Math.min(INK_MAX, currentInk + amount);
       await updateDoc(profileRef, {
-        ink: increment(amount)
+        ink: nextInk
       });
       
       console.log(`✅ 잉크 +${amount} 충전 완료`);
@@ -990,31 +994,47 @@ const App = () => {
 
     // 잉크 확인
     const currentInk = userProfile?.ink || 0;
-    const requiredInk = 3;
-
-    if (currentInk < requiredInk) {
-      setError('잉크가 부족합니다! 💧 잉크를 충전해주세요.');
-      return;
-    }
+    const requiredInk = READ_INK_COST;
 
     // 확인 모달 표시
     setPendingBook(book);
     setShowInkConfirmModal(true);
+    if (currentInk < requiredInk) {
+      setError('잉크가 부족합니다! 💧 잉크를 충전해주세요.');
+    } else {
+      setError(null);
+    }
   };
 
   // 잉크 확인 모달에서 확인 버튼 클릭 (수정 3: 잉크 소비 시 경험치 획득)
   const confirmOpenBook = async () => {
     if (!pendingBook) return;
 
-    // 수정 3: 잉크 소비 시에만 경험치 획득 (잉크 -3, 경험치 +3)
-    const success = await deductInk(3);
+    const currentInk = userProfile?.ink || 0;
+    if (currentInk < READ_INK_COST) {
+      setError('잉크가 부족합니다! 💧 잉크를 충전해주세요.');
+      return;
+    }
+
+    // 수정 3: 잉크 소비 시에만 경험치 획득 (잉크 -1, 경험치 +1)
+    const success = await deductInk(READ_INK_COST);
     if (success) {
+      // 다른 사람이 쓴 책을 읽는 경우에만 조회수 증가
+      if (pendingBook.authorId !== user?.uid) {
+        try {
+          await updateDoc(doc(db, 'artifacts', appId, 'books', pendingBook.id), {
+            views: increment(1)
+          });
+        } catch (viewErr) {
+          console.error('조회수 증가 실패:', viewErr);
+        }
+      }
       setSelectedBook(pendingBook);
       setView('book_detail');
       setShowInkConfirmModal(false);
       setPendingBook(null);
       setError(null);
-      console.log('✅ 책 열기 완료: 잉크 -3, 경험치 +3');
+      console.log(`✅ 책 열기 완료: 잉크 -${READ_INK_COST}, 경험치 +${READ_INK_COST}`);
     } else {
       setError('잉크 차감에 실패했습니다. 다시 시도해주세요.');
     }
@@ -1032,6 +1052,11 @@ const App = () => {
     if (!user) return;
     const favRef = collection(db, 'artifacts', appId, 'public', 'data', 'favorites');
     const unsubFav = onSnapshot(favRef, (snap) => setFavorites(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
+    const bookFavRef = query(
+      collection(db, 'artifacts', appId, 'public', 'data', 'book_favorites'),
+      where('userId', '==', user.uid)
+    );
+    const unsubBookFav = onSnapshot(bookFavRef, (snap) => setBookFavorites(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
     const storiesRef = collection(db, 'artifacts', appId, 'public', 'data', 'stories');
     const unsubStories = onSnapshot(storiesRef, (snap) => setStories(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
     const ratingsRef = collection(db, 'artifacts', appId, 'public', 'data', 'ratings');
@@ -1050,7 +1075,7 @@ const App = () => {
         stats.sort((a, b) => b.date.localeCompare(a.date));
         setDailyStats(stats.slice(0, 7).reverse());
     });
-    return () => { unsubFav(); unsubStories(); unsubRatings(); unsubVotes(); unsubNotices(); unsubUnlocked(); unsubRead(); unsubStats(); };
+    return () => { unsubFav(); unsubBookFav(); unsubStories(); unsubRatings(); unsubVotes(); unsubNotices(); unsubUnlocked(); unsubRead(); unsubStats(); };
   }, [user]);
 
   // ⭐️ 댓글 가져오기 + 정렬 로직 강화
@@ -1304,7 +1329,7 @@ const App = () => {
     }
 
     // 확인 메시지
-    const confirmMessage = '⚠️ 개발용 리셋 기능입니다.\n\n다음 작업이 수행됩니다:\n1. 내가 작성한 모든 책 삭제\n2. 유저 정보 초기화 (닉네임, 잉크, 레벨, 경험치 등)\n3. 페이지 새로고침\n\n계속하시겠습니까?';
+    const confirmMessage = '⚠️ 개발용 리셋 기능입니다.\n\n다음 작업이 수행됩니다:\n1. 내가 작성한 모든 책 삭제\n2. 모든 책의 조회수/좋아요/즐겨찾기 수 0으로 초기화\n3. 모든 책 댓글/좋아요/즐겨찾기 기록 삭제\n4. 유저 정보 초기화 (닉네임, 잉크, 레벨, 경험치 등)\n5. 페이지 새로고침\n\n계속하시겠습니까?';
     if (!window.confirm(confirmMessage)) {
       return;
     }
@@ -1322,12 +1347,36 @@ const App = () => {
       
       console.log(`✅ ${booksSnapshot.docs.length}개의 책 삭제 완료`);
       
-      // 2. 유저 정보 초기화
+      // 2. 전체 책 통계 초기화 (조회수/좋아요/즐겨찾기)
+      const allBooksSnapshot = await getDocs(collection(db, 'artifacts', appId, 'books'));
+      const resetBookStatsPromises = allBooksSnapshot.docs.map((bookDoc) =>
+        updateDoc(bookDoc.ref, { views: 0, likes: 0, favorites: 0 })
+      );
+      await Promise.all(resetBookStatsPromises);
+      console.log(`✅ ${allBooksSnapshot.docs.length}개의 책 통계 초기화 완료`);
+
+      // 3. 댓글/좋아요/즐겨찾기 기록 전체 삭제
+      const commentsSnapshot = await getDocs(collection(db, 'artifacts', appId, 'public', 'data', 'book_comments'));
+      const commentDeletePromises = commentsSnapshot.docs.map((c) => deleteDoc(c.ref));
+      await Promise.all(commentDeletePromises);
+      console.log(`✅ 댓글 ${commentsSnapshot.docs.length}개 삭제 완료`);
+
+      const bookLikesSnapshot = await getDocs(collection(db, 'artifacts', appId, 'public', 'data', 'book_likes'));
+      const bookLikeDeletePromises = bookLikesSnapshot.docs.map((l) => deleteDoc(l.ref));
+      await Promise.all(bookLikeDeletePromises);
+      console.log(`✅ 좋아요 기록 ${bookLikesSnapshot.docs.length}개 삭제 완료`);
+
+      const bookFavSnapshot = await getDocs(collection(db, 'artifacts', appId, 'public', 'data', 'book_favorites'));
+      const bookFavDeletePromises = bookFavSnapshot.docs.map((f) => deleteDoc(f.ref));
+      await Promise.all(bookFavDeletePromises);
+      console.log(`✅ 즐겨찾기 기록 ${bookFavSnapshot.docs.length}개 삭제 완료`);
+
+      // 4. 유저 정보 초기화
       const profileRef = doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'info');
       await updateDoc(profileRef, {
         nickname: null,  // 다시 설정하게
         lastNicknameChangeDate: null,
-        ink: 50,
+        ink: INITIAL_INK,
         level: 1,
         exp: 0,  // 수정 3: 초기 경험치는 0 (잉크 소비 시에만 획득)
         maxExp: 100,
@@ -1337,7 +1386,7 @@ const App = () => {
       
       console.log('✅ 유저 정보 초기화 완료');
       
-      // 3. 페이지 새로고침
+      // 5. 페이지 새로고침
       alert('리셋이 완료되었습니다. 페이지를 새로고침합니다.');
       window.location.reload();
       
@@ -1900,10 +1949,13 @@ const App = () => {
           <div className="flex items-center gap-3">
             {userProfile && (
               <div className="flex items-center gap-2">
-                <div className="bg-slate-800 text-white text-[10px] px-2 py-0.5 rounded-full font-bold">Lv.{levelInfo.level}</div>
+                <div className="flex items-center gap-1 bg-blue-50 px-2 py-1 rounded-lg">
+                  <span className="text-red-600 font-black text-xs">↑</span>
+                  <span className="text-xs font-black text-red-600">Lv.{levelInfo.level}</span>
+                </div>
                 <div className="flex items-center gap-1 bg-blue-50 text-blue-700 px-2 py-1 rounded-lg">
                   <Droplets className="w-3.5 h-3.5 fill-blue-500 text-blue-500" />
-                  <span className="text-xs font-bold">{userProfile.ink || 50}</span>
+                  <span className="text-xs font-bold">{userProfile.ink || INITIAL_INK}</span>
                 </div>
                 <button onClick={() => setIsHelpModalOpen(true)} className="p-1.5 rounded-full bg-slate-100 text-slate-400 hover:bg-slate-200"><HelpCircle className="w-4 h-4" /></button>
               </div>
@@ -1928,7 +1980,7 @@ const App = () => {
                   </div>
                   <h3 className="text-lg font-black text-slate-800">잉크를 사용하시겠습니까?</h3>
                   <p className="text-sm text-slate-600">
-                    💧 잉크 <span className="font-black text-blue-600">3방울</span>을 사용하여
+                    💧 잉크 <span className="font-black text-blue-600">{READ_INK_COST}방울</span>을 사용하여
                   </p>
                   <p className="text-sm font-bold text-slate-800">
                     "{pendingBook.title}"을 읽으시겠습니까?
@@ -1942,7 +1994,8 @@ const App = () => {
                 <div className="space-y-2 pt-2">
                   <button
                     onClick={confirmOpenBook}
-                    className="w-full bg-blue-500 text-white py-3 rounded-xl font-black hover:bg-blue-600 transition-colors flex items-center justify-center gap-2"
+                    disabled={(userProfile?.ink || 0) < READ_INK_COST}
+                    className="w-full bg-blue-500 text-white py-3 rounded-xl font-black hover:bg-blue-600 transition-colors flex items-center justify-center gap-2 disabled:bg-slate-200 disabled:text-slate-400"
                   >
                     <Droplets className="w-4 h-4" />
                     읽기
@@ -2178,6 +2231,7 @@ const App = () => {
               <ArchiveView 
                 books={books}
                 user={user}
+                favoriteBookIds={bookFavorites.map(f => f.bookId)}
                 onBookClick={handleBookClick}
               />
             )}
@@ -2185,6 +2239,9 @@ const App = () => {
             {view === 'book_detail' && selectedBook && (
               <BookDetail 
                 book={selectedBook}
+                user={user}
+                userProfile={userProfile}
+                appId={appId}
                 fontSize={fontSize}  // 수정 5: 폰트 크기 연동 버그 픽스
                 onClose={() => {
                   // 이전 화면으로 돌아가기 (서재 또는 보관함)

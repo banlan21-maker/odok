@@ -1,10 +1,22 @@
 // src/components/LibraryView.jsx
 import React, { useMemo } from 'react';
-import { Book, Calendar, Filter, ChevronDown } from 'lucide-react';
+import { Book, Calendar, Filter, ChevronDown, Eye, Heart, Bookmark, CheckCircle } from 'lucide-react';
 import { formatDate } from '../utils/dateUtils';
 import { getCoverImageFromBook } from '../utils/bookCovers';
+import { formatCount } from '../utils/numberFormat';
 
 const LibraryView = ({ books, onBookClick, filter = 'all', onFilterChange }) => {
+  const formatTag = (value) => {
+    if (!value) return value;
+    const normalized = String(value).trim().toLowerCase();
+    if (normalized === 'self-help' || normalized === 'self-improvement') {
+      return '자기계발';
+    }
+    if (/^[a-z0-9-]+$/.test(normalized)) {
+      return normalized.toUpperCase();
+    }
+    return value;
+  };
   // 필터별 책 목록 필터링
   const filteredBooks = useMemo(() => {
     let filtered = books;
@@ -143,7 +155,10 @@ const LibraryView = ({ books, onBookClick, filter = 'all', onFilterChange }) => 
                       {book.title}
                     </h3>
                     <div className="flex items-center gap-2 text-xs text-slate-500 flex-wrap">
-                      <span className="font-bold text-slate-700">{book.authorName || '익명'}</span>
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-gradient-to-r from-orange-500 to-rose-500 text-white text-[11px] font-black shadow-sm">
+                        <Book className="w-3 h-3" />
+                        작가: {book.authorName || '익명'}
+                      </span>
                       <span className="bg-slate-100 px-2 py-0.5 rounded-full font-bold text-slate-600">
                         {book.category === 'webnovel' ? '웹소설' :
                          book.category === 'novel' ? '소설' :
@@ -153,12 +168,30 @@ const LibraryView = ({ books, onBookClick, filter = 'all', onFilterChange }) => 
                       </span>
                       {book.subCategory && (
                         <span className="bg-slate-100 px-2 py-0.5 rounded-full text-slate-600">
-                          {book.subCategory}
+                          {formatTag(book.subCategory)}
                         </span>
                       )}
                       <span className="flex items-center gap-1 text-slate-400 ml-auto">
                         <Calendar className="w-3 h-3" />
                         {dateString}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-3 text-[11px] text-slate-400 mt-2">
+                      <span className="flex items-center gap-1">
+                        <Eye className="w-3 h-3" />
+                        {formatCount(book.views)}
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <Heart className="w-3 h-3" />
+                        {formatCount(book.likes)}
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <Bookmark className="w-3 h-3" />
+                        {formatCount(book.favorites)}
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <CheckCircle className="w-3 h-3" />
+                        {formatCount(book.completions)}
                       </span>
                     </div>
                   </div>

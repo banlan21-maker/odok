@@ -14,13 +14,16 @@ const REGION = "asia-northeast3";
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || process.env.GOOGLE_GENERATIVE_AI_API_KEY;
 
 // Gemini API 모델 설정 (고정)
-const MODEL_NAME = "gemini-2.5-flash"; // 안정적인 고성능 모델 (gemini-2.5-pro가 불안정하여 flash 사용)
+const MODEL_NAME = "gemini-2.5-pro"; // 안정성 우선
+const FALLBACK_MODEL_NAME = "gemini-pro";
 
 // 프롬프트 설정 (Strategy Pattern)
 const NOVEL_BASE_GUIDE = [
+  "[CRITICAL RULE] 출력된 content 내부에는 '## 제목', '### 발단', '**[전개]**', '### 결말' 등 그 어떤 마크다운 헤더나 섹션 구분자도 포함하지 마라. 오직 독자가 읽을 순수한 본문 텍스트만 출력하라.",
+  "[CRITICAL RULE] 소설은 중간에 리셋하거나 앞 내용을 요약 반복하지 말고, 하나의 타임라인으로 쭉 이어가라.",
   "당신은 100만 부가 팔린 베스트셀러 작가다.",
   "요약문이 아니라 장면(Scene) 위주로 서술하라.",
-  "대사, 행동, 배경 묘사를 통해 분량을 6,000자 이상으로 늘려라.",
+  "공백 포함 약 2,000자 내외로 핵심 사건 위주로 속도감 있게 전개하라.",
   "반드시 [발단-전개-위기-절정-결말]의 5단계 구조를 따른다."
 ].join(" ");
 
@@ -56,9 +59,11 @@ const NOVEL_GENRE_STYLES = [
 ];
 
 const NONFICTION_BASE_GUIDE = [
+  "[CRITICAL RULE] 출력된 content 내부에는 '## 제목', '### 발단', '**[전개]**', '### 결말' 등 그 어떤 마크다운 헤더나 섹션 구분자도 포함하지 마라. 오직 독자가 읽을 순수한 본문 텍스트만 출력하라.",
+  "[CRITICAL RULE] 비소설은 '결론' 같은 소제목 없이 문맥으로 자연스럽게 마무리하라.",
   "당신은 해당 분야의 최고 전문가이자 권위자다.",
   "50자 이내의 주제를 씨앗으로 삼아 깊이 있는 통찰을 제시하라.",
-  "분량은 3,000자 수준을 목표로 한다."
+  "공백 포함 약 1,000자 내외로 핵심 메시지만 명확히 전달하라."
 ].join(" ");
 
 const NONFICTION_CATEGORY_STYLES = {
@@ -128,16 +133,30 @@ function buildStepPrompt({topic, currentStep, previousStorySummary, isNovel, tit
   return `주제(Seed): ${seed}\n단계: ${currentStep.name}\n\n${summaryBlock}${baseInstruction.join("\n")}`;
 }
 
+function getErrorStatus(error) {
+  return (
+    error?.status ||
+    error?.code ||
+    error?.response?.status ||
+    error?.details?.status ||
+    null
+  );
+}
+
+function isRetryableStatus(status) {
+  return status === 500 || status === 503;
+}
+
 // Gemini API 호출 함수
-async function callGemini(systemPrompt, userPrompt, temperature = 0.75, isNovel = false) {
+async function callGemini(systemPrompt, userPrompt, temperature = 0.75, isNovel = false, modelName = MODEL_NAME, allowFallback = true) {
   if (!GEMINI_API_KEY) {
     throw new Error("Gemini API 키가 설정되지 않았습니다.");
   }
 
   try {
-    logger.info(`[Gemini API] 모델 사용: ${MODEL_NAME}`);
+    logger.info(`[Gemini API] 모델 사용: ${modelName}`);
     const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-    const model = genAI.getGenerativeModel({model: MODEL_NAME});
+    const model = genAI.getGenerativeModel({model: modelName});
 
     const safetySettings = isNovel ? [
       {category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_ONLY_HIGH"},
@@ -165,12 +184,19 @@ async function callGemini(systemPrompt, userPrompt, temperature = 0.75, isNovel 
     const response = result.response;
     const text = response.text();
 
-    logger.info(`[Gemini API] ✅ 성공! 사용 모델: ${MODEL_NAME} (응답 길이: ${text.length}자)`);
+    logger.info(`[Gemini API] ✅ 성공! 사용 모델: ${modelName} (응답 길이: ${text.length}자)`);
     
     // 순수 텍스트만 반환
     return {content: text};
   } catch (error) {
-    logger.error(`[Gemini API] 호출 실패 (모델: ${MODEL_NAME}):`, error.message);
+    const status = getErrorStatus(error);
+    logger.error(`[Gemini API] 호출 실패 (모델: ${modelName}):`, error.message);
+
+    if (allowFallback && isRetryableStatus(status)) {
+      logger.warn(`[Gemini API] 재시도: ${FALLBACK_MODEL_NAME} (status: ${status})`);
+      return callGemini(systemPrompt, userPrompt, temperature, isNovel, FALLBACK_MODEL_NAME, false);
+    }
+
     throw error;
   }
 }

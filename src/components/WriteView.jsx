@@ -1,5 +1,5 @@
 // src/components/WriteView.jsx
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { PenTool, RefreshCw, Book, Edit2, Lock } from 'lucide-react';
 import { generateBook } from '../utils/aiService';
 
@@ -85,6 +85,7 @@ const WriteView = ({ user, userProfile, onBookGenerated, slotStatus, setView, se
   const [endingStyle, setEndingStyle] = useState(''); // 소설 결말 스타일
   const [isCustomInput, setIsCustomInput] = useState(false); // 직접 입력 모드
   const [isGenerating, setIsGenerating] = useState(false);
+  const cancelRequestedRef = useRef(false);
   const [localError, setLocalError] = useState(null);
 
   const displayError = error || localError;
@@ -211,6 +212,7 @@ const WriteView = ({ user, userProfile, onBookGenerated, slotStatus, setView, se
       return;
     }
 
+    cancelRequestedRef.current = false;
     setIsGenerating(true);
     setLocalError(null);
     if (setError) setError(null);
@@ -224,6 +226,8 @@ const WriteView = ({ user, userProfile, onBookGenerated, slotStatus, setView, se
         isSeries: false,
         title: bookTitle.trim()
       });
+
+      if (cancelRequestedRef.current) return;
 
       if (!result || !result.title || !result.content) {
         throw new Error('책 생성 결과가 올바르지 않습니다.');
@@ -258,6 +262,7 @@ const WriteView = ({ user, userProfile, onBookGenerated, slotStatus, setView, se
       }
     } finally {
       setIsGenerating(false);
+      cancelRequestedRef.current = false;
     }
   };
 
@@ -283,6 +288,7 @@ const WriteView = ({ user, userProfile, onBookGenerated, slotStatus, setView, se
       return;
     }
 
+    cancelRequestedRef.current = false;
     setIsGenerating(true);
     setLocalError(null);
     if (setError) setError(null);
@@ -298,6 +304,8 @@ const WriteView = ({ user, userProfile, onBookGenerated, slotStatus, setView, se
         endingStyle: endingStyleToSend,
         title: bookTitle.trim()
       });
+
+      if (cancelRequestedRef.current) return;
 
       if (onBookGenerated) {
         onBookGenerated({
@@ -331,8 +339,29 @@ const WriteView = ({ user, userProfile, onBookGenerated, slotStatus, setView, se
       }
     } finally {
       setIsGenerating(false);
+      cancelRequestedRef.current = false;
     }
   };
+  const handleCancelGenerate = () => {
+    cancelRequestedRef.current = true;
+    setIsGenerating(false);
+    setLocalError('집필이 취소되었습니다.');
+    if (setError) setError('집필이 취소되었습니다.');
+  };
+
+  const GeneratingNotice = () => (
+    <div className="mt-4 border-2 border-orange-200 bg-orange-50 rounded-2xl p-4 text-center space-y-3">
+      <p className="text-xs text-slate-600">
+        뒤로가기 또는 다른 작업을 하면 집필이 취소될 수 있어요.
+      </p>
+      <button
+        onClick={handleCancelGenerate}
+        className="px-4 py-2 rounded-xl text-xs font-black bg-white border border-orange-300 text-orange-600 hover:bg-orange-100"
+      >
+        집필 취소
+      </button>
+    </div>
+  );
 
   // 생성 가능 여부 확인
   const canGenerateNovel = selectedCategory && 
@@ -513,12 +542,7 @@ const WriteView = ({ user, userProfile, onBookGenerated, slotStatus, setView, se
                   )}
                 </button>
               )}
-              {isGenerating && (
-                <div className="text-center py-4">
-                  <RefreshCw className="w-6 h-6 animate-spin text-orange-500 mx-auto mb-2" />
-                  <p className="text-sm text-slate-600 font-bold">책을 쓰고 있어요...</p>
-                </div>
-              )}
+              {isGenerating && <GeneratingNotice />}
             </>
           )}
 
@@ -689,6 +713,7 @@ const WriteView = ({ user, userProfile, onBookGenerated, slotStatus, setView, se
                   )}
                 </button>
               )}
+              {isGenerating && <GeneratingNotice />}
             </>
           )}
         </div>

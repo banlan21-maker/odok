@@ -3,10 +3,12 @@
 import React, { useState, useEffect } from 'react';
 import { 
   BookOpen, Crown, Trophy, Star, Megaphone, User, 
-  ArrowRight, Medal, Book, Bell, Sparkles, ChevronLeft, ChevronRight, Calendar
+  ArrowRight, Medal, Book, Bell, Sparkles, ChevronLeft, ChevronRight, Calendar,
+  Eye, Heart, Bookmark, CheckCircle
 } from 'lucide-react';
 import { formatDate } from '../utils/dateUtils';
 import { getCoverImageFromBook } from '../utils/bookCovers';
+import { formatCount } from '../utils/numberFormat';
 
 // Skeleton UI 컴포넌트
 const SkeletonCard = () => (
@@ -302,13 +304,26 @@ const HomeView = ({
                   <div className="flex-1 min-w-0">
                     <h4 className="font-bold text-slate-800 truncate mb-1">{book.title}</h4>
                     <div className="flex items-center gap-2 text-xs text-slate-500">
-                      <span>{book.authorName || '익명'}</span>
-                      <span className="flex items-center text-orange-500 font-bold gap-1">
-                        <Star className="w-3 h-3 fill-current" />
-                        {book.likes || 0}
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-gradient-to-r from-orange-500 to-rose-500 text-white text-[11px] font-black shadow-sm">
+                        <Book className="w-3 h-3" />
+                        작가: {book.authorName || '익명'}
                       </span>
-                      <span className="text-slate-400">·</span>
-                      <span className="text-slate-400">{book.views || 0}회</span>
+                      <span className="flex items-center gap-1 text-slate-400">
+                        <Eye className="w-3 h-3" />
+                        {formatCount(book.views)}
+                      </span>
+                      <span className="flex items-center gap-1 text-slate-400">
+                        <Heart className="w-3 h-3" />
+                        {formatCount(book.likes)}
+                      </span>
+                      <span className="flex items-center gap-1 text-slate-400">
+                        <Bookmark className="w-3 h-3" />
+                        {formatCount(book.favorites)}
+                      </span>
+                      <span className="flex items-center gap-1 text-slate-400">
+                        <CheckCircle className="w-3 h-3" />
+                        {formatCount(book.completions)}
+                      </span>
                     </div>
                   </div>
                   <ArrowRight className="w-4 h-4 text-slate-300 shrink-0" />
