@@ -81,6 +81,7 @@ const WriteView = ({ user, userProfile, onBookGenerated, slotStatus, setView, se
   const [seriesSubType, setSeriesSubType] = useState(null); // 시리즈의 웹소설형/일반소설형
   const [selectedTopic, setSelectedTopic] = useState(null); // 비문학 주제
   const [keywords, setKeywords] = useState(''); // 소설류 키워드
+  const [bookTitle, setBookTitle] = useState(''); // 사용자 입력 제목
   const [endingStyle, setEndingStyle] = useState(''); // 소설 결말 스타일
   const [isCustomInput, setIsCustomInput] = useState(false); // 직접 입력 모드
   const [isGenerating, setIsGenerating] = useState(false);
@@ -145,33 +146,21 @@ const WriteView = ({ user, userProfile, onBookGenerated, slotStatus, setView, se
     setSeriesSubType(null);
     setSelectedTopic(null);
     setKeywords('');
+    setBookTitle('');
     setEndingStyle('');
     setIsCustomInput(false);
     setLocalError(null);
     if (setError) setError(null);
   };
 
-  // 비문학 주제 선택 시 바로 생성
-  const handleTopicSelect = async (topicObj) => {
+  // 비문학 주제 선택
+  const handleTopicSelect = (topicObj) => {
     // 안전성 체크
     if (!selectedCategory) {
       console.error('selectedCategory가 없습니다.');
       return;
     }
     
-    if (isGenerating) {
-      return;
-    }
-    
-    // 슬롯 확인
-    if (!isSlotAvailable(selectedCategory.id)) {
-      const slotInfo = getSlotStatus(selectedCategory.id);
-      const errorMsg = `이미 오늘의 책이 발행되었습니다! (By. ${slotInfo?.authorName || '익명'}) 서재에서 읽어보세요.`;
-      setLocalError(errorMsg);
-      if (setError) setError(errorMsg);
-      return;
-    }
-
     // topicObj 안전 처리
     let topicText = '';
     let requiredLevel = 1;
@@ -203,6 +192,25 @@ const WriteView = ({ user, userProfile, onBookGenerated, slotStatus, setView, se
     }
 
     setSelectedTopic(topicText);
+    setLocalError(null);
+    if (setError) setError(null);
+  };
+
+  // 비문학 생성 핸들러
+  const handleNonfictionGenerate = async () => {
+    if (!selectedCategory || selectedCategory.isNovel || !selectedTopic || !bookTitle.trim() || isGenerating) {
+      return;
+    }
+
+    // 슬롯 확인
+    if (!isSlotAvailable(selectedCategory.id)) {
+      const slotInfo = getSlotStatus(selectedCategory.id);
+      const errorMsg = `이미 오늘의 책이 발행되었습니다! (By. ${slotInfo?.authorName || '익명'}) 서재에서 읽어보세요.`;
+      setLocalError(errorMsg);
+      if (setError) setError(errorMsg);
+      return;
+    }
+
     setIsGenerating(true);
     setLocalError(null);
     if (setError) setError(null);
@@ -212,8 +220,9 @@ const WriteView = ({ user, userProfile, onBookGenerated, slotStatus, setView, se
         category: selectedCategory.id,
         subCategory: null,
         genre: null,
-        keywords: topicText,
-        isSeries: false
+        keywords: selectedTopic,
+        isSeries: false,
+        title: bookTitle.trim()
       });
 
       if (!result || !result.title || !result.content) {
@@ -226,13 +235,14 @@ const WriteView = ({ user, userProfile, onBookGenerated, slotStatus, setView, se
           category: selectedCategory.id,
           subCategory: null,
           isSeries: false,
-          keywords: topicText
+          keywords: selectedTopic
         });
       }
 
       // 폼 초기화
       setSelectedCategory(null);
       setSelectedTopic(null);
+      setBookTitle('');
       setIsCustomInput(false);
     } catch (err) {
       console.error('❌ [WriteView] 비문학 생성 오류 - 전체 에러:', err);
@@ -253,7 +263,7 @@ const WriteView = ({ user, userProfile, onBookGenerated, slotStatus, setView, se
 
   // 소설류 생성 핸들러
   const handleNovelGenerate = async () => {
-    if (!selectedCategory || !selectedGenre || !keywords.trim() || isGenerating) {
+    if (!selectedCategory || !selectedGenre || !keywords.trim() || !bookTitle.trim() || isGenerating) {
       return;
     }
 
@@ -285,7 +295,8 @@ const WriteView = ({ user, userProfile, onBookGenerated, slotStatus, setView, se
         genre: selectedGenre.name,
         keywords: keywords.trim(),
         isSeries: selectedCategory.id === 'series',
-        endingStyle: endingStyleToSend
+        endingStyle: endingStyleToSend,
+        title: bookTitle.trim()
       });
 
       if (onBookGenerated) {
@@ -303,6 +314,7 @@ const WriteView = ({ user, userProfile, onBookGenerated, slotStatus, setView, se
       setSelectedGenre(null);
       setSeriesSubType(null);
       setKeywords('');
+      setBookTitle('');
       setEndingStyle('');
       setIsCustomInput(false);
     } catch (err) {
@@ -326,7 +338,14 @@ const WriteView = ({ user, userProfile, onBookGenerated, slotStatus, setView, se
   const canGenerateNovel = selectedCategory && 
     selectedGenre && 
     (selectedCategory.id !== 'series' || seriesSubType) && // 시리즈는 세부 타입도 선택 필요
+    bookTitle.trim().length > 0 &&
     keywords.trim().length > 0 &&
+    isSlotAvailable(selectedCategory.id);
+
+  const canGenerateNonfiction = selectedCategory &&
+    !selectedCategory.isNovel &&
+    selectedTopic &&
+    bookTitle.trim().length > 0 &&
     isSlotAvailable(selectedCategory.id);
 
   return (
@@ -451,6 +470,49 @@ const WriteView = ({ user, userProfile, onBookGenerated, slotStatus, setView, se
                   })}
                 </div>
               </div>
+              {selectedTopic && (
+                <div className="space-y-2">
+                  <label className="text-sm font-bold text-slate-700">
+                    책 제목 <span className="text-orange-500">*</span>
+                  </label>
+                  <div className="space-y-2">
+                    <input
+                      type="text"
+                      value={bookTitle}
+                      onChange={(e) => setBookTitle(e.target.value)}
+                      placeholder="15자 이내로 제목을 입력하세요"
+                      className="w-full bg-slate-50 border-2 border-slate-200 rounded-xl py-3 px-4 text-sm focus:border-orange-500 focus:bg-white outline-none transition-colors"
+                      maxLength={15}
+                    />
+                    <div className="text-xs text-slate-400 font-bold text-right">
+                      {bookTitle.length}/15
+                    </div>
+                  </div>
+                </div>
+              )}
+              {canGenerateNonfiction && (
+                <button
+                  onClick={handleNonfictionGenerate}
+                  disabled={isGenerating}
+                  className={`w-full py-4 rounded-2xl font-black text-white shadow-lg transition-all flex items-center justify-center gap-2 ${
+                    !isGenerating
+                      ? 'bg-orange-500 hover:bg-orange-600 active:scale-95'
+                      : 'bg-slate-300 cursor-not-allowed'
+                  }`}
+                >
+                  {isGenerating ? (
+                    <>
+                      <RefreshCw className="w-5 h-5 animate-spin" />
+                      <span>책을 쓰고 있어요...</span>
+                    </>
+                  ) : (
+                    <>
+                      <PenTool className="w-5 h-5" />
+                      <span>책 생성하기</span>
+                    </>
+                  )}
+                </button>
+              )}
               {isGenerating && (
                 <div className="text-center py-4">
                   <RefreshCw className="w-6 h-6 animate-spin text-orange-500 mx-auto mb-2" />
@@ -537,6 +599,28 @@ const WriteView = ({ user, userProfile, onBookGenerated, slotStatus, setView, se
                   </div>
                 </div>
               ) : null}
+
+              {/* 책 제목 */}
+              {selectedGenre && (
+                <div className="space-y-2">
+                  <label className="text-sm font-bold text-slate-700">
+                    책 제목 <span className="text-orange-500">*</span>
+                  </label>
+                  <div className="space-y-2">
+                    <input
+                      type="text"
+                      value={bookTitle}
+                      onChange={(e) => setBookTitle(e.target.value)}
+                      placeholder="15자 이내로 제목을 입력하세요"
+                      className="w-full bg-slate-50 border-2 border-slate-200 rounded-xl py-3 px-4 text-sm focus:border-orange-500 focus:bg-white outline-none transition-colors"
+                      maxLength={15}
+                    />
+                    <div className="text-xs text-slate-400 font-bold text-right">
+                      {bookTitle.length}/15
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* 키워드 선택 (장르 선택 후) */}
               {selectedGenre && (

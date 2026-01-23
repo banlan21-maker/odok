@@ -102,13 +102,15 @@ function buildSystemPrompt({isNovel, category, genre, endingStyle}) {
   ].join(" ");
 }
 
-function buildStepPrompt({topic, currentStep, previousStorySummary, isNovel}) {
+function buildStepPrompt({topic, currentStep, previousStorySummary, isNovel, title}) {
   const seed = topic || "";
+  const titleLine = title ? `책 제목은 "${title}"입니다. 제목의 분위기와 주제에 어울리게 전개하세요.` : "";
   const summaryBlock = previousStorySummary
     ? `이전 내용 요약:\n${previousStorySummary}\n\n`
     : "";
   const baseInstruction = [
     `사용자가 준 주제는 "${seed}"입니다. 이 짧은 문장을 씨앗으로 삼아 풍성한 디테일을 상상하여 확장하세요.`,
+    titleLine,
     `이번 단계는 "${currentStep.name}" 입니다.`,
     `목표: ${currentStep.instruction}`,
     "단순한 줄거리가 아니라 대사와 묘사가 살아있는 생생한 본문을 작성하세요.",
@@ -174,12 +176,13 @@ async function callGemini(systemPrompt, userPrompt, temperature = 0.75, isNovel 
 }
 
 // 단계별 생성 함수
-async function generateStep(systemPrompt, topic, currentStep, previousStorySummary, temperature, isNovel) {
+async function generateStep(systemPrompt, topic, currentStep, previousStorySummary, temperature, isNovel, title) {
   const userPrompt = buildStepPrompt({
     topic,
     currentStep,
     previousStorySummary,
-    isNovel
+    isNovel,
+    title
   });
   const result = await callGemini(systemPrompt, userPrompt, temperature, isNovel);
   return result.content || '';
@@ -197,7 +200,7 @@ exports.generateBookAI = onCall(
         throw new HttpsError("failed-precondition", "Gemini API 키가 설정되지 않았습니다.");
       }
 
-      const {category, subCategory, genre, keywords, isSeries, previousContext, endingStyle} = request.data;
+      const {category, subCategory, genre, keywords, isSeries, previousContext, endingStyle, title} = request.data;
 
       // 소설류 여부 확인
       const isNovel = category === "webnovel" || category === "novel" || category === "series";
@@ -229,6 +232,8 @@ exports.generateBookAI = onCall(
       let fullContent = "";
       const topic = `${keywords || ""} ${genre || ""}`.trim();
 
+      const requestedTitle = (title || "").toString().trim().slice(0, 15);
+
       // 단계별 생성
       for (let i = 0; i < steps.length; i++) {
         const step = steps[i];
@@ -243,7 +248,8 @@ exports.generateBookAI = onCall(
             step,
             previousStorySummary,
             temperature,
-            isNovel
+            isNovel,
+            requestedTitle
           );
 
           if (!stepContent || !stepContent.trim()) {
@@ -262,15 +268,16 @@ exports.generateBookAI = onCall(
 
       // 제목 생성
       const titleMatch = fullContent.match(/^#\s*(.+)$/m);
-      const title = titleMatch
+      const generatedTitle = titleMatch
         ? titleMatch[1].trim()
         : `${keywords || "작품"} - ${genre || category}`;
+      const finalTitle = requestedTitle || generatedTitle;
 
       // 요약 생성
       const summary = fullContent.substring(0, 200) + "...";
 
       return {
-        title: title,
+        title: finalTitle,
         content: fullContent.trim(),
         summary: summary
       };
