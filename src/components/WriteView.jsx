@@ -278,7 +278,7 @@ const WriteView = ({ user, userProfile, onBookGenerated, slotStatus, setView, se
     if (setError) setError(null);
 
     try {
-      const endingStyleToSend = selectedCategory.id === 'novel' ? endingStyle : null;
+      const endingStyleToSend = selectedCategory.isNovel ? endingStyle : null;
       const result = await generateBook({
         category: selectedCategory.id === 'series' ? 'series' : selectedCategory.id,
         subCategory: selectedGenre.id,
@@ -544,64 +544,24 @@ const WriteView = ({ user, userProfile, onBookGenerated, slotStatus, setView, se
                   <label className="text-sm font-bold text-slate-700">
                     주제 또는 키워드 <span className="text-orange-500">*</span>
                   </label>
-                  
-                  {!isCustomInput ? (
-                    <>
-                      <div className="flex flex-wrap gap-2">
-                        {novelKeywords.map((keyword, index) => (
-                          <button
-                            key={index}
-                            onClick={() => {
-                              setKeywords(keyword);
-                              setIsCustomInput(false);
-                            }}
-                            className={`px-4 py-2 rounded-full text-sm font-bold transition-all ${
-                              keywords === keyword
-                                ? 'bg-orange-500 text-white shadow-md'
-                                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                            }`}
-                          >
-                            {keyword}
-                          </button>
-                        ))}
-                        <button
-                          onClick={() => {
-                            setIsCustomInput(true);
-                            setKeywords('');
-                          }}
-                          className="px-4 py-2 rounded-full text-sm font-bold bg-slate-50 border-2 border-dashed border-slate-300 text-slate-500 hover:border-orange-300 hover:text-orange-500 transition-all flex items-center gap-1"
-                        >
-                          <Edit2 className="w-3 h-3" />
-                          직접 입력
-                        </button>
-                      </div>
-                    </>
-                  ) : (
-                    <div className="space-y-2">
-                      <input
-                        type="text"
-                        value={keywords}
-                        onChange={(e) => setKeywords(e.target.value)}
-                        placeholder="예: 가을 낙엽, 첫 사랑, 성장, 일상의 소중함..."
-                        className="w-full bg-slate-50 border-2 border-slate-200 rounded-xl py-3 px-4 text-sm focus:border-orange-500 focus:bg-white outline-none transition-colors"
-                        autoFocus
-                      />
-                      <button
-                        onClick={() => {
-                          setIsCustomInput(false);
-                          if (!keywords) setKeywords('');
-                        }}
-                        className="text-xs text-slate-400 hover:text-orange-500 font-bold"
-                      >
-                        추천 키워드로 돌아가기
-                      </button>
+                  <div className="space-y-2">
+                    <input
+                      type="text"
+                      value={keywords}
+                      onChange={(e) => setKeywords(e.target.value)}
+                      placeholder="예: 가을 낙엽, 첫 사랑, 성장, 일상의 소중함..."
+                      className="w-full bg-slate-50 border-2 border-slate-200 rounded-xl py-3 px-4 text-sm focus:border-orange-500 focus:bg-white outline-none transition-colors"
+                      maxLength={50}
+                    />
+                    <div className="text-xs text-slate-400 font-bold text-right">
+                      {keywords.length}/50
                     </div>
-                  )}
+                  </div>
                 </div>
               )}
 
-              {/* 결말 스타일 (소설 카테고리 전용) */}
-              {selectedCategory.id === 'novel' && (
+              {/* 결말 스타일 (소설류 전용) */}
+              {selectedCategory.isNovel && (
                 <div className="space-y-2">
                   <label className="text-sm font-bold text-slate-700">
                     결말 스타일
