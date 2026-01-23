@@ -28,7 +28,9 @@ export const generateBook = async ({
   title = null
 }) => {
   try {
-    const generateBookAI = httpsCallable(functions, 'generateBookAI');
+    const generateBookAI = httpsCallable(functions, 'generateBookAI', {
+      timeout: 540000
+    });
     
     const result = await generateBookAI({
       category: category,
