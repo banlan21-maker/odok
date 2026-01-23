@@ -192,7 +192,8 @@ async function generateStep(systemPrompt, topic, currentStep, previousStorySumma
 exports.generateBookAI = onCall(
   {
     region: REGION,
-    maxInstances: 10
+    maxInstances: 10,
+    timeoutSeconds: 300
   },
   async (request) => {
     try {
