@@ -610,7 +610,20 @@ const WriteView = ({ user, userProfile, onBookGenerated, slotStatus, setView, se
                     어떤 이야기를 쓰고 싶으신가요?
                   </h3>
                   <button
-                    onClick={handleRefreshKeywords}
+                    type="button"
+                    onMouseDown={(event) => {
+                      event.preventDefault();
+                      event.stopPropagation();
+                    }}
+                    onTouchStart={(event) => {
+                      event.preventDefault();
+                      event.stopPropagation();
+                    }}
+                    onClick={(event) => {
+                      event.preventDefault();
+                      event.stopPropagation();
+                      handleRefreshKeywords();
+                    }}
                     disabled={isRefreshingKeywords || isGenerating || !isSlotAvailable(selectedCategory.id)}
                     className={`px-3 py-1.5 rounded-full text-xs font-black border transition-colors ${
                       isRefreshingKeywords || isGenerating || !isSlotAvailable(selectedCategory.id)
