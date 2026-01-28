@@ -683,13 +683,14 @@ const App = () => {
 
   // Step 1: 책 생성 완료 후 Firestore에 저장 (Step 5: 동시성 제어 추가)
   // 수정 1: 집필 제한 확인 및 추가 집필 확인 모달 처리
-  const handleBookGenerated = async (bookData, useInk = false) => {
+  const handleBookGenerated = async (bookData, useInk = false, options = {}) => {
     if (!user) {
       setError('로그인이 필요합니다.');
       return;
     }
 
     try {
+      const { skipDailyCheck = false, skipInkDeduct = false } = options || {};
       // 수정 1: 하루 2회 제한 체크 (1회 무료 + 1회 잉크)
       const profileRefForCheck = doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'info');
       const profileSnapForCheck = await getDoc(profileRefForCheck);
@@ -715,15 +716,15 @@ const App = () => {
         return;
       }
       
-      // 무료 집필 1회 이후에는 잉크 확인 모달 표시
-      if (!useInk && dailyWriteCount >= DAILY_FREE_WRITES) {
+      // 무료 집필 1회 이후에는 잉크 확인 모달 표시 (사전 확인을 건너뛴 경우에만)
+      if (!skipDailyCheck && !useInk && dailyWriteCount >= DAILY_FREE_WRITES) {
         setPendingBookData(bookData);
         setShowInkConfirmModal(true); // 추가 집필 확인 모달 재사용
         return;
       }
       
       // 잉크를 사용하는 경우 잉크 확인
-      if (useInk) {
+      if (useInk && !skipInkDeduct) {
         const currentInk = userProfile?.ink || 0;
         const requiredInk = EXTRA_WRITE_INK_COST;
         

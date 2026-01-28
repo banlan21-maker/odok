@@ -1,6 +1,6 @@
 // src/components/WriteView.jsx
 import React, { useState, useEffect, useRef } from 'react';
-import { PenTool, RefreshCw, Book, Edit2, Lock } from 'lucide-react';
+import { PenTool, RefreshCw, Book, Edit2, Lock, Droplets } from 'lucide-react';
 import { generateBook } from '../utils/aiService';
 
 // 비문학 키워드 은행
@@ -41,6 +41,10 @@ const NONFICTION_TONE_OPTIONS = {
   'self-help': ['따뜻한 위로/격려', '강한 동기부여/독설', '논리적인/분석적인', '경험담 위주'],
   humanities: ['질문을 던지는/사색적인', '날카로운 비판', '대화 형식/인터뷰', '쉬운 해설/스토리텔링']
 };
+
+const DAILY_WRITE_LIMIT = 2;
+const DAILY_FREE_WRITES = 1;
+const EXTRA_WRITE_INK_COST = 5;
 
 const NOVEL_MOOD_OPTIONS = {
   webnovel: {
@@ -124,6 +128,8 @@ const WriteView = ({ user, userProfile, onBookGenerated, slotStatus, setView, se
   const [isGenerating, setIsGenerating] = useState(false);
   const [nonfictionTopics, setNonfictionTopics] = useState([]);
   const [isRefreshingKeywords, setIsRefreshingKeywords] = useState(false);
+  const [showPaidWriteConfirm, setShowPaidWriteConfirm] = useState(false);
+  const [pendingPaidWriteType, setPendingPaidWriteType] = useState(null);
   const cancelRequestedRef = useRef(false);
   const [localError, setLocalError] = useState(null);
 
@@ -172,6 +178,13 @@ const WriteView = ({ user, userProfile, onBookGenerated, slotStatus, setView, se
   const getToneOptions = (categoryId) => {
     return NONFICTION_TONE_OPTIONS[categoryId] || [];
   };
+
+  const todayKey = getTodayKey();
+  const lastWriteDate = userProfile?.lastBookCreatedDate || null;
+  const dailyWriteCount = userProfile?.dailyWriteCount || 0;
+  const effectiveWriteCount = lastWriteDate === todayKey ? dailyWriteCount : 0;
+  const remainingDailyWrites = Math.max(0, DAILY_WRITE_LIMIT - effectiveWriteCount);
+  const requiresPaidWrite = effectiveWriteCount >= DAILY_FREE_WRITES;
 
   const getMoodOptions = () => {
     if (!selectedCategory || !selectedGenre) return [];
@@ -279,6 +292,8 @@ const WriteView = ({ user, userProfile, onBookGenerated, slotStatus, setView, se
     setSelectedMood('');
     setIsCustomInput(false);
     setNonfictionTopics([]);
+    setShowPaidWriteConfirm(false);
+    setPendingPaidWriteType(null);
     setLocalError(null);
     if (setError) setError(null);
   };
@@ -350,10 +365,62 @@ const WriteView = ({ user, userProfile, onBookGenerated, slotStatus, setView, se
     }
   };
 
-  // 비문학 생성 핸들러
-  const handleNonfictionGenerate = async () => {
+  const openPaidWriteConfirm = (type) => {
+    setPendingPaidWriteType(type);
+    setShowPaidWriteConfirm(true);
+  };
+
+  const closePaidWriteConfirm = () => {
+    setShowPaidWriteConfirm(false);
+    setPendingPaidWriteType(null);
+  };
+
+  const confirmPaidWrite = async () => {
+    const type = pendingPaidWriteType;
+    closePaidWriteConfirm();
+    if (type === 'nonfiction') {
+      await startNonfictionGenerate(true);
+    } else if (type === 'novel') {
+      await startNovelGenerate(true);
+    }
+  };
+
+  const startNonfictionGenerate = async (forcePaid = false) => {
     if (!selectedCategory || selectedCategory.isNovel || !selectedTopic || !bookTitle.trim() || !selectedTone || isGenerating) {
       return;
+    }
+
+    if (remainingDailyWrites <= 0) {
+      const errorMsg = '하루에 최대 2회까지만 집필할 수 있어요.';
+      setLocalError(errorMsg);
+      if (setError) setError(errorMsg);
+      return;
+    }
+
+    if (requiresPaidWrite && !forcePaid) {
+      openPaidWriteConfirm('nonfiction');
+      return;
+    }
+
+    if (requiresPaidWrite && forcePaid) {
+      const currentInk = userProfile?.ink || 0;
+      if (currentInk < EXTRA_WRITE_INK_COST) {
+        const errorMsg = '잉크가 부족합니다! 💧 잉크를 충전해주세요.';
+        setLocalError(errorMsg);
+        if (setError) setError(errorMsg);
+        return;
+      }
+      if (typeof deductInk !== 'function') {
+        setLocalError('잉크 차감 기능을 사용할 수 없습니다.');
+        if (setError) setError('잉크 차감 기능을 사용할 수 없습니다.');
+        return;
+      }
+      const success = await deductInk(EXTRA_WRITE_INK_COST);
+      if (!success) {
+        setLocalError('잉크 차감에 실패했습니다. 다시 시도해주세요.');
+        if (setError) setError('잉크 차감에 실패했습니다. 다시 시도해주세요.');
+        return;
+      }
     }
 
     // 슬롯 확인
@@ -394,7 +461,7 @@ const WriteView = ({ user, userProfile, onBookGenerated, slotStatus, setView, se
           subCategory: null,
           isSeries: false,
           keywords: selectedTopic
-        });
+        }, false, { skipDailyCheck: true });
       }
 
       // 폼 초기화
@@ -420,10 +487,52 @@ const WriteView = ({ user, userProfile, onBookGenerated, slotStatus, setView, se
     }
   };
 
+  // 비문학 생성 핸들러
+  const handleNonfictionGenerate = async () => {
+    await startNonfictionGenerate(false);
+  };
+
   // 소설류 생성 핸들러
   const handleNovelGenerate = async () => {
+    await startNovelGenerate(false);
+  };
+
+  const startNovelGenerate = async (forcePaid = false) => {
     if (!selectedCategory || !selectedGenre || !keywords.trim() || !bookTitle.trim() || !selectedMood || isGenerating) {
       return;
+    }
+
+    if (remainingDailyWrites <= 0) {
+      const errorMsg = '하루에 최대 2회까지만 집필할 수 있어요.';
+      setLocalError(errorMsg);
+      if (setError) setError(errorMsg);
+      return;
+    }
+
+    if (requiresPaidWrite && !forcePaid) {
+      openPaidWriteConfirm('novel');
+      return;
+    }
+
+    if (requiresPaidWrite && forcePaid) {
+      const currentInk = userProfile?.ink || 0;
+      if (currentInk < EXTRA_WRITE_INK_COST) {
+        const errorMsg = '잉크가 부족합니다! 💧 잉크를 충전해주세요.';
+        setLocalError(errorMsg);
+        if (setError) setError(errorMsg);
+        return;
+      }
+      if (typeof deductInk !== 'function') {
+        setLocalError('잉크 차감 기능을 사용할 수 없습니다.');
+        if (setError) setError('잉크 차감 기능을 사용할 수 없습니다.');
+        return;
+      }
+      const success = await deductInk(EXTRA_WRITE_INK_COST);
+      if (!success) {
+        setLocalError('잉크 차감에 실패했습니다. 다시 시도해주세요.');
+        if (setError) setError('잉크 차감에 실패했습니다. 다시 시도해주세요.');
+        return;
+      }
     }
 
     // 슬롯 확인 (시리즈는 subCategory로 구분)
@@ -469,7 +578,7 @@ const WriteView = ({ user, userProfile, onBookGenerated, slotStatus, setView, se
           subCategory: selectedGenre.id,
           isSeries: selectedCategory.id === 'series',
           keywords: keywords.trim()
-        });
+        }, false, { skipDailyCheck: true });
       }
 
       // 폼 초기화
@@ -524,12 +633,15 @@ const WriteView = ({ user, userProfile, onBookGenerated, slotStatus, setView, se
     (selectedCategory.id !== 'series' || seriesSubType) && // 시리즈는 세부 타입도 선택 필요
     bookTitle.trim().length > 0 &&
     keywords.trim().length > 0 &&
+    remainingDailyWrites > 0 &&
     isSlotAvailable(selectedCategory.id);
 
   const canGenerateNonfiction = selectedCategory &&
     !selectedCategory.isNovel &&
     selectedTopic &&
     bookTitle.trim().length > 0 &&
+    selectedTone &&
+    remainingDailyWrites > 0 &&
     isSlotAvailable(selectedCategory.id);
 
   return (
@@ -625,13 +737,14 @@ const WriteView = ({ user, userProfile, onBookGenerated, slotStatus, setView, se
                       handleRefreshKeywords();
                     }}
                     disabled={isRefreshingKeywords || isGenerating || !isSlotAvailable(selectedCategory.id)}
-                    className={`px-3 py-1.5 rounded-full text-xs font-black border transition-colors ${
+                    className={`w-8 h-8 rounded-full border flex items-center justify-center transition-colors ${
                       isRefreshingKeywords || isGenerating || !isSlotAvailable(selectedCategory.id)
                         ? 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed'
-                        : 'bg-white text-orange-600 border-orange-200 hover:bg-orange-50'
+                        : 'bg-blue-50 text-blue-600 border-blue-200 hover:bg-blue-100'
                     }`}
+                    title="키워드 새로고침 (잉크 1)"
                   >
-                    {isRefreshingKeywords ? '새로고침 중...' : '키워드 새로고침 (잉크 1)'}
+                    <RefreshCw className={`w-4 h-4 ${isRefreshingKeywords ? 'animate-spin' : ''}`} />
                   </button>
                 </div>
                 <div className="flex flex-wrap gap-2">
@@ -719,7 +832,7 @@ const WriteView = ({ user, userProfile, onBookGenerated, slotStatus, setView, se
                   ) : (
                     <>
                       <PenTool className="w-5 h-5" />
-                      <span>책 생성하기</span>
+                      <span>{requiresPaidWrite ? `잉크 ${EXTRA_WRITE_INK_COST} 사용하고 집필` : '책 생성하기'}</span>
                     </>
                   )}
                 </button>
@@ -916,7 +1029,7 @@ const WriteView = ({ user, userProfile, onBookGenerated, slotStatus, setView, se
                   ) : (
                     <>
                       <PenTool className="w-5 h-5" />
-                      <span>책 생성하기</span>
+                      <span>{requiresPaidWrite ? `잉크 ${EXTRA_WRITE_INK_COST} 사용하고 집필` : '책 생성하기'}</span>
                     </>
                   )}
                 </button>
@@ -924,6 +1037,45 @@ const WriteView = ({ user, userProfile, onBookGenerated, slotStatus, setView, se
               {isGenerating && <GeneratingNotice />}
             </>
           )}
+        </div>
+      )}
+
+      {showPaidWriteConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-6">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl space-y-4 animate-in fade-in zoom-in-95 duration-200">
+            <div className="text-center space-y-2">
+              <Droplets className="w-12 h-12 text-orange-500 mx-auto" />
+              <h3 className="text-xl font-black text-slate-800">
+                추가 집필
+              </h3>
+              <p className="text-sm text-slate-600">
+                하루 무료 횟수를 사용했습니다.
+              </p>
+              <p className="text-sm text-slate-600 font-bold">
+                <span className="text-orange-500">{EXTRA_WRITE_INK_COST} 잉크</span>를 사용하여 집필하시겠습니까?
+              </p>
+              <div className="pt-2">
+                <p className="text-xs text-slate-400">
+                  현재 보유: <span className="font-bold text-slate-600">{userProfile?.ink || 0} 잉크</span>
+                </p>
+              </div>
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={closePaidWriteConfirm}
+                className="flex-1 bg-slate-100 text-slate-600 py-3 rounded-xl font-bold hover:bg-slate-200 transition-colors"
+              >
+                취소
+              </button>
+              <button
+                onClick={confirmPaidWrite}
+                className="flex-1 bg-orange-500 text-white py-3 rounded-xl font-black hover:bg-orange-600 transition-colors flex items-center justify-center gap-2"
+              >
+                <Droplets className="w-4 h-4" />
+                잉크 {EXTRA_WRITE_INK_COST} 사용하고 집필
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
