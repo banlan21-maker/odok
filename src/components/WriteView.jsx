@@ -130,6 +130,7 @@ const WriteView = ({ user, userProfile, onBookGenerated, slotStatus, setView, se
   const [isRefreshingKeywords, setIsRefreshingKeywords] = useState(false);
   const [showPaidWriteConfirm, setShowPaidWriteConfirm] = useState(false);
   const [pendingPaidWriteType, setPendingPaidWriteType] = useState(null);
+  const [showNoWritesNotice, setShowNoWritesNotice] = useState(false);
   const cancelRequestedRef = useRef(false);
   const [localError, setLocalError] = useState(null);
 
@@ -185,6 +186,12 @@ const WriteView = ({ user, userProfile, onBookGenerated, slotStatus, setView, se
   const effectiveWriteCount = lastWriteDate === todayKey ? dailyWriteCount : 0;
   const remainingDailyWrites = Math.max(0, DAILY_WRITE_LIMIT - effectiveWriteCount);
   const requiresPaidWrite = effectiveWriteCount >= DAILY_FREE_WRITES;
+
+  useEffect(() => {
+    if (remainingDailyWrites === 0) {
+      setShowNoWritesNotice(true);
+    }
+  }, [remainingDailyWrites]);
 
   const getMoodOptions = () => {
     if (!selectedCategory || !selectedGenre) return [];
@@ -614,16 +621,27 @@ const WriteView = ({ user, userProfile, onBookGenerated, slotStatus, setView, se
   };
 
   const GeneratingNotice = () => (
-    <div className="mt-4 border-2 border-orange-200 bg-orange-50 rounded-2xl p-4 text-center space-y-3">
-      <p className="text-xs text-slate-600">
-        뒤로가기 또는 다른 작업을 하면 집필이 취소될 수 있어요.
-      </p>
-      <button
-        onClick={handleCancelGenerate}
-        className="px-4 py-2 rounded-xl text-xs font-black bg-white border border-orange-300 text-orange-600 hover:bg-orange-100"
-      >
-        집필 취소
-      </button>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-6">
+      <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl space-y-4 animate-in fade-in zoom-in-95 duration-200 text-center">
+        <div className="flex items-center justify-center">
+          <RefreshCw className="w-6 h-6 text-orange-500 animate-spin" />
+        </div>
+        <p className="text-sm text-slate-700 font-bold">
+          집필 중입니다…
+        </p>
+        <p className="text-xs text-slate-500">
+          책 생성에는 약 2~3분이 소요될 수 있어요.
+        </p>
+        <p className="text-xs text-slate-400">
+          취소 후에 다른 작업을 진행할 수 있습니다.
+        </p>
+        <button
+          onClick={handleCancelGenerate}
+          className="w-full py-3 rounded-xl text-sm font-black bg-white border border-orange-300 text-orange-600 hover:bg-orange-100"
+        >
+          집필 취소
+        </button>
+      </div>
     </div>
   );
 
@@ -1063,18 +1081,43 @@ const WriteView = ({ user, userProfile, onBookGenerated, slotStatus, setView, se
             <div className="flex gap-3">
               <button
                 onClick={closePaidWriteConfirm}
-                className="flex-1 bg-slate-100 text-slate-600 py-3 rounded-xl font-bold hover:bg-slate-200 transition-colors"
+                className="flex-1 bg-slate-100 text-slate-600 py-2 rounded-lg text-xs font-bold hover:bg-slate-200 transition-colors"
               >
                 취소
               </button>
               <button
                 onClick={confirmPaidWrite}
-                className="flex-1 bg-orange-500 text-white py-3 rounded-xl font-black hover:bg-orange-600 transition-colors flex items-center justify-center gap-2"
+                className="flex-1 bg-orange-500 text-white py-2 rounded-lg text-xs font-black hover:bg-orange-600 transition-colors flex items-center justify-center gap-1.5"
               >
                 <Droplets className="w-4 h-4" />
                 잉크 {EXTRA_WRITE_INK_COST} 사용하고 집필
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {showNoWritesNotice && remainingDailyWrites === 0 && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-6">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl space-y-4 animate-in fade-in zoom-in-95 duration-200">
+            <div className="text-center space-y-2">
+              <PenTool className="w-12 h-12 text-orange-500 mx-auto" />
+              <h3 className="text-xl font-black text-slate-800">
+                오늘은 집필이 끝났어요
+              </h3>
+              <p className="text-sm text-slate-600">
+                하루 집필 가능 횟수(2회)를 모두 사용했습니다.
+              </p>
+              <p className="text-xs text-slate-400">
+                내일 다시 집필할 수 있어요.
+              </p>
+            </div>
+            <button
+              onClick={() => setShowNoWritesNotice(false)}
+              className="w-full bg-slate-900 text-white py-3 rounded-xl font-black"
+            >
+              확인
+            </button>
           </div>
         </div>
       )}

@@ -73,8 +73,9 @@ const HomeView = ({
       <div className="space-y-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Book className="w-8 h-8 text-orange-600" />
-            <h1 className="text-xl font-black text-slate-800">오독오독</h1>
+            <h1 className="text-lg font-jua font-black text-slate-800 leading-tight whitespace-pre-line">
+              하루 5분!{'\n'}이야기가 맛있어지는 시간
+            </h1>
           </div>
           <button className="p-2 rounded-full hover:bg-slate-100 transition-colors">
             <Bell className="w-5 h-5 text-slate-400" />
@@ -222,7 +223,8 @@ const HomeView = ({
                          book.category === 'novel' ? '소설' :
                          book.category === 'essay' ? '에세이' :
                          book.category === 'self-improvement' ? '자기계발' :
-                         book.category === 'humanities' ? '인문·철학' : book.category}
+                         book.category === 'self-help' ? '자기계발' :
+                         book.category === 'humanities' ? '인문.철학' : book.category}
                       </span>
                       <span className="flex items-center gap-1 text-slate-400">
                         <Calendar className="w-3 h-3" />
@@ -368,8 +370,16 @@ const HomeView = ({
               
               return (
                 <div key={writer.id} className="w-20 shrink-0 text-center snap-start">
-                  <div className={`relative w-20 h-20 rounded-full mx-auto mb-2 flex items-center justify-center ${isTopThree ? 'bg-gradient-to-br from-orange-400 to-orange-600' : 'bg-slate-100'}`}>
-                    <User className={`w-10 h-10 ${isTopThree ? 'text-white' : 'text-slate-400'}`} />
+                  <div className={`relative w-20 h-20 rounded-full mx-auto mb-2 flex items-center justify-center overflow-hidden ${isTopThree ? 'bg-gradient-to-br from-orange-400 to-orange-600' : 'bg-slate-100'}`}>
+                    {writer.profileImageUrl ? (
+                      <img
+                        src={writer.profileImageUrl}
+                        alt={`${writer.nickname} 프로필`}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <User className={`w-10 h-10 ${isTopThree ? 'text-white' : 'text-slate-400'}`} />
+                    )}
                     {isTopThree && (
                       <div className="absolute -top-1 -right-1 w-6 h-6 bg-yellow-400 rounded-full flex items-center justify-center">
                         <Crown className="w-3 h-3 text-yellow-700" />

@@ -25,6 +25,7 @@ const BookDetail = ({ book, onClose, fontSize = 'text-base', user, userProfile, 
     'novel': '소설',
     'essay': '에세이',
     'self-improvement': '자기계발',
+    'self-help': '자기계발',
     'humanities': '인문·철학'
   }[book.category] || book.category;
 

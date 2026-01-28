@@ -9,9 +9,13 @@ const LibraryView = ({ books, onBookClick, filter = 'all', onFilterChange }) => 
   const formatTag = (value) => {
     if (!value) return value;
     const normalized = String(value).trim().toLowerCase();
+    if (normalized === 'webnovel') return '웹소설';
+    if (normalized === 'novel') return '소설';
+    if (normalized === 'essay') return '에세이';
     if (normalized === 'self-help' || normalized === 'self-improvement') {
       return '자기계발';
     }
+    if (normalized === 'humanities') return '인문.철학';
     if (/^[a-z0-9-]+$/.test(normalized)) {
       return normalized.toUpperCase();
     }
@@ -164,7 +168,8 @@ const LibraryView = ({ books, onBookClick, filter = 'all', onFilterChange }) => 
                          book.category === 'novel' ? '소설' :
                          book.category === 'essay' ? '에세이' :
                          book.category === 'self-improvement' ? '자기계발' :
-                         book.category === 'humanities' ? '인문·철학' : book.category}
+                         book.category === 'self-help' ? '자기계발' :
+                         book.category === 'humanities' ? '인문.철학' : book.category}
                       </span>
                       {book.subCategory && (
                         <span className="bg-slate-100 px-2 py-0.5 rounded-full text-slate-600">

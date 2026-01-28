@@ -618,38 +618,59 @@ const App = () => {
   // Step 3: 주간 집필왕 (월~일 기준, 주간 집필 수 TOP 3)
   useEffect(() => {
     if (!user || books.length === 0) return;
+    let isActive = true;
     const timer = setTimeout(() => {
-      const today = startOfDay(new Date());
-      const weekStart = startOfWeek(today, { weekStartsOn: 1 });
-      const weekEnd = endOfWeek(today, { weekStartsOn: 1 });
+      const buildTopWriters = async () => {
+        const today = startOfDay(new Date());
+        const weekStart = startOfWeek(today, { weekStartsOn: 1 });
+        const weekEnd = endOfWeek(today, { weekStartsOn: 1 });
 
-      const weeklyBooks = books.filter(book => {
-        const createdAt = book.createdAt?.toDate?.() || (book.createdAt?.seconds ? new Date(book.createdAt.seconds * 1000) : null);
-        return createdAt && createdAt >= weekStart && createdAt <= weekEnd;
-      });
+        const weeklyBooks = books.filter(book => {
+          const createdAt = book.createdAt?.toDate?.() || (book.createdAt?.seconds ? new Date(book.createdAt.seconds * 1000) : null);
+          return createdAt && createdAt >= weekStart && createdAt <= weekEnd;
+        });
 
-      const counts = weeklyBooks.reduce((acc, book) => {
-        const authorId = book.authorId;
-        if (!authorId) return acc;
-        if (!acc[authorId]) {
-          acc[authorId] = {
-            id: authorId,
-            nickname: book.authorName || '익명',
-            bookCount: 0
-          };
+        const counts = weeklyBooks.reduce((acc, book) => {
+          const authorId = book.authorId;
+          if (!authorId) return acc;
+          if (!acc[authorId]) {
+            acc[authorId] = {
+              id: authorId,
+              nickname: book.authorName || '익명',
+              bookCount: 0
+            };
+          }
+          acc[authorId].bookCount += 1;
+          return acc;
+        }, {});
+
+        const topWritersList = Object.values(counts)
+          .sort((a, b) => b.bookCount - a.bookCount)
+          .slice(0, 3);
+
+        const enriched = await Promise.all(topWritersList.map(async (writer) => {
+          try {
+            const profileRef = doc(db, 'artifacts', appId, 'users', writer.id, 'profile', 'info');
+            const profileSnap = await getDoc(profileRef);
+            const profileImageUrl = profileSnap.exists() ? profileSnap.data().profileImageUrl : null;
+            return { ...writer, profileImageUrl: profileImageUrl || null };
+          } catch (err) {
+            console.warn('프로필 이미지 로드 실패:', err);
+            return writer;
+          }
+        }));
+
+        if (isActive) {
+          setTopWriters(enriched);
         }
-        acc[authorId].bookCount += 1;
-        return acc;
-      }, {});
-
-      const topWritersList = Object.values(counts)
-        .sort((a, b) => b.bookCount - a.bookCount)
-        .slice(0, 3);
-
-      setTopWriters(topWritersList);
+      };
+      buildTopWriters();
     }, 200);
 
-    return () => clearTimeout(timer);
+    return () => {
+      isActive = false;
+      clearTimeout(timer);
+    };
   }, [user, books]);
 
   // Step 5: 슬롯 키 생성 헬퍼 함수 (7개 슬롯 체제 - 시리즈 분리)
@@ -1999,6 +2020,43 @@ const App = () => {
         <main id="main-content" className="flex-1 overflow-y-auto scrollbar-hide pb-20 relative">
           
           {/* 각종 모달들 */}
+          {isHelpModalOpen && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-6">
+              <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl space-y-4 animate-in fade-in zoom-in-95 duration-200">
+                <div className="flex items-center justify-between">
+                  <div className="text-lg font-black text-slate-800">사용 설명서</div>
+                  <button
+                    onClick={() => setIsHelpModalOpen(false)}
+                    className="p-1.5 rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+                <div className="space-y-3 text-sm text-slate-600 leading-relaxed">
+                  <div className="font-bold text-slate-800">기본 사용법</div>
+                  <div>1. 홈/서재에서 원하는 책을 선택하거나, 집필 탭에서 새 책을 생성합니다.</div>
+                  <div>2. 집필은 하루 2회까지 가능합니다. 1회는 무료, 2회째부터는 잉크가 소모됩니다.</div>
+                  <div className="pt-2 font-bold text-slate-800">잉크 시스템</div>
+                  <div>- 책 집필 완료 시 +25 잉크가 지급됩니다.</div>
+                  <div>- 다른 사람의 책을 읽을 때 -1 잉크가 소모됩니다.</div>
+                  <div>- 2회째 집필부터는 -5 잉크가 소모됩니다.</div>
+                  <div>- 잉크 최대치는 999입니다.</div>
+                  <div className="pt-2 font-bold text-slate-800">레벨 시스템</div>
+                  <div>- 잉크를 사용할 때마다 사용한 만큼 경험치를 얻습니다.</div>
+                  <div>- 경험치가 최대치에 도달하면 레벨이 올라갑니다.</div>
+                  <div className="pt-2 font-bold text-slate-800">집필/읽기 팁</div>
+                  <div>- 소설은 장르/분위기/결말 스타일을 선택해 더 정교하게 작성할 수 있습니다.</div>
+                  <div>- 비소설은 키워드/제목/스타일을 선택해 원하는 톤으로 작성됩니다.</div>
+                </div>
+                <button
+                  onClick={() => setIsHelpModalOpen(false)}
+                  className="w-full bg-slate-900 text-white py-3 rounded-xl font-black"
+                >
+                  닫기
+                </button>
+              </div>
+            </div>
+          )}
           {isUnlockModalOpen && <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60"><div className="bg-white p-6 rounded-2xl w-full max-w-sm"><h3 className="font-bold mb-3">{t.unlock_title}</h3><div className="space-y-2"><button onClick={()=>processUnlock('free')} className="w-full bg-orange-500 text-white py-3 rounded-xl font-bold">{t.unlock_btn_free}</button><button onClick={()=>processUnlock('point')} className="w-full bg-slate-800 text-white py-3 rounded-xl font-bold">{t.unlock_btn_paid}</button><button onClick={()=>setIsUnlockModalOpen(false)} className="w-full bg-slate-100 py-3 rounded-xl font-bold">{t.cancel}</button></div></div></div>}
           {showAttendanceModal && <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60"><div className="bg-white p-8 rounded-2xl text-center"><h3 className="text-xl font-black mb-1">{t.attendance_check}</h3><p className="text-slate-500 font-bold mb-4">{t.attendance_reward}</p><button onClick={()=>setShowAttendanceModal(false)} className="bg-slate-900 text-white px-8 py-2 rounded-xl font-bold">OK</button></div></div>}
           
