@@ -7,6 +7,31 @@ import { getCoverImageFromBook } from '../utils/bookCovers';
 import { collection, addDoc, deleteDoc, doc, onSnapshot, serverTimestamp, setDoc, updateDoc, increment, runTransaction } from 'firebase/firestore';
 import { db } from '../firebase';
 
+const MAX_LEVEL = 99;
+
+const calculateLevelUp = (currentLevel, currentExp, expGain, maxExp) => {
+  const newExp = currentExp + expGain;
+
+  if (newExp >= maxExp && currentLevel < MAX_LEVEL) {
+    const newLevel = currentLevel + 1;
+    const remainingExp = newExp - maxExp;
+    const nextMaxExp = Math.max(100, Math.floor(maxExp * 1.2));
+    return {
+      leveledUp: true,
+      newLevel,
+      newExp: remainingExp,
+      newMaxExp: nextMaxExp
+    };
+  }
+
+  return {
+    leveledUp: false,
+    newLevel: currentLevel,
+    newExp,
+    newMaxExp: maxExp
+  };
+};
+
 const BookDetail = ({ book, onClose, fontSize = 'text-base', user, userProfile, appId }) => {
   if (!book) return null;
   
@@ -231,11 +256,23 @@ const BookDetail = ({ book, onClose, fontSize = 'text-base', user, userProfile, 
         const receiverSnap = await tx.get(receiverRef);
         const senderInk = senderSnap.exists() ? (senderSnap.data().ink || 0) : 0;
         const receiverInk = receiverSnap.exists() ? (receiverSnap.data().ink || 0) : 0;
+        const senderLevel = senderSnap.exists() ? (senderSnap.data().level || 1) : 1;
+        const senderExp = senderSnap.exists() ? (senderSnap.data().exp || 0) : 0;
+        const senderMaxExp = senderSnap.exists() ? (senderSnap.data().maxExp || 100) : 100;
         if (senderInk < amount) {
           throw new Error('잉크가 부족합니다.');
         }
         const nextReceiverInk = Math.min(999, receiverInk + amount);
-        tx.update(senderRef, { ink: senderInk - amount });
+        const levelUpResult = calculateLevelUp(senderLevel, senderExp, amount, senderMaxExp);
+        const senderUpdate = {
+          ink: senderInk - amount,
+          exp: levelUpResult.newExp,
+          maxExp: levelUpResult.newMaxExp
+        };
+        if (levelUpResult.leveledUp) {
+          senderUpdate.level = levelUpResult.newLevel;
+        }
+        tx.update(senderRef, senderUpdate);
         tx.set(receiverRef, { ink: nextReceiverInk }, { merge: true });
       });
       alert(`잉크 ${amount}개를 보냈습니다!`);

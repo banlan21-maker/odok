@@ -2022,7 +2022,7 @@ const App = () => {
           {/* 각종 모달들 */}
           {isHelpModalOpen && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-6">
-              <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl space-y-4 animate-in fade-in zoom-in-95 duration-200">
+              <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl space-y-4 animate-in fade-in zoom-in-95 duration-200 max-h-[80vh] overflow-hidden">
                 <div className="flex items-center justify-between">
                   <div className="text-lg font-black text-slate-800">사용 설명서</div>
                   <button
@@ -2032,18 +2032,27 @@ const App = () => {
                     <X className="w-4 h-4" />
                   </button>
                 </div>
-                <div className="space-y-3 text-sm text-slate-600 leading-relaxed">
+                <div className="space-y-3 text-sm text-slate-600 leading-relaxed overflow-y-auto pr-1 max-h-[60vh]">
                   <div className="font-bold text-slate-800">기본 사용법</div>
                   <div>1. 홈/서재에서 원하는 책을 선택하거나, 집필 탭에서 새 책을 생성합니다.</div>
                   <div>2. 집필은 하루 2회까지 가능합니다. 1회는 무료, 2회째부터는 잉크가 소모됩니다.</div>
                   <div className="pt-2 font-bold text-slate-800">잉크 시스템</div>
                   <div>- 책 집필 완료 시 +25 잉크가 지급됩니다.</div>
+                  <div>- 프로필 탭에서 “광고 보고 잉크 얻기”로 +10 잉크를 받을 수 있습니다.</div>
+                  <div>- 다른 유저가 잉크쏘기를 보내면 1~10 잉크를 받을 수 있습니다.</div>
                   <div>- 다른 사람의 책을 읽을 때 -1 잉크가 소모됩니다.</div>
                   <div>- 2회째 집필부터는 -5 잉크가 소모됩니다.</div>
+                  <div>- 비소설 키워드 새로고침 시 -1 잉크가 소모됩니다.</div>
+                  <div>- 잉크쏘기 보내기 시 입력한 만큼(1~10) 잉크가 소모됩니다.</div>
                   <div>- 잉크 최대치는 999입니다.</div>
                   <div className="pt-2 font-bold text-slate-800">레벨 시스템</div>
                   <div>- 잉크를 사용할 때마다 사용한 만큼 경험치를 얻습니다.</div>
+                  <div>- 기본 필요 경험치는 100이며, 레벨업 시 1.2배씩 증가합니다.</div>
                   <div>- 경험치가 최대치에 도달하면 레벨이 올라갑니다.</div>
+                  <div>- 최고 레벨은 99입니다.</div>
+                  <div className="pt-2 font-bold text-slate-800">랭킹 기준</div>
+                  <div>- 주간 베스트셀러: 월~일 생성된 책의 조회+좋아요+즐겨찾기+완독 합산 TOP 3</div>
+                  <div>- 금주의 집필왕: 월~일 집필 권수 TOP 3</div>
                   <div className="pt-2 font-bold text-slate-800">집필/읽기 팁</div>
                   <div>- 소설은 장르/분위기/결말 스타일을 선택해 더 정교하게 작성할 수 있습니다.</div>
                   <div>- 비소설은 키워드/제목/스타일을 선택해 원하는 톤으로 작성됩니다.</div>
