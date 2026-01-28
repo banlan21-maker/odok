@@ -44,6 +44,7 @@ const DAILY_FREE_WRITES = 1;
 
 const App = () => {
   const [view, setView] = useState('profile_setup'); 
+  const viewRef = useRef(view);
   const [user, setUser] = useState(null);
   const [userProfile, setUserProfile] = useState(null);
   
@@ -258,6 +259,10 @@ const App = () => {
 
   // 2. 프로필 (Part 1: 데이터 지속성 강화)
   useEffect(() => {
+    viewRef.current = view;
+  }, [view]);
+
+  useEffect(() => {
     if (!user) return;
     const profileRef = doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'info');
     
@@ -362,7 +367,7 @@ const App = () => {
         } else {
           // 닉네임이 있으면 홈 화면으로 이동
           console.log('🏠 홈 화면으로 이동 (닉네임 있음:', data.nickname, ')');
-          if (view === 'login' || view === 'profile_setup' || !view) {
+          if (viewRef.current === 'login' || viewRef.current === 'profile_setup' || !viewRef.current) {
             setView('home');
           }
         }
@@ -398,13 +403,13 @@ const App = () => {
         // 닉네임 상태에 따른 화면 전환 (실시간 업데이트)
         if (!data.nickname || data.nickname.trim() === '') {
           // 닉네임이 없으면 프로필 설정 화면으로
-          if (view === 'home' || view === 'profile' || view === 'login') {
+          if (viewRef.current === 'home' || viewRef.current === 'profile' || viewRef.current === 'login') {
             console.log('📍 프로필 설정 화면으로 이동 (snapshot: 닉네임 없음)');
             setView('profile_setup');
           }
         } else {
           // 닉네임이 있으면 프로필 설정 화면에서 홈으로
-          if (view === 'profile_setup' || view === 'login') {
+          if (viewRef.current === 'profile_setup' || viewRef.current === 'login') {
             console.log('🏠 홈 화면으로 이동 (snapshot: 닉네임 있음:', data.nickname, ')');
             setView('home');
           }
@@ -412,7 +417,7 @@ const App = () => {
       } else {
         // 문서가 삭제된 경우 (드문 경우)
         console.warn('⚠️ 프로필 문서가 존재하지 않습니다.');
-        if (view !== 'profile_setup' && view !== 'login') {
+        if (viewRef.current !== 'profile_setup' && viewRef.current !== 'login') {
           setView('profile_setup');
         }
       }
