@@ -138,7 +138,7 @@ const App = () => {
       ? Math.max(0, userProfile.maxExp - (userProfile.exp || 0))
       : 100
   } : { level: 1, currentExp: 0, maxExp: 100, progress: 0, remainingExp: 100 };
-  
+
   const getTodayString = () => new Date().toISOString().split('T')[0];
   
   // 로컬 타임(KST) 기준으로 오늘 날짜를 YYYY-MM-DD 형식으로 반환
@@ -149,6 +149,14 @@ const App = () => {
     const day = String(now.getDate()).padStart(2, '0');
     return `${year}-${month}-${day}`;
   };
+
+  const todayDateKey = getTodayDateKey();
+  const dailyWriteCount = userProfile?.dailyWriteCount || 0;
+  const lastWriteDate = userProfile?.lastBookCreatedDate || null;
+  const remainingDailyWrites = Math.max(
+    0,
+    DAILY_WRITE_LIMIT - (lastWriteDate === todayDateKey ? dailyWriteCount : 0)
+  );
 
   // 인앱 브라우저 감지 함수
   const detectInAppBrowser = () => {
@@ -1968,6 +1976,10 @@ const App = () => {
           <div className="flex items-center gap-3">
             {userProfile && (
               <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1 bg-blue-50 text-blue-700 px-2 py-1 rounded-lg">
+                  <PenTool className="w-3.5 h-3.5" />
+                  <span className="text-xs font-bold">{remainingDailyWrites}</span>
+                </div>
                 <div className="flex items-center gap-1 bg-blue-50 px-2 py-1 rounded-lg">
                   <span className="text-red-600 font-black text-xs">↑</span>
                   <span className="text-xs font-black text-red-600">Lv.{levelInfo.level}</span>
