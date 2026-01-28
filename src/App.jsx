@@ -1,15 +1,15 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { 
   BookOpen, Coffee, Lightbulb, ChevronLeft, 
-  RefreshCw, Book, Calendar, List, ArrowRight, User, PenTool, Settings, Save,
-  Star, MessageCircle, Reply, Send, MoreHorizontal, Bookmark, Heart, Coins, Globe, Home, Edit2, Flag, X, Menu, Library, Share2, Vote, Megaphone, Bell, Trophy, TrendingUp, BarChart2, CheckCircle, HelpCircle, Smile, Zap, Brain, CloudSun, Ticket, Sparkles, LogOut, Lock, Droplets
+  RefreshCw, Book, Calendar, List, ArrowRight, User, PenTool, Save,
+  Star, MessageCircle, Reply, Send, MoreHorizontal, Bookmark, Heart, Globe, Home, Edit2, Flag, X, Library, Vote, Trophy, CheckCircle, HelpCircle, Smile, Zap, Brain, Sparkles, LogOut, Lock, Droplets
 } from 'lucide-react';
 import { 
   collection, query, onSnapshot, 
   doc, setDoc, getDoc, addDoc, deleteDoc, serverTimestamp, updateDoc, increment, where, getDocs, limit, orderBy, Timestamp
 } from 'firebase/firestore';
 import { 
-  signInAnonymously, signInWithCustomToken, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut, deleteUser
+  signInWithCustomToken, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut, deleteUser
 } from 'firebase/auth';
 import { httpsCallable } from 'firebase/functions';
 import { auth, db, functions } from './firebase';
@@ -37,23 +37,10 @@ const MAX_LEVEL = 99;
 const INK_MAX = 999;
 const INITIAL_INK = 25;
 const REWARD_INK = 25;
-const EXTRA_WRITE_INK_COST = 50;
+const EXTRA_WRITE_INK_COST = 5;
 const READ_INK_COST = 1;
-
-const getLevelInfo = (totalExp) => {
-  const safeExp = Number(totalExp) || 0;
-  if (safeExp === 0) return { level: 1, currentExp: 0, nextLevelExp: 100, progress: 0 };
-  let level = 1;
-  let expForCurrentLevel = 0;
-  let expForNextLevel = 100;
-  while (level < MAX_LEVEL) {
-    if (safeExp < expForNextLevel) break;
-    expForCurrentLevel = expForNextLevel;
-    expForNextLevel += Math.floor(100 * Math.pow(level + 1, 1.5));
-    level++;
-  }
-  return { level, currentExp: safeExp - expForCurrentLevel, nextLevelExp: expForNextLevel - expForCurrentLevel, progress: Math.min(100, Math.floor(((safeExp - expForCurrentLevel) / (expForNextLevel - expForCurrentLevel)) * 100)) };
-};
+const DAILY_WRITE_LIMIT = 2;
+const DAILY_FREE_WRITES = 1;
 
 const App = () => {
   const [view, setView] = useState('profile_setup'); 
@@ -298,6 +285,8 @@ const App = () => {
             lastSeriesGeneratedDate: '',
             lastReadDate: '',
             lastAttendanceDate: '',
+            dailyWriteCount: 0,
+            lastBookCreatedDate: null,
             lastNicknameChangeDate: null, // Part 2: 닉네임 변경 날짜 추적
             createdAt: serverTimestamp(),
             updatedAt: serverTimestamp()
@@ -336,6 +325,12 @@ const App = () => {
         }
         if (data.maxExp === undefined || data.maxExp === null) {
           needsUpdate.maxExp = 100;
+        }
+        if (data.dailyWriteCount === undefined || data.dailyWriteCount === null) {
+          needsUpdate.dailyWriteCount = 0;
+        }
+        if (data.lastBookCreatedDate === undefined) {
+          needsUpdate.lastBookCreatedDate = null;
         }
         if (data.lastNicknameChangeDate === undefined) {
           needsUpdate.lastNicknameChangeDate = null; // Part 2: 닉네임 변경 날짜 필드 추가
@@ -682,22 +677,33 @@ const App = () => {
     }
 
     try {
-      // 수정 1: 하루 1권 제한 체크 (lastBookCreatedDate 필드 사용)
+      // 수정 1: 하루 2회 제한 체크 (1회 무료 + 1회 잉크)
       const profileRefForCheck = doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'info');
       const profileSnapForCheck = await getDoc(profileRefForCheck);
       const todayDateKey = getTodayDateKey(); // YYYY-MM-DD 형식
       
       let lastBookCreatedDate = null;
+      let dailyWriteCount = 0;
       if (profileSnapForCheck.exists()) {
         const profileData = profileSnapForCheck.data();
         lastBookCreatedDate = profileData.lastBookCreatedDate; // 날짜 문자열 (YYYY-MM-DD)
+        dailyWriteCount = Number(profileData.dailyWriteCount || 0);
       }
       
-      // 오늘 이미 집필했는지 확인
-      const alreadyCreatedToday = lastBookCreatedDate === todayDateKey;
+      // 날짜가 바뀌면 일일 카운트 초기화
+      if (lastBookCreatedDate !== todayDateKey) {
+        dailyWriteCount = 0;
+      }
       
-      // 잉크를 사용하지 않고 이미 오늘 만들었으면 확인 모달 표시
-      if (!useInk && alreadyCreatedToday) {
+      // 하루 최대 집필 제한
+      if (dailyWriteCount >= DAILY_WRITE_LIMIT) {
+        setError('하루에 최대 2회까지만 집필할 수 있어요.');
+        setPendingBookData(null);
+        return;
+      }
+      
+      // 무료 집필 1회 이후에는 잉크 확인 모달 표시
+      if (!useInk && dailyWriteCount >= DAILY_FREE_WRITES) {
         setPendingBookData(bookData);
         setShowInkConfirmModal(true); // 추가 집필 확인 모달 재사용
         return;
@@ -834,10 +840,12 @@ const App = () => {
         // 수정 1: 집필 시에는 잉크만 보상하고, 경험치는 주지 않음 (잉크 소비 시에만 경험치 획득)
         // 수정 1: lastBookCreatedDate를 오늘 날짜 문자열로 저장
         const nextInk = Math.min(INK_MAX, (userProfile?.ink || 0) + rewardInk);
+        const nextDailyWriteCount = lastBookCreatedDate === todayDateKey ? dailyWriteCount + 1 : 1;
         const updateData = {
           bookCount: increment(1),
           ink: nextInk,
-          lastBookCreatedDate: todayDateKey // 수정 1: 하루 1권 제한용 날짜 문자열 (YYYY-MM-DD)
+          dailyWriteCount: nextDailyWriteCount,
+          lastBookCreatedDate: todayDateKey // 수정 1: 하루 2회 제한용 날짜 문자열 (YYYY-MM-DD)
         };
         
         await updateDoc(profileRef, updateData);
@@ -855,10 +863,14 @@ const App = () => {
             // 수정 1: 집필 시에는 잉크만 보상하고 경험치는 주지 않음
             // 수정 1: lastBookCreatedDate를 오늘 날짜 문자열로 저장
             const todayDateKey = getTodayDateKey();
+            const existingDate = profileSnap.data().lastBookCreatedDate;
+            const existingCount = Number(profileSnap.data().dailyWriteCount || 0);
+            const nextDailyWriteCount = existingDate === todayDateKey ? existingCount + 1 : 1;
             const updateData = {
               bookCount: (profileSnap.data().bookCount || 0) + 1,
               ink: Math.min(INK_MAX, (profileSnap.data().ink || 0) + rewardInk),
-              lastBookCreatedDate: todayDateKey // 수정 1: 하루 1권 제한용 날짜 문자열
+              dailyWriteCount: nextDailyWriteCount,
+              lastBookCreatedDate: todayDateKey // 수정 1: 하루 2회 제한용 날짜 문자열
             };
             
             await updateDoc(profileRef, updateData);
@@ -871,7 +883,8 @@ const App = () => {
               level: 1,
               exp: 0,  // 수정 3: 초기 경험치는 0 (잉크 소비 시에만 획득)
               maxExp: 100,
-              lastBookCreatedDate: todayDateKey // 수정 1: 하루 1권 제한용 날짜 문자열
+              dailyWriteCount: 1,
+              lastBookCreatedDate: todayDateKey // 수정 1: 하루 2회 제한용 날짜 문자열
             }, { merge: true });
           }
         } catch (fallbackErr) {
@@ -1380,6 +1393,7 @@ const App = () => {
         level: 1,
         exp: 0,  // 수정 3: 초기 경험치는 0 (잉크 소비 시에만 획득)
         maxExp: 100,
+        dailyWriteCount: 0,
         lastBookCreatedDate: null,  // 수정 1: 즉시 집필 가능하게 (날짜 문자열)
         updatedAt: serverTimestamp()
       });
@@ -2024,10 +2038,10 @@ const App = () => {
                     추가 집필
                   </h3>
                   <p className="text-sm text-slate-600">
-                    하루 무료 횟수를 다 썼습니다.
+                    오늘 무료 집필 1회를 사용했습니다.
                   </p>
                   <p className="text-sm text-slate-600 font-bold">
-                    <span className="text-orange-500">100 잉크</span>를 사용하여 추가로 집필하시겠습니까?
+                    <span className="text-orange-500">{EXTRA_WRITE_INK_COST} 잉크</span>를 사용하여 추가로 집필하시겠습니까?
                   </p>
                   <div className="pt-2">
                     <p className="text-xs text-slate-400">
@@ -2055,7 +2069,7 @@ const App = () => {
                     className="w-full bg-orange-500 text-white py-3 rounded-xl font-black hover:bg-orange-600 transition-colors flex items-center justify-center gap-2"
                   >
                     <Droplets className="w-4 h-4" />
-                    잉크 100 사용하고 집필
+                    잉크 {EXTRA_WRITE_INK_COST} 사용하고 집필
                   </button>
                 </div>
               </div>
@@ -2215,6 +2229,7 @@ const App = () => {
                 setSelectedBook={setSelectedBook}
                 error={error}
                 setError={setError}
+                deductInk={deductInk}
               />
             )}
             {/* Step 1: 서재 화면 */}

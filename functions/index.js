@@ -58,10 +58,39 @@ const NOVEL_GENRE_STYLES = [
   }
 ];
 
+const GENRE_SPECIFIC_INSTRUCTIONS = {
+  "로맨스": "남녀 주인공 간의 설레는 감정선과 티키타카(대화의 재미)에 집중하십시오. 복잡한 배경 묘사보다는 인물의 심리와 관계 변화를 중심으로 서술하고, 치명적인 매력이나 오해와 질투 요소를 적극 활용하십시오.",
+  "로맨스 판타지": "서양풍 귀족 사회를 배경으로, 화려한 드레스와 무도회 등의 시각적 요소를 강조하십시오. 남주인공은 권위적이고 차갑지만 여주인공에게만 다정한 '북부 대공' 스타일, 여주인공은 당차고 능력 있는 캐릭터로 묘사하십시오. 회귀/빙의/환생 요소가 있다면 이를 스토리의 핵심 동력으로 삼으십시오.",
+  "판타지": "검과 마법, 몬스터가 존재하는 세계관을 웅장하게 그리십시오. 주인공의 모험과 성장, 동료들과의 유대감을 강조하며, 전투 장면에서는 마법 주문이나 검술의 이펙트를 화려하고 박진감 넘치게 묘사하십시오.",
+  "현대 판타지": "현대 한국 사회를 배경으로 하되, '상태창(System)', '던전', '각성' 같은 게임적 요소를 적극 활용하십시오. 주인공이 특별한 능력으로 사회적 성공을 거두거나 적들을 압도하는 '사이다' 전개를 최우선으로 하십시오. 고구마 같은 답답한 전개는 피하십시오.",
+  "무협": "중원 무림을 배경으로 '구파일방', '마교' 등의 세력 다툼을 그리십시오. 문체는 약간의 고풍스러운 어조를 사용하고, 내공, 검기, 경공 등 무협 고유의 용어를 반드시 포함하여 무공 대결을 묘사하십시오. '협(의리)'과 '복수'의 정서를 강조하십시오.",
+  "미스터리/공포": "독자의 숨통을 조이는 긴장감(Suspense) 조성에 집중하십시오. 미지의 존재에 대한 공포, 좁혀오는 포위망, 끔찍한 묘사를 생생하게 하되, 주인공의 생존 본능과 절박함을 극대화하십시오.",
+  "SF": "미래 기술, 우주, AI가 일상화된 세계를 그리되, 기술이 가져온 인간의 변화나 디스토피아적 상황에서의 생존에 초점을 맞추십시오.",
+  "드라마": "인물 간의 갈등과 화해, 그리고 인간적인 고뇌를 깊이 있게 다루십시오. 자극적인 사건보다는 현실적인 문제(가족, 직장, 꿈)를 소재로 하여 독자의 공감을 이끌어내고 감동을 주는 서사를 만드십시오.",
+  "미스터리/추리": "논리적인 인과관계와 트릭, 복선 회수에 집중하십시오. 범인의 심리전이나 탐정의 추리 과정을 치밀하게 설계하고, 결말의 반전을 위해 정보를 제한적으로 제공하여 독자의 궁금증을 유발하십시오.",
+  "스릴러": "범죄, 음모, 추격전 등 긴박한 상황을 속도감 있는 문체로 서술하십시오. 심리적 압박감과 타임리밋 요소를 활용하여 독자가 책을 덮지 못하게 만드십시오.",
+  "역사": "철저한 시대적 고증과 당시의 생활상, 언어적 특징을 반영하여 현장감을 살리십시오. 역사의 거대한 흐름 속에 던져진 개인의 운명을 비장미 넘치게 혹은 담담하게 서술하십시오.",
+  "힐링": "자극적인 갈등을 최소화하고, 따뜻하고 편안한 분위기를 조성하십시오. 숲속의 오두막, 심야 식당 등 특정 장소의 감각적 묘사(향기, 소리, 날씨)를 통해 독자가 위로받는 느낌을 주십시오."
+};
+
+const NOVEL_MOOD_OPTIONS = {
+  webnovel: {
+    Action: ['사이다/먼치킨(압도적 힘)', '피폐/느와르(처절함)', '코믹/착각계(유쾌함)', '정통/성장형(감동)'],
+    Romance: ['달달/힐링(설렘)', '후회/집착(도파민)', '혐관/배틀(티키타카)', '사이다/복수(걸크러시)'],
+    Thriller: ['오컬트/기담(공포)', '슬래셔/고어(잔혹)', '두뇌전/심리(긴장감)']
+  },
+  novel: {
+    Drama: ['서정적/잔잔한', '현실적/사실주의', '비극적/애절한', '격정적/파란만장'],
+    Romance: ['담백한/현실연애', '클래식/멜로', '아련한/첫사랑'],
+    Genre: ['하드보일드/건조한', '정통 추리/논리적', '철학적/사색적']
+  }
+};
+
 const NONFICTION_BASE_GUIDE = [
   "[CRITICAL RULE] 출력된 content 내부에는 '## 제목', '### 발단', '**[전개]**', '### 결말' 등 그 어떤 마크다운 헤더나 섹션 구분자도 포함하지 마라. 오직 독자가 읽을 순수한 본문 텍스트만 출력하라.",
   "[CRITICAL RULE] 비소설은 '결론' 같은 소제목 없이 문맥으로 자연스럽게 마무리하라.",
   "당신은 해당 분야의 최고 전문가이자 권위자다.",
+  "입력된 키워드와 책 제목의 분위기/의도를 정확히 반영해 서술하라.",
   "50자 이내의 주제를 씨앗으로 삼아 깊이 있는 통찰을 제시하라.",
   "공백 포함 약 1,000자 내외로 핵심 메시지만 명확히 전달하라."
 ].join(" ");
@@ -70,6 +99,12 @@ const NONFICTION_CATEGORY_STYLES = {
   "essay": "개인적 경험에서 출발해 보편적 공감으로 확장하라. 문체는 부드럽고 서정적으로.",
   "self-help": "독자의 문제를 진단하고 구체적인 해결책(Action Item)을 제시하라.",
   "humanities": "철학적/인문학적 맥락을 제시하며 개념을 명확히 설명하라."
+};
+
+const NONFICTION_TONE_OPTIONS = {
+  essay: ['담백한/건조한', '감성적인/시적인', '유머러스한/위트있는', '친근한/구어체'],
+  'self-help': ['따뜻한 위로/격려', '강한 동기부여/독설', '논리적인/분석적인', '경험담 위주'],
+  humanities: ['질문을 던지는/사색적인', '날카로운 비판', '대화 형식/인터뷰', '쉬운 해설/스토리텔링']
 };
 
 function pickGenreGuide(genre) {
@@ -86,25 +121,100 @@ function pickNonfictionGuide(category) {
   return NONFICTION_CATEGORY_STYLES[category] || "논리적 흐름과 근거를 갖춘 깊이 있는 설명을 제공하라.";
 }
 
-function buildSystemPrompt({isNovel, category, genre, endingStyle}) {
+function pickGenreGuideline(genre) {
+  const key = (genre || "").toString().trim();
+  return GENRE_SPECIFIC_INSTRUCTIONS[key] || "장르에 맞는 흥미로운 이야기를 쓰세요.";
+}
+
+function normalizeNovelTrack(category, subCategory) {
+  if (category === "webnovel") return "webnovel";
+  if (category === "novel") return "novel";
+  if (category === "series") {
+    return (subCategory || "").toString().trim().toLowerCase() === "webnovel"
+      ? "webnovel"
+      : "novel";
+  }
+  return null;
+}
+
+function resolveNovelMoodGroup(track, genre) {
+  const genreName = (genre || "").toString().trim();
+  if (track === "webnovel") {
+    if (["판타지", "현대 판타지", "무협", "SF"].includes(genreName)) return "Action";
+    if (["로맨스", "로맨스 판타지"].includes(genreName)) return "Romance";
+    if (["미스터리/공포"].includes(genreName)) return "Thriller";
+  }
+  if (track === "novel") {
+    if (["드라마", "역사", "힐링"].includes(genreName)) return "Drama";
+    if (["로맨스"].includes(genreName)) return "Romance";
+    if (["미스터리/추리", "스릴러", "SF"].includes(genreName)) return "Genre";
+  }
+  return null;
+}
+
+function buildNovelMoodInstruction(category, subCategory, genre, selectedMood) {
+  const mood = (selectedMood || "").toString().trim();
+  if (!mood) {
+    return null;
+  }
+  const track = normalizeNovelTrack(category, subCategory);
+  if (!track) {
+    return null;
+  }
+  const group = resolveNovelMoodGroup(track, genre);
+  if (!group) {
+    return null;
+  }
+  const options = NOVEL_MOOD_OPTIONS[track]?.[group] || [];
+  if (options.length > 0 && !options.includes(mood)) {
+    return null;
+  }
+  return `[Style Guideline] 선택된 분위기 '${mood}'를 살려 문체와 전개 속도를 조절하라.`;
+}
+
+function buildNonfictionToneInstruction(category, selectedTone) {
+  const tone = (selectedTone || "").toString().trim();
+  if (!tone) {
+    return null;
+  }
+  const toneOptions = NONFICTION_TONE_OPTIONS[category] || [];
+  if (toneOptions.length > 0 && !toneOptions.includes(tone)) {
+    return null;
+  }
+
+  const categoryName = category === "essay"
+    ? "에세이"
+    : category === "self-help"
+      ? "자기계발"
+      : "철학";
+
+  return `당신은 ${categoryName} 작가입니다. 사용자가 선택한 키워드를 주제로 글을 쓰되, 반드시 '${tone}' 스타일을 유지하여 서술하십시오. 문장의 어미, 단어 선택, 분위기를 이 스타일에 맞춰야 합니다.`;
+}
+
+function buildSystemPrompt({isNovel, category, subCategory, genre, endingStyle, selectedTone, selectedMood}) {
   if (isNovel) {
     const endingGuide = endingStyle
       ? `결말은 반드시 '${endingStyle}' 형태로 끝내며 그 톤을 유지하라.`
       : "결말은 독자의 여운을 남기는 방식으로 완성하라.";
+    const moodGuide = buildNovelMoodInstruction(category, subCategory, genre, selectedMood);
     return [
+      `[Genre Guideline]: ${pickGenreGuideline(genre)}`,
+      moodGuide,
       "당신은 [장르] 분야의 최고 작가입니다.",
       NOVEL_BASE_GUIDE,
       pickGenreGuide(genre),
       "절정에서는 갈등을 최고조로 끌어올리며, 전체 분량의 약 30%를 할애한다.",
       endingGuide
-    ].join(" ");
+    ].filter(Boolean).join(" ");
   }
 
+  const toneInstruction = buildNonfictionToneInstruction(category, selectedTone);
   return [
     "당신은 비소설 분야의 최고 저자입니다.",
+    toneInstruction ? `[지침] ${toneInstruction}` : "[지침] 장르에 맞는 흥미로운 이야기를 쓰세요.",
     NONFICTION_BASE_GUIDE,
     pickNonfictionGuide(category)
-  ].join(" ");
+  ].filter(Boolean).join(" ");
 }
 
 function buildStepPrompt({topic, currentStep, previousStorySummary, isNovel, title}) {
@@ -227,7 +337,7 @@ exports.generateBookAI = onCall(
         throw new HttpsError("failed-precondition", "Gemini API 키가 설정되지 않았습니다.");
       }
 
-      const {category, subCategory, genre, keywords, isSeries, previousContext, endingStyle, title} = request.data;
+      const {category, subCategory, genre, keywords, isSeries, previousContext, endingStyle, title, selectedTone, selectedMood} = request.data;
 
       // 소설류 여부 확인
       const isNovel = category === "webnovel" || category === "novel" || category === "series";
@@ -237,8 +347,11 @@ exports.generateBookAI = onCall(
       const systemPrompt = buildSystemPrompt({
         isNovel,
         category,
+        subCategory,
         genre,
-        endingStyle
+        endingStyle,
+        selectedTone,
+        selectedMood
       });
 
       // 단계 정의

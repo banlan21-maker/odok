@@ -11,6 +11,7 @@
     "deploy": "npm run build && firebase deploy"
   },
   "dependencies": {
+    "browser-image-compression": "^2.0.2",
     "date-fns": "^4.1.0",
     "firebase": "^12.7.0",
     "lucide-react": "^0.561.0",

@@ -1,7 +1,11 @@
 // src/components/ProfileView.jsx
 // Part 2: 프로필 페이지 전면 리뉴얼 - Single View (100vh), 컴팩트한 레이아웃
 import React, { useState } from 'react';
-import { LogOut, Trophy, Droplets, Save, Trash2, AlertTriangle, X } from 'lucide-react';
+import imageCompression from 'browser-image-compression';
+import { LogOut, Trophy, Droplets, Save, Trash2, AlertTriangle, X, Camera } from 'lucide-react';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { db, storage } from '../firebase';
 
 // 수정 3: 앱 버전 관리
 const APP_VERSION = "v1.02";
@@ -29,6 +33,7 @@ const ProfileView = ({
   const [isCharging, setIsCharging] = useState(false);
   const [showChargeSuccess, setShowChargeSuccess] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
 
   const handleChargeInk = async () => {
     if (isCharging) return;
@@ -86,6 +91,38 @@ const ProfileView = ({
 
   const nicknameChangeInfo = getNicknameChangeInfo();
   const canChange = canChangeNickname();
+  const profileImageUrl = userProfile?.profileImageUrl || '';
+
+  const handleProfileImageChange = async (event) => {
+    const file = event.target.files?.[0];
+    if (!file || !user || !appId) return;
+
+    setIsUploadingImage(true);
+    try {
+      const compressedFile = await imageCompression(file, {
+        maxWidthOrHeight: 500,
+        maxSizeMB: 0.1,
+        useWebWorker: true,
+        fileType: 'image/webp'
+      });
+
+      const imageRef = ref(storage, `users/${user.uid}/profile_image.webp`);
+      await uploadBytes(imageRef, compressedFile, { contentType: 'image/webp' });
+      const downloadUrl = await getDownloadURL(imageRef);
+
+      const profileRef = doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'info');
+      await updateDoc(profileRef, {
+        profileImageUrl: downloadUrl,
+        updatedAt: serverTimestamp()
+      });
+    } catch (err) {
+      console.error('프로필 이미지 업로드 실패:', err);
+      if (setError) setError('프로필 사진 업로드에 실패했습니다.');
+    } finally {
+      setIsUploadingImage(false);
+      event.target.value = '';
+    }
+  };
 
   return (
     <div className="flex flex-col h-full bg-slate-50 -mx-5">
@@ -96,27 +133,63 @@ const ProfileView = ({
           {/* 1. 상단 정보: 레벨 & 경험치 바 */}
           {userProfile && (
             <div className="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm">
-              <div className="flex items-center justify-between mb-2">
-                <div>
-                  <span className="text-[10px] text-slate-400 font-bold">LEVEL</span>
-                  <div className="text-xl font-black text-slate-800 leading-none mt-0.5">
-                    Lv.{levelInfo.level}
+              <div className="flex items-stretch gap-4">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between mb-2">
+                    <div>
+                      <span className="text-[10px] text-slate-400 font-bold">LEVEL</span>
+                      <div className="text-xl font-black text-slate-800 leading-none mt-0.5">
+                        Lv.{levelInfo.level}
+                      </div>
+                    </div>
+                    <div className="text-xs font-bold text-orange-500">{levelInfo.progress}%</div>
+                  </div>
+                  <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden mb-1">
+                    <div 
+                      className="h-full bg-gradient-to-r from-orange-400 to-orange-600 rounded-full transition-all duration-500"
+                      style={{ width: `${levelInfo.progress}%` }}
+                    />
+                  </div>
+                  <div className="flex justify-between items-center text-[10px] text-slate-400">
+                    <span>
+                      다음 레벨까지 <span className="text-orange-600 font-black">{levelInfo.remainingExp} XP</span>
+                    </span>
+                    <span>{levelInfo.currentExp}/{levelInfo.maxExp} XP</span>
                   </div>
                 </div>
-                <div className="text-xs font-bold text-orange-500">{levelInfo.progress}%</div>
+                <div className="w-24 flex flex-col items-center justify-center gap-2 border-l border-slate-100 pl-4">
+                  <div className="w-16 h-16 rounded-full bg-slate-100 overflow-hidden flex items-center justify-center border border-slate-200">
+                    {profileImageUrl ? (
+                      <img
+                        src={profileImageUrl}
+                        alt="프로필 이미지"
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <Camera className="w-6 h-6 text-slate-400" />
+                    )}
+                  </div>
+                  <label className={`text-[10px] font-bold px-2 py-1 rounded-full border transition-colors cursor-pointer ${
+                    isUploadingImage
+                      ? 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed'
+                      : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+                  }`}>
+                    {isUploadingImage ? '업로드 중...' : '사진 변경'}
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={handleProfileImageChange}
+                      disabled={isUploadingImage}
+                    />
+                  </label>
+                </div>
               </div>
-              <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden mb-1">
-                <div 
-                  className="h-full bg-gradient-to-r from-orange-400 to-orange-600 rounded-full transition-all duration-500"
-                  style={{ width: `${levelInfo.progress}%` }}
-                />
-              </div>
-              <div className="flex justify-between items-center text-[10px] text-slate-400">
-                <span>
-                  다음 레벨까지 <span className="text-orange-600 font-black">{levelInfo.remainingExp} XP</span>
-                </span>
-                <span>{levelInfo.currentExp}/{levelInfo.maxExp} XP</span>
-              </div>
+              {isUploadingImage && (
+                <div className="mt-2 text-[10px] text-slate-400 font-bold">
+                  이미지 압축 및 업로드 중입니다...
+                </div>
+              )}
             </div>
           )}
 

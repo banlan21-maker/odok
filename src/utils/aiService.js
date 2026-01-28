@@ -15,6 +15,8 @@ import { functions } from '../firebase';
  * @param {string} options.previousContext - 이전 줄거리 (시리즈 연속 생성 시)
  * @param {string|null} options.endingStyle - 결말 스타일 (소설 전용)
  * @param {string|null} options.title - 사용자 입력 제목
+ * @param {string|null} options.selectedTone - 비소설 문체 선택값
+ * @param {string|null} options.selectedMood - 소설 분위기 선택값
  * @returns {Promise<{title: string, content: string, summary: string}>}
  */
 export const generateBook = async ({ 
@@ -25,7 +27,9 @@ export const generateBook = async ({
   isSeries,
   previousContext = null,
   endingStyle = null,
-  title = null
+  title = null,
+  selectedTone = null,
+  selectedMood = null
 }) => {
   try {
     const generateBookAI = httpsCallable(functions, 'generateBookAI', {
@@ -40,7 +44,9 @@ export const generateBook = async ({
       isSeries: isSeries || false,
       previousContext: previousContext || null,
       endingStyle: endingStyle || null,
-      title: title || null
+      title: title || null,
+      selectedTone: selectedTone || null,
+      selectedMood: selectedMood || null
     });
     
     const bookData = result.data;

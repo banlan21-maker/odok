@@ -3,42 +3,77 @@ import React, { useState, useEffect, useRef } from 'react';
 import { PenTool, RefreshCw, Book, Edit2, Lock } from 'lucide-react';
 import { generateBook } from '../utils/aiService';
 
-// 비문학 카테고리별 추천 주제 (Topic) - 레벨 요구사항 포함
-const recommendedTopics = {
-  essay: [
-    { text: "지친 하루의 위로", requiredLevel: 1 },
-    { text: "나를 찾아 떠나는 여행", requiredLevel: 1 },
-    { text: "새벽 감성", requiredLevel: 1 },
-    { text: "복잡한 인간관계", requiredLevel: 5 },
-    { text: "소확행", requiredLevel: 1 },
-    { text: "추억 회상", requiredLevel: 10 }
-  ],
-  'self-help': [
-    { text: "갓생 살기 루틴", requiredLevel: 1 },
-    { text: "부자 되는 마인드셋", requiredLevel: 1 },
-    { text: "말하기의 기술", requiredLevel: 1 },
-    { text: "강철 멘탈 만들기", requiredLevel: 5 },
-    { text: "효율적인 시간관리", requiredLevel: 1 },
-    { text: "습관 형성하기", requiredLevel: 10 }
-  ],
-  humanities: [
-    { text: "삶의 의미란 무엇인가", requiredLevel: 1 },
-    { text: "역사 속 그날의 진실", requiredLevel: 1 },
-    { text: "내 마음 심리학", requiredLevel: 1 },
-    { text: "예술과 낭만", requiredLevel: 5 },
-    { text: "고전의 지혜", requiredLevel: 10 },
-    { text: "인간 이해하기", requiredLevel: 1 }
-  ]
+// 비문학 키워드 은행
+const ESSAY_KEYWORDS = [
+  "새벽", "해질녘", "첫눈", "장마", "무더위", "늦가을", "봄바람", "크리스마스", "12월31일", "월요일아침", "주말오후", "한여름밤", "개기일식", "생일", "기념일",
+  "편의점", "골목길", "옥상", "지하철", "버스창가", "빈방", "놀이터", "도서관", "목욕탕", "세탁소", "공항", "기차역", "바다", "숲길", "카페구석", "헌책방", "시장", "포장마차", "엘리베이터",
+  "어머니", "아버지", "할머니", "첫사랑", "짝사랑", "오랜친구", "직장동료", "반려동물", "길고양이", "이방인", "선생님", "이웃", "나자신", "헤어진연인",
+  "오래된사진", "일기장", "라디오", "우산", "자전거", "운동화", "손편지", "향수", "커피", "라면", "소주한잔", "담배", "꽃다발", "선인장", "가로등", "이어폰", "통장", "여권",
+  "그리움", "후회", "위로", "권태", "설렘", "불안", "안도감", "고독", "자유", "퇴사", "합격", "이별", "만남", "용기", "거짓말", "비밀", "약속", "기다림", "꿈", "멍때리기",
+  "빗소리", "풀내음", "밥냄새", "사이렌소리", "피아노선율", "차가운공기", "따뜻한이불", "매미소리", "낙엽밟는소리"
+];
+
+const SELF_HELP_KEYWORDS = [
+  "미라클모닝", "새벽기상", "독서", "글쓰기", "운동", "명상", "찬물샤워", "일기쓰기", "확언", "시각화", "정리정돈", "메모", "시간관리", "우선순위", "체크리스트",
+  "자존감", "회복탄력성", "그릿(Grit)", "긍정", "감사", "몰입", "끈기", "용기", "성실", "절제", "겸손", "자신감", "책임감", "주도성", "완벽주의버리기",
+  "리더십", "팔로워십", "협상", "설득", "스피치", "기획력", "마케팅", "퍼스널브랜딩", "네트워킹", "멘토링", "벤치마킹", "사이드프로젝트", "창업", "승진", "연봉협상",
+  "저축", "투자", "주식", "부동산", "소비통제", "가계부", "경제적자유", "파이어족", "부의추월차선", "시드머니", "복리의마법", "자산배분",
+  "번아웃", "슬럼프", "실패", "거절", "비판", "스트레스", "불면증", "미루기", "작심삼일", "열등감", "질투", "무기력", "트라우마", "디지털디톡스",
+  "미니멀라이프", "워라밸", "노마드", "N잡러", "평생학습", "외국어공부", "자격증", "취미", "다이어트", "건강관리"
+];
+
+const PHILOSOPHY_KEYWORDS = [
+  "나는누구인가", "자아", "무의식", "욕망", "본능", "이성", "감정", "기억", "망각", "꿈", "육체", "영혼", "죽음", "노화", "탄생", "성장", "천재", "광기",
+  "타인", "사랑", "우정", "가족", "공동체", "고독", "소외", "혐오", "차별", "평등", "정의", "법", "권력", "정치", "전쟁", "평화", "자본주의", "노동", "소유",
+  "행복", "불행", "자유", "운명", "우연", "필연", "진실", "거짓", "선과악", "도덕", "윤리", "종교", "신", "구원", "믿음", "의심", "희망", "절망",
+  "시간", "영원", "순간", "과거", "미래", "현재", "역사", "우주", "자연", "환경", "기술", "AI", "인공지능", "가상현실", "진화", "멸종",
+  "아름다움", "추함", "예술", "창조", "파괴", "영감", "모방", "오리지널리티", "취향", "유행", "고전", "낭만", "허무", "부조리", "침묵", "언어"
+];
+
+const NONFICTION_KEYWORD_BANKS = {
+  essay: ESSAY_KEYWORDS,
+  'self-help': SELF_HELP_KEYWORDS,
+  humanities: PHILOSOPHY_KEYWORDS
 };
 
-// 소설류 장르 (웹소설/소설/시리즈 공통)
-const novelGenres = [
+const NONFICTION_TONE_OPTIONS = {
+  essay: ['담백한/건조한', '감성적인/시적인', '유머러스한/위트있는', '친근한/구어체'],
+  'self-help': ['따뜻한 위로/격려', '강한 동기부여/독설', '논리적인/분석적인', '경험담 위주'],
+  humanities: ['질문을 던지는/사색적인', '날카로운 비판', '대화 형식/인터뷰', '쉬운 해설/스토리텔링']
+};
+
+const NOVEL_MOOD_OPTIONS = {
+  webnovel: {
+    Action: ['사이다/먼치킨(압도적 힘)', '피폐/느와르(처절함)', '코믹/착각계(유쾌함)', '정통/성장형(감동)'],
+    Romance: ['달달/힐링(설렘)', '후회/집착(도파민)', '혐관/배틀(티키타카)', '사이다/복수(걸크러시)'],
+    Thriller: ['오컬트/기담(공포)', '슬래셔/고어(잔혹)', '두뇌전/심리(긴장감)']
+  },
+  novel: {
+    Drama: ['서정적/잔잔한', '현실적/사실주의', '비극적/애절한', '격정적/파란만장'],
+    Romance: ['담백한/현실연애', '클래식/멜로', '아련한/첫사랑'],
+    Genre: ['하드보일드/건조한', '정통 추리/논리적', '철학적/사색적']
+  }
+};
+
+// 소설류 장르 (웹소설/소설/시리즈-웹소설형/시리즈-소설형)
+const webnovelGenres = [
   { id: 'romance', name: '로맨스' },
+  { id: 'romance-fantasy', name: '로맨스 판타지' },
   { id: 'fantasy', name: '판타지' },
-  { id: 'mystery', name: '미스터리' },
+  { id: 'modern-fantasy', name: '현대 판타지' },
+  { id: 'wuxia', name: '무협' },
+  { id: 'mystery-horror', name: '미스터리/공포' },
+  { id: 'sf', name: 'SF' }
+];
+
+const novelGenres = [
   { id: 'drama', name: '드라마' },
+  { id: 'romance', name: '로맨스' },
+  { id: 'mystery', name: '미스터리/추리' },
   { id: 'sf', name: 'SF' },
-  { id: 'thriller', name: '스릴러' }
+  { id: 'thriller', name: '스릴러' },
+  { id: 'history', name: '역사' },
+  { id: 'healing', name: '힐링' }
 ];
 
 // 소설류 추천 키워드
@@ -65,7 +100,7 @@ const endingStyles = [
   '수미상관 (처음과 끝이 연결됨)'
 ];
 
-const WriteView = ({ user, userProfile, onBookGenerated, slotStatus, setView, setSelectedBook, error, setError }) => {
+const WriteView = ({ user, userProfile, onBookGenerated, slotStatus, setView, setSelectedBook, error, setError, deductInk }) => {
   // 메인 카테고리 목록 (6개)
   const categories = [
     { id: 'webnovel', name: '웹소설', icon: '📱', isNovel: true, isSingle: true },
@@ -83,15 +118,106 @@ const WriteView = ({ user, userProfile, onBookGenerated, slotStatus, setView, se
   const [keywords, setKeywords] = useState(''); // 소설류 키워드
   const [bookTitle, setBookTitle] = useState(''); // 사용자 입력 제목
   const [endingStyle, setEndingStyle] = useState(''); // 소설 결말 스타일
+  const [selectedTone, setSelectedTone] = useState(''); // 비문학 문체
+  const [selectedMood, setSelectedMood] = useState(''); // 소설 분위기
   const [isCustomInput, setIsCustomInput] = useState(false); // 직접 입력 모드
   const [isGenerating, setIsGenerating] = useState(false);
+  const [nonfictionTopics, setNonfictionTopics] = useState([]);
+  const [isRefreshingKeywords, setIsRefreshingKeywords] = useState(false);
   const cancelRequestedRef = useRef(false);
   const [localError, setLocalError] = useState(null);
 
   const displayError = error || localError;
   
-  // 유저 레벨 변수 정의 (레벨 잠금 로직용)
-  const userLevel = userProfile?.level || 1;
+  const getTodayKey = () => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  const hashSeed = (value) => {
+    let hash = 0;
+    for (let i = 0; i < value.length; i++) {
+      hash = (hash << 5) - hash + value.charCodeAt(i);
+      hash |= 0;
+    }
+    return Math.abs(hash);
+  };
+
+  const seededRandom = (seed) => {
+    let state = seed;
+    return () => {
+      state = (state * 1664525 + 1013904223) % 4294967296;
+      return state / 4294967296;
+    };
+  };
+
+  const pickKeywords = (bank, count, seedKey) => {
+    const list = Array.isArray(bank) ? [...bank] : [];
+    const rand = seedKey ? seededRandom(hashSeed(seedKey)) : Math.random;
+    for (let i = list.length - 1; i > 0; i--) {
+      const j = Math.floor(rand() * (i + 1));
+      [list[i], list[j]] = [list[j], list[i]];
+    }
+    return list.slice(0, count);
+  };
+
+  const getDailyKeywords = (categoryId) => {
+    const bank = NONFICTION_KEYWORD_BANKS[categoryId] || [];
+    return pickKeywords(bank, 10, `${categoryId}-${getTodayKey()}`);
+  };
+
+  const getToneOptions = (categoryId) => {
+    return NONFICTION_TONE_OPTIONS[categoryId] || [];
+  };
+
+  const getMoodOptions = () => {
+    if (!selectedCategory || !selectedGenre) return [];
+    const isWebNovel = selectedCategory.id === 'webnovel'
+      || (selectedCategory.id === 'series' && seriesSubType?.id === 'webnovel');
+    const isGeneralNovel = selectedCategory.id === 'novel'
+      || (selectedCategory.id === 'series' && seriesSubType?.id === 'novel');
+
+    if (isWebNovel) {
+      if (['판타지', '현대 판타지', '무협', 'SF'].includes(selectedGenre.name)) {
+        return NOVEL_MOOD_OPTIONS.webnovel.Action;
+      }
+      if (['로맨스', '로맨스 판타지'].includes(selectedGenre.name)) {
+        return NOVEL_MOOD_OPTIONS.webnovel.Romance;
+      }
+      if (['미스터리/공포'].includes(selectedGenre.name)) {
+        return NOVEL_MOOD_OPTIONS.webnovel.Thriller;
+      }
+    }
+
+    if (isGeneralNovel) {
+      if (['드라마', '역사', '힐링'].includes(selectedGenre.name)) {
+        return NOVEL_MOOD_OPTIONS.novel.Drama;
+      }
+      if (['로맨스'].includes(selectedGenre.name)) {
+        return NOVEL_MOOD_OPTIONS.novel.Romance;
+      }
+      if (['미스터리/추리', '스릴러', 'SF'].includes(selectedGenre.name)) {
+        return NOVEL_MOOD_OPTIONS.novel.Genre;
+      }
+    }
+
+    return [];
+  };
+
+  const getAvailableNovelGenres = () => {
+    if (!selectedCategory) return [];
+    if (selectedCategory.id === 'webnovel') return webnovelGenres;
+    if (selectedCategory.id === 'novel') return novelGenres;
+    if (selectedCategory.id === 'series') {
+      if (seriesSubType?.id === 'webnovel') return webnovelGenres;
+      if (seriesSubType?.id === 'novel') return novelGenres;
+      return [];
+    }
+    return [];
+  };
 
   // 슬롯 상태 확인 (시리즈는 웹소설형/소설형 분리)
   const getSlotStatus = (categoryId, subCategoryId = null) => {
@@ -149,46 +275,34 @@ const WriteView = ({ user, userProfile, onBookGenerated, slotStatus, setView, se
     setKeywords('');
     setBookTitle('');
     setEndingStyle('');
+    setSelectedTone('');
+    setSelectedMood('');
     setIsCustomInput(false);
+    setNonfictionTopics([]);
     setLocalError(null);
     if (setError) setError(null);
   };
 
+  useEffect(() => {
+    if (selectedCategory && !selectedCategory.isNovel) {
+      setNonfictionTopics(getDailyKeywords(selectedCategory.id));
+    } else {
+      setNonfictionTopics([]);
+    }
+  }, [selectedCategory]);
+
   // 비문학 주제 선택
-  const handleTopicSelect = (topicObj) => {
+  const handleTopicSelect = (topicText) => {
     // 안전성 체크
     if (!selectedCategory) {
       console.error('selectedCategory가 없습니다.');
       return;
     }
-    
-    // topicObj 안전 처리
-    let topicText = '';
-    let requiredLevel = 1;
-    
-    if (typeof topicObj === 'string') {
-      topicText = topicObj;
-    } else if (topicObj && typeof topicObj === 'object') {
-      topicText = topicObj.text || '';
-      requiredLevel = topicObj.requiredLevel || 1;
-    } else {
-      console.error('유효하지 않은 topicObj:', topicObj);
-      setLocalError('주제 선택에 오류가 발생했습니다.');
-      if (setError) setError('주제 선택에 오류가 발생했습니다.');
-      return;
-    }
-    
-    if (!topicText) {
+
+    if (!topicText || typeof topicText !== 'string') {
       console.error('topicText가 비어있습니다.');
       setLocalError('주제를 선택해주세요.');
       if (setError) setError('주제를 선택해주세요.');
-      return;
-    }
-
-    // 레벨 체크
-    if (userLevel < requiredLevel) {
-      setLocalError(`레벨 ${requiredLevel} 달성 시 열립니다!`);
-      if (setError) setError(`레벨 ${requiredLevel} 달성 시 열립니다!`);
       return;
     }
 
@@ -197,9 +311,48 @@ const WriteView = ({ user, userProfile, onBookGenerated, slotStatus, setView, se
     if (setError) setError(null);
   };
 
+  const handleRefreshKeywords = async () => {
+    if (!selectedCategory || selectedCategory.isNovel) return;
+    if (!user) {
+      setLocalError('로그인 후 사용할 수 있어요.');
+      if (setError) setError('로그인 후 사용할 수 있어요.');
+      return;
+    }
+
+    const currentInk = userProfile?.ink || 0;
+    if (currentInk < 1) {
+      setLocalError('잉크가 부족합니다! 💧 잉크를 충전해주세요.');
+      if (setError) setError('잉크가 부족합니다! 💧 잉크를 충전해주세요.');
+      return;
+    }
+
+    if (typeof deductInk !== 'function') {
+      setLocalError('잉크 차감 기능을 사용할 수 없습니다.');
+      if (setError) setError('잉크 차감 기능을 사용할 수 없습니다.');
+      return;
+    }
+
+    setIsRefreshingKeywords(true);
+    try {
+      const success = await deductInk(1);
+      if (!success) {
+        setLocalError('잉크 차감에 실패했습니다. 다시 시도해주세요.');
+        if (setError) setError('잉크 차감에 실패했습니다. 다시 시도해주세요.');
+        return;
+      }
+
+      const bank = NONFICTION_KEYWORD_BANKS[selectedCategory.id] || [];
+      setNonfictionTopics(pickKeywords(bank, 10));
+      setSelectedTopic(null);
+      setBookTitle('');
+    } finally {
+      setIsRefreshingKeywords(false);
+    }
+  };
+
   // 비문학 생성 핸들러
   const handleNonfictionGenerate = async () => {
-    if (!selectedCategory || selectedCategory.isNovel || !selectedTopic || !bookTitle.trim() || isGenerating) {
+    if (!selectedCategory || selectedCategory.isNovel || !selectedTopic || !bookTitle.trim() || !selectedTone || isGenerating) {
       return;
     }
 
@@ -224,7 +377,8 @@ const WriteView = ({ user, userProfile, onBookGenerated, slotStatus, setView, se
         genre: null,
         keywords: selectedTopic,
         isSeries: false,
-        title: bookTitle.trim()
+        title: bookTitle.trim(),
+        selectedTone: selectedTone
       });
 
       if (cancelRequestedRef.current) return;
@@ -268,7 +422,7 @@ const WriteView = ({ user, userProfile, onBookGenerated, slotStatus, setView, se
 
   // 소설류 생성 핸들러
   const handleNovelGenerate = async () => {
-    if (!selectedCategory || !selectedGenre || !keywords.trim() || !bookTitle.trim() || isGenerating) {
+    if (!selectedCategory || !selectedGenre || !keywords.trim() || !bookTitle.trim() || !selectedMood || isGenerating) {
       return;
     }
 
@@ -302,7 +456,8 @@ const WriteView = ({ user, userProfile, onBookGenerated, slotStatus, setView, se
         keywords: keywords.trim(),
         isSeries: selectedCategory.id === 'series',
         endingStyle: endingStyleToSend,
-        title: bookTitle.trim()
+        title: bookTitle.trim(),
+        selectedMood: selectedMood
       });
 
       if (cancelRequestedRef.current) return;
@@ -450,47 +605,42 @@ const WriteView = ({ user, userProfile, onBookGenerated, slotStatus, setView, se
           {!selectedCategory.isNovel && (
             <>
               <div className="space-y-3">
-                <h3 className="text-base font-black text-slate-800">
-                  어떤 이야기를 쓰고 싶으신가요?
-                </h3>
+                <div className="flex items-center justify-between gap-2">
+                  <h3 className="text-base font-black text-slate-800">
+                    어떤 이야기를 쓰고 싶으신가요?
+                  </h3>
+                  <button
+                    onClick={handleRefreshKeywords}
+                    disabled={isRefreshingKeywords || isGenerating || !isSlotAvailable(selectedCategory.id)}
+                    className={`px-3 py-1.5 rounded-full text-xs font-black border transition-colors ${
+                      isRefreshingKeywords || isGenerating || !isSlotAvailable(selectedCategory.id)
+                        ? 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed'
+                        : 'bg-white text-orange-600 border-orange-200 hover:bg-orange-50'
+                    }`}
+                  >
+                    {isRefreshingKeywords ? '새로고침 중...' : '키워드 새로고침 (잉크 1)'}
+                  </button>
+                </div>
                 <div className="flex flex-wrap gap-2">
-                  {recommendedTopics[selectedCategory.id]?.map((topicObj, index) => {
-                    const topicText = typeof topicObj === 'string' ? topicObj : topicObj.text;
-                    const requiredLevel = typeof topicObj === 'object' ? topicObj.requiredLevel : 1;
-                    const isLocked = userLevel < requiredLevel;
+                  {nonfictionTopics.map((topicText, index) => {
                     const isSelected = selectedTopic === topicText;
                     
                     return (
                       <button
                         key={index}
                         onClick={() => {
-                          if (isLocked) {
-                            setLocalError(`레벨 ${requiredLevel} 달성 시 열립니다!`);
-                            if (setError) setError(`레벨 ${requiredLevel} 달성 시 열립니다!`);
-                            return;
-                          }
-                          handleTopicSelect(topicObj);
+                          handleTopicSelect(topicText);
                         }}
-                        disabled={isGenerating || !isSlotAvailable(selectedCategory.id) || isLocked}
+                        disabled={isGenerating || !isSlotAvailable(selectedCategory.id)}
                         className={`px-4 py-3 rounded-full text-sm font-bold transition-all relative ${
-                          isGenerating || !isSlotAvailable(selectedCategory.id) || isLocked
-                            ? 'bg-slate-100 text-slate-400 cursor-not-allowed grayscale'
+                          isGenerating || !isSlotAvailable(selectedCategory.id)
+                            ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
                             : isSelected
                             ? 'bg-orange-500 text-white shadow-md'
                             : 'bg-slate-100 text-slate-600 hover:bg-slate-200 active:scale-95'
                         }`}
                       >
-                        {isLocked && (
-                          <div className="absolute -top-1 -right-1">
-                            <Lock className="w-4 h-4 text-slate-400" />
-                          </div>
-                        )}
-                        <span className={isLocked ? 'opacity-60' : ''}>{topicText}</span>
-                        {isLocked && (
-                          <span className="text-[10px] text-slate-400 block mt-0.5">
-                            Lv.{requiredLevel} 필요
-                          </span>
-                        )}
+                        <span>{topicText}</span>
                         {isGenerating && isSelected && (
                           <RefreshCw className="w-4 h-4 inline-block ml-2 animate-spin" />
                         )}
@@ -517,6 +667,25 @@ const WriteView = ({ user, userProfile, onBookGenerated, slotStatus, setView, se
                       {bookTitle.length}/15
                     </div>
                   </div>
+                </div>
+              )}
+              {selectedTopic && (
+                <div className="space-y-2">
+                  <label className="text-sm font-bold text-slate-700">
+                    스타일 선택 <span className="text-orange-500">*</span>
+                  </label>
+                  <select
+                    value={selectedTone}
+                    onChange={(e) => setSelectedTone(e.target.value)}
+                    className="w-full bg-slate-50 border-2 border-slate-200 rounded-xl py-3 px-4 text-sm focus:border-orange-500 focus:bg-white outline-none transition-colors"
+                  >
+                    <option value="">스타일을 선택하세요</option>
+                    {getToneOptions(selectedCategory.id).map((tone) => (
+                      <option key={tone} value={tone}>
+                        {tone}
+                      </option>
+                    ))}
+                  </select>
                 </div>
               )}
               {canGenerateNonfiction && (
@@ -572,6 +741,8 @@ const WriteView = ({ user, userProfile, onBookGenerated, slotStatus, setView, se
                               return;
                             }
                             setSeriesSubType(subType);
+                            setSelectedGenre(null);
+                            setSelectedMood('');
                           }}
                           disabled={!isSlotAvailableForSubType}
                           className={`py-3 rounded-xl font-bold text-sm transition-all relative ${
@@ -607,10 +778,13 @@ const WriteView = ({ user, userProfile, onBookGenerated, slotStatus, setView, se
                     장르 <span className="text-orange-500">*</span>
                   </label>
                   <div className="grid grid-cols-2 gap-2">
-                    {novelGenres.map((genre) => (
+                    {getAvailableNovelGenres().map((genre) => (
                       <button
                         key={genre.id}
-                        onClick={() => setSelectedGenre(genre)}
+                        onClick={() => {
+                          setSelectedGenre(genre);
+                          setSelectedMood('');
+                        }}
                         className={`py-2 px-3 rounded-xl font-bold text-sm transition-all ${
                           selectedGenre?.id === genre.id
                             ? 'bg-orange-500 text-white'
@@ -623,6 +797,27 @@ const WriteView = ({ user, userProfile, onBookGenerated, slotStatus, setView, se
                   </div>
                 </div>
               ) : null}
+
+              {/* 분위기 선택 */}
+              {selectedGenre && (
+                <div className="space-y-2">
+                  <label className="text-sm font-bold text-slate-700">
+                    분위기 <span className="text-orange-500">*</span>
+                  </label>
+                  <select
+                    value={selectedMood}
+                    onChange={(e) => setSelectedMood(e.target.value)}
+                    className="w-full bg-slate-50 border-2 border-slate-200 rounded-xl py-3 px-4 text-sm focus:border-orange-500 focus:bg-white outline-none transition-colors"
+                  >
+                    <option value="">분위기를 선택하세요</option>
+                    {getMoodOptions().map((mood) => (
+                      <option key={mood} value={mood}>
+                        {mood}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
 
               {/* 책 제목 */}
               {selectedGenre && (
