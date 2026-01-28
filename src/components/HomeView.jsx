@@ -48,7 +48,7 @@ const HomeView = ({
   ];
   const [currentBannerIndex, setCurrentBannerIndex] = useState(0);
   const banners = notices.length > 0 
-    ? notices.map(n => ({ id: n.id, title: n.title, subtitle: n.body }))
+    ? notices.map(n => ({ id: n.id, title: n.title, subtitle: n.content }))
     : mockBanners;
 
   // 배너 자동 슬라이드
@@ -77,7 +77,10 @@ const HomeView = ({
               하루 5분!{'\n'}이야기가 맛있어지는 시간
             </h1>
           </div>
-          <button className="p-2 rounded-full hover:bg-slate-100 transition-colors">
+          <button
+            onClick={() => setView('notice_list')}
+            className="p-2 rounded-full hover:bg-slate-100 transition-colors"
+          >
             <Bell className="w-5 h-5 text-slate-400" />
           </button>
         </div>

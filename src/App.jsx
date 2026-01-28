@@ -75,6 +75,11 @@ const App = () => {
   const [favorites, setFavorites] = useState([]);
   const [bookFavorites, setBookFavorites] = useState([]);
   const [notices, setNotices] = useState([]);
+  const [selectedNotice, setSelectedNotice] = useState(null);
+  const [isNoticeEditorOpen, setIsNoticeEditorOpen] = useState(false);
+  const [noticeTitle, setNoticeTitle] = useState('');
+  const [noticeContent, setNoticeContent] = useState('');
+  const [isSavingNotice, setIsSavingNotice] = useState(false);
   const [ratings, setRatings] = useState([]);
   const [comments, setComments] = useState([]);
   const [readHistory, setReadHistory] = useState([]); 
@@ -129,6 +134,7 @@ const App = () => {
   
   const readingStartTime = useRef(null);
   const t = (T && T[language]) ? T[language] : T['ko']; 
+  const isNoticeAdmin = user?.email === 'banlan21@gmail.com';
   
   // 레벨 정보 계산 (새로운 필드 구조 사용)
   const levelInfo = userProfile ? {
@@ -292,6 +298,20 @@ const App = () => {
   useEffect(() => {
     viewRef.current = view;
   }, [view]);
+
+  useEffect(() => {
+    if (view === 'notice_list') {
+      window.history.replaceState(window.history.state, '', '/notice');
+    } else if (window.location.pathname === '/notice') {
+      window.history.replaceState(window.history.state, '', '/');
+    }
+  }, [view]);
+
+  useEffect(() => {
+    if (window.location.pathname === '/notice' && user && userProfile?.nickname) {
+      setView('notice_list');
+    }
+  }, [user, userProfile]);
 
   useEffect(() => {
     if (!user) return;
@@ -1153,6 +1173,17 @@ const App = () => {
 
   // 3. 데이터 Fetch
   useEffect(() => {
+    const noticesRef = query(
+      collection(db, 'notices'),
+      orderBy('createdAt', 'desc')
+    );
+    const unsubNotices = onSnapshot(noticesRef, (snap) => {
+      setNotices(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    });
+    return () => unsubNotices();
+  }, []);
+
+  useEffect(() => {
     if (!user) return;
     const favRef = collection(db, 'artifacts', appId, 'public', 'data', 'favorites');
     const unsubFav = onSnapshot(favRef, (snap) => setFavorites(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
@@ -1167,8 +1198,6 @@ const App = () => {
     const unsubRatings = onSnapshot(ratingsRef, (snap) => setRatings(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
     const votesRef = collection(db, 'artifacts', appId, 'public', 'data', 'series_votes');
     const unsubVotes = onSnapshot(votesRef, (snap) => setSeriesVotes(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
-    const noticesRef = collection(db, 'artifacts', appId, 'public', 'data', 'notices');
-    const unsubNotices = onSnapshot(noticesRef, (snap) => setNotices(snap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a,b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0))));
     const unlockedRef = collection(db, 'artifacts', appId, 'users', user.uid, 'unlocked_stories');
     const unsubUnlocked = onSnapshot(unlockedRef, (snap) => setUnlockedStories(snap.docs.map(d => d.id)));
     const readHistoryRef = collection(db, 'artifacts', appId, 'users', user.uid, 'read_history');
@@ -1179,7 +1208,7 @@ const App = () => {
         stats.sort((a, b) => b.date.localeCompare(a.date));
         setDailyStats(stats.slice(0, 7).reverse());
     });
-    return () => { unsubFav(); unsubBookFav(); unsubStories(); unsubRatings(); unsubVotes(); unsubNotices(); unsubUnlocked(); unsubRead(); unsubStats(); };
+    return () => { unsubFav(); unsubBookFav(); unsubStories(); unsubRatings(); unsubVotes(); unsubUnlocked(); unsubRead(); unsubStats(); };
   }, [user]);
 
   // ⭐️ 댓글 가져오기 + 정렬 로직 강화
@@ -1447,6 +1476,45 @@ const App = () => {
       await signOut(auth);
       setView('profile_setup');
     } catch (e) {}
+  };
+
+  const formatNoticeDate = (createdAt) => {
+    const date = createdAt?.toDate?.()
+      || (createdAt?.seconds ? new Date(createdAt.seconds * 1000) : null);
+    return date ? format(date, 'yyyy.MM.dd') : '';
+  };
+
+  const openNoticeEditor = () => {
+    setNoticeTitle('');
+    setNoticeContent('');
+    setIsNoticeEditorOpen(true);
+  };
+
+  const saveNotice = async () => {
+    if (!isNoticeAdmin || !user) return;
+    const title = noticeTitle.trim();
+    const content = noticeContent.trim();
+    if (!title || !content) {
+      alert('제목과 내용을 모두 입력해주세요.');
+      return;
+    }
+    setIsSavingNotice(true);
+    try {
+      await addDoc(collection(db, 'notices'), {
+        title,
+        content,
+        author: user.email || 'admin',
+        createdAt: serverTimestamp()
+      });
+      setIsNoticeEditorOpen(false);
+      setNoticeTitle('');
+      setNoticeContent('');
+    } catch (err) {
+      console.error('공지사항 저장 실패:', err);
+      alert('공지사항 저장에 실패했습니다. 다시 시도해주세요.');
+    } finally {
+      setIsSavingNotice(false);
+    }
   };
   
   // 수정 2: 개발용 원클릭 리셋 함수 (유저 데이터 초기화)
@@ -2149,6 +2217,81 @@ const App = () => {
           )}
           {isUnlockModalOpen && <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60"><div className="bg-white p-6 rounded-2xl w-full max-w-sm"><h3 className="font-bold mb-3">{t.unlock_title}</h3><div className="space-y-2"><button onClick={()=>processUnlock('free')} className="w-full bg-orange-500 text-white py-3 rounded-xl font-bold">{t.unlock_btn_free}</button><button onClick={()=>processUnlock('point')} className="w-full bg-slate-800 text-white py-3 rounded-xl font-bold">{t.unlock_btn_paid}</button><button onClick={()=>setIsUnlockModalOpen(false)} className="w-full bg-slate-100 py-3 rounded-xl font-bold">{t.cancel}</button></div></div></div>}
           {showAttendanceModal && <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60"><div className="bg-white p-8 rounded-2xl text-center"><h3 className="text-xl font-black mb-1">{t.attendance_check}</h3><p className="text-slate-500 font-bold mb-4">{t.attendance_reward}</p><button onClick={()=>setShowAttendanceModal(false)} className="bg-slate-900 text-white px-8 py-2 rounded-xl font-bold">OK</button></div></div>}
+          {selectedNotice && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-6">
+              <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl space-y-4 animate-in fade-in zoom-in-95 duration-200">
+                <div className="flex items-center justify-between">
+                  <div className="text-lg font-black text-slate-800">공지사항</div>
+                  <button
+                    onClick={() => setSelectedNotice(null)}
+                    className="p-1.5 rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+                <div className="space-y-2">
+                  <div className="text-xs text-slate-400">
+                    {formatNoticeDate(selectedNotice.createdAt)} · {selectedNotice.author || '관리자'}
+                  </div>
+                  <div className="text-lg font-black text-slate-800">{selectedNotice.title}</div>
+                  <div className="text-sm text-slate-600 whitespace-pre-line">
+                    {selectedNotice.content}
+                  </div>
+                </div>
+                <button
+                  onClick={() => setSelectedNotice(null)}
+                  className="w-full bg-slate-900 text-white py-3 rounded-xl font-black"
+                >
+                  닫기
+                </button>
+              </div>
+            </div>
+          )}
+          {isNoticeEditorOpen && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-6">
+              <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl space-y-4 animate-in fade-in zoom-in-95 duration-200">
+                <div className="flex items-center justify-between">
+                  <div className="text-lg font-black text-slate-800">공지사항 작성</div>
+                  <button
+                    onClick={() => setIsNoticeEditorOpen(false)}
+                    className="p-1.5 rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+                <div className="space-y-3">
+                  <input
+                    value={noticeTitle}
+                    onChange={(e) => setNoticeTitle(e.target.value)}
+                    placeholder="제목을 입력하세요"
+                    className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-200"
+                  />
+                  <textarea
+                    value={noticeContent}
+                    onChange={(e) => setNoticeContent(e.target.value)}
+                    placeholder="내용을 입력하세요"
+                    rows={6}
+                    className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-200 resize-none"
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setIsNoticeEditorOpen(false)}
+                    className="flex-1 bg-slate-100 text-slate-600 py-2.5 rounded-xl font-bold hover:bg-slate-200 transition-colors"
+                  >
+                    취소
+                  </button>
+                  <button
+                    onClick={saveNotice}
+                    disabled={isSavingNotice}
+                    className="flex-1 bg-orange-500 text-white py-2.5 rounded-xl font-black hover:bg-orange-600 transition-colors disabled:bg-orange-200"
+                  >
+                    {isSavingNotice ? '저장 중...' : '저장'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
           {showExitConfirm && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-6">
               <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl space-y-4 animate-in fade-in zoom-in-95 duration-200">
@@ -2397,7 +2540,48 @@ const App = () => {
                 handleBookClick={handleBookClick}
               />
             )}
-            {view === 'notice_list' && notices.map(n=><div key={n.id} className="p-4 bg-white rounded-xl mb-2 shadow-sm"><h3 className="font-bold">{n.title}</h3><p className="text-sm text-slate-600">{n.body}</p></div>)}
+            {view === 'notice_list' && (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-xl font-black text-slate-800">공지사항</h2>
+                  <span className="text-xs text-slate-400">{notices.length}건</span>
+                </div>
+                {notices.length === 0 ? (
+                  <div className="p-6 bg-white rounded-2xl border border-slate-100 text-center text-sm text-slate-500">
+                    아직 등록된 공지사항이 없습니다.
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {notices.map((notice) => (
+                      <button
+                        key={notice.id}
+                        onClick={() => setSelectedNotice(notice)}
+                        className="w-full text-left p-4 bg-white rounded-2xl border border-slate-100 shadow-sm hover:border-orange-200 hover:bg-orange-50 transition-colors"
+                      >
+                        <div className="flex items-center justify-between gap-3">
+                          <div className="font-bold text-slate-800 line-clamp-1">{notice.title}</div>
+                          <div className="text-[10px] text-slate-400">
+                            {formatNoticeDate(notice.createdAt)}
+                          </div>
+                        </div>
+                        <div className="text-xs text-slate-500 line-clamp-2 mt-1">
+                          {notice.content}
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+                {isNoticeAdmin && (
+                  <button
+                    onClick={openNoticeEditor}
+                    className="fixed bottom-24 right-5 w-14 h-14 rounded-full bg-orange-500 text-white shadow-lg flex items-center justify-center font-black hover:bg-orange-600 active:scale-95"
+                    aria-label="공지사항 작성"
+                  >
+                    글쓰기
+                  </button>
+                )}
+              </div>
+            )}
             {view === 'library_main' && <LibraryMainView t={t} setIsRecommendModalOpen={setIsRecommendModalOpen} genres={genres} handleGenreClick={handleGenreClick} />}
             {view === 'genre_select' && selectedGenre && <GenreSelectView t={t} selectedGenre={selectedGenre} handleSubGenreClick={handleSubGenreClick} stories={stories} />}
             {view === 'list' && <StoryListView t={t} user={user} selectedGenre={selectedGenre} selectedSubGenre={selectedSubGenre} filteredStories={filteredStories} hasTodayStory={hasTodayStory} dailyCount={dailyCount} isSeriesLimitReached={isSeriesLimitReached} generateTodayStory={generateTodayStory} isGenerating={isGenerating} error={error} handleStoryClick={handleStoryClick} unlockedStories={unlockedStories} getStoryStats={getStoryStats} getFavoriteCount={getFavoriteCount} />}
