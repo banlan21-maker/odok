@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "38540467550",
+    "project_id": "odok-odok-final",
+    "storage_bucket": "odok-odok-final.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:38540467550:android:bfc9f9b34d71c357fb03cf",
+        "android_client_info": {
+          "package_name": "com.banlan21.odok"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "38540467550-ichnnhrukr9tcg4c701pefj4t6j3dgmf.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBWP0G4V6c05ZMZtCJHJO50AERREoyWzX0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "38540467550-ichnnhrukr9tcg4c701pefj4t6j3dgmf.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

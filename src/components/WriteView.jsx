@@ -1,5 +1,7 @@
 // src/components/WriteView.jsx
 import React, { useState, useEffect, useRef } from 'react';
+import { Capacitor } from '@capacitor/core';
+import { KeepAwake } from '@capacitor-community/keep-awake';
 import { PenTool, RefreshCw, Book, Edit2, Lock, Droplets } from 'lucide-react';
 import { generateBook } from '../utils/aiService';
 
@@ -133,6 +135,26 @@ const WriteView = ({ user, userProfile, onBookGenerated, slotStatus, setView, se
   const [showNoWritesNotice, setShowNoWritesNotice] = useState(false);
   const cancelRequestedRef = useRef(false);
   const [localError, setLocalError] = useState(null);
+
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return;
+    const toggleWakeLock = async () => {
+      try {
+        if (isGenerating) {
+          await KeepAwake.keepAwake();
+        } else {
+          await KeepAwake.allowSleep();
+        }
+      } catch (err) {
+        console.warn('KeepAwake error:', err);
+      }
+    };
+
+    toggleWakeLock();
+    return () => {
+      KeepAwake.allowSleep().catch(() => {});
+    };
+  }, [isGenerating]);
 
   const displayError = error || localError;
   

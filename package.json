@@ -11,6 +11,11 @@
     "deploy": "npm run build && firebase deploy"
   },
   "dependencies": {
+    "@capacitor-community/keep-awake": "^8.0.0",
+    "@capacitor-firebase/authentication": "^8.0.1",
+    "@capacitor/android": "^8.0.2",
+    "@capacitor/cli": "^8.0.2",
+    "@capacitor/core": "^8.0.2",
     "browser-image-compression": "^2.0.2",
     "date-fns": "^4.1.0",
     "firebase": "^12.7.0",

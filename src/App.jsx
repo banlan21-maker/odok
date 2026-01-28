@@ -1,15 +1,17 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { Capacitor } from '@capacitor/core';
 import { 
   BookOpen, Coffee, Lightbulb, ChevronLeft, 
   RefreshCw, Book, Calendar, List, ArrowRight, User, PenTool, Save,
   Star, MessageCircle, Reply, Send, MoreHorizontal, Bookmark, Heart, Globe, Home, Edit2, Flag, X, Library, Vote, Trophy, CheckCircle, HelpCircle, Smile, Zap, Brain, Sparkles, LogOut, Lock, Droplets
 } from 'lucide-react';
+import { FirebaseAuthentication } from '@capacitor-firebase/authentication';
 import { 
   collection, query, onSnapshot, 
   doc, setDoc, getDoc, addDoc, deleteDoc, serverTimestamp, updateDoc, increment, where, getDocs, limit, orderBy, Timestamp
 } from 'firebase/firestore';
 import { 
-  signInWithCustomToken, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut, deleteUser
+  signInWithCustomToken, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signInWithCredential, signOut, deleteUser
 } from 'firebase/auth';
 import { httpsCallable } from 'firebase/functions';
 import { auth, db, functions } from './firebase';
@@ -265,6 +267,25 @@ const App = () => {
       }
     });
     return () => unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    const tryNativeSilentSignIn = async () => {
+      if (!Capacitor.isNativePlatform()) return;
+      if (auth.currentUser) return;
+      try {
+        const currentUserResult = await FirebaseAuthentication.getCurrentUser();
+        if (!currentUserResult?.user) return;
+        const tokenResult = await FirebaseAuthentication.getIdToken();
+        if (!tokenResult?.token) return;
+        const credential = GoogleAuthProvider.credential(tokenResult.token);
+        await signInWithCredential(auth, credential);
+      } catch (err) {
+        console.warn('Native silent sign-in skipped:', err);
+      }
+    };
+
+    tryNativeSilentSignIn();
   }, []);
 
   // 2. 프로필 (Part 1: 데이터 지속성 강화)
@@ -1366,7 +1387,23 @@ const App = () => {
       console.log('🔐 Google 로그인 시도...');
       setError(null); // 에러 메시지 초기화
       
-      // Google 로그인 팝업 열기
+      if (Capacitor.isNativePlatform()) {
+        const nativeResult = await FirebaseAuthentication.signInWithGoogle();
+        const idToken = nativeResult?.credential?.idToken;
+        if (!idToken) {
+          throw new Error('Google 로그인 토큰을 가져올 수 없습니다.');
+        }
+        const credential = GoogleAuthProvider.credential(idToken);
+        const result = await signInWithCredential(auth, credential);
+        console.log('✅ Native Google 로그인 성공:', {
+          uid: result.user.uid,
+          email: result.user.email,
+          displayName: result.user.displayName
+        });
+        return;
+      }
+
+      // Web: Google 로그인 팝업 열기
       const provider = new GoogleAuthProvider();
       const result = await signInWithPopup(auth, provider);
       
@@ -1402,7 +1439,15 @@ const App = () => {
       alert(`로그인 오류\n\n${errorMessage}\n\n에러 코드: ${error.code || 'unknown'}`);
     }
   };
-  const handleLogout = async () => { try { await signOut(auth); setView('profile_setup'); } catch (e) {} };
+  const handleLogout = async () => {
+    try {
+      if (Capacitor.isNativePlatform()) {
+        await FirebaseAuthentication.signOut();
+      }
+      await signOut(auth);
+      setView('profile_setup');
+    } catch (e) {}
+  };
   
   // 수정 2: 개발용 원클릭 리셋 함수 (유저 데이터 초기화)
   const handleDevReset = async () => {
