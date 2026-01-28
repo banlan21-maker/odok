@@ -2106,16 +2106,6 @@ const App = () => {
         {/* 상단바 */}
         <header className="flex-none bg-white/90 backdrop-blur-md border-b border-slate-100 z-40 px-4 h-14 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            {/* 수정 2: 개발용 원클릭 리셋 버튼 (상단 우측) */}
-            {user && (
-              <button
-                onClick={handleDevReset}
-                className="ml-auto mr-2 px-3 py-1.5 bg-red-500 text-white text-xs font-black rounded-lg hover:bg-red-600 transition-colors"
-                title="개발용: 유저 데이터 초기화"
-              >
-                DEV RESET
-              </button>
-            )}
             {/* 뒤로가기 버튼: 홈, 서재, 집필, 보관함, 프로필 탭에서는 숨김 (하단 탭 사용) */}
             {(view === 'write' || view === 'library' || view === 'archive' || view === 'profile' || view === 'book_detail' || (view === 'reader' && currentBook)) ? (
               <button onClick={() => {
@@ -2569,6 +2559,17 @@ const App = () => {
                         </div>
                       </button>
                     ))}
+                  </div>
+                )}
+                {user && (
+                  <div className="pt-2">
+                    <button
+                      onClick={handleDevReset}
+                      className="w-full px-3 py-2 bg-red-500 text-white text-xs font-black rounded-lg hover:bg-red-600 transition-colors"
+                      title="개발용: 유저 데이터 초기화"
+                    >
+                      DEV RESET
+                    </button>
                   </div>
                 )}
                 {isNoticeAdmin && (
