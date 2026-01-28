@@ -116,7 +116,7 @@ const BookDetail = ({ book, onClose, fontSize = 'text-base', user, userProfile, 
 
   useEffect(() => {
     setCanComplete(false);
-    const timer = setTimeout(() => setCanComplete(true), 10000);
+    const timer = setTimeout(() => setCanComplete(true), 3 * 60 * 1000);
     return () => clearTimeout(timer);
   }, [bookId]);
 

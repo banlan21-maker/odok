@@ -113,6 +113,7 @@ const App = () => {
   const [canFinishRead, setCanFinishRead] = useState(false);
   const [showSaveSuccessModal, setShowSaveSuccessModal] = useState(false);
   const [showInkConfirmModal, setShowInkConfirmModal] = useState(false);
+  const [showExitConfirm, setShowExitConfirm] = useState(false);
   const [pendingBook, setPendingBook] = useState(null); // 잉크 확인 대기 중인 책
   const [showLevelUpModal, setShowLevelUpModal] = useState(false);
   const [newLevel, setNewLevel] = useState(null);
@@ -122,6 +123,7 @@ const App = () => {
   const [showInAppBrowserWarning, setShowInAppBrowserWarning] = useState(false);
   const [detectedInAppBrowser, setDetectedInAppBrowser] = useState(null);
   const [detectedDevice, setDetectedDevice] = useState(null); // 'ios' | 'android' | 'unknown'
+  const allowExitRef = useRef(false);
   
   const readingStartTime = useRef(null);
   const t = (T && T[language]) ? T[language] : T['ko']; 
@@ -436,6 +438,39 @@ const App = () => {
     
     return () => unsubscribe();
   }, [user]);
+
+  useEffect(() => {
+    const ensureHistoryState = () => {
+      if (!window.history.state || !window.history.state.__odok) {
+        window.history.pushState({ __odok: true }, '');
+      }
+    };
+
+    ensureHistoryState();
+
+    const handlePopState = () => {
+      if (allowExitRef.current) {
+        allowExitRef.current = false;
+        return;
+      }
+
+      const currentView = viewRef.current;
+      if (currentView === 'reader' || currentView === 'book_detail') {
+        setView('home');
+        setSelectedBook(null);
+        setCurrentBook(null);
+        setCurrentStory(null);
+        window.history.pushState({ __odok: true }, '');
+        return;
+      }
+
+      setShowExitConfirm(true);
+      window.history.pushState({ __odok: true }, '');
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
 
   const checkAttendance = async (profileRef, today) => {
     try { await updateDoc(profileRef, { lastAttendanceDate: today, points: increment(1) }); setShowAttendanceModal(true); } catch(e) {}
@@ -2056,6 +2091,7 @@ const App = () => {
                   <div className="pt-2 font-bold text-slate-800">집필/읽기 팁</div>
                   <div>- 소설은 장르/분위기/결말 스타일을 선택해 더 정교하게 작성할 수 있습니다.</div>
                   <div>- 비소설은 키워드/제목/스타일을 선택해 원하는 톤으로 작성됩니다.</div>
+                  <div>- 완독 버튼은 책을 일정 시간(3분) 이상 읽으면 활성화됩니다.</div>
                 </div>
                 <button
                   onClick={() => setIsHelpModalOpen(false)}
@@ -2068,6 +2104,36 @@ const App = () => {
           )}
           {isUnlockModalOpen && <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60"><div className="bg-white p-6 rounded-2xl w-full max-w-sm"><h3 className="font-bold mb-3">{t.unlock_title}</h3><div className="space-y-2"><button onClick={()=>processUnlock('free')} className="w-full bg-orange-500 text-white py-3 rounded-xl font-bold">{t.unlock_btn_free}</button><button onClick={()=>processUnlock('point')} className="w-full bg-slate-800 text-white py-3 rounded-xl font-bold">{t.unlock_btn_paid}</button><button onClick={()=>setIsUnlockModalOpen(false)} className="w-full bg-slate-100 py-3 rounded-xl font-bold">{t.cancel}</button></div></div></div>}
           {showAttendanceModal && <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60"><div className="bg-white p-8 rounded-2xl text-center"><h3 className="text-xl font-black mb-1">{t.attendance_check}</h3><p className="text-slate-500 font-bold mb-4">{t.attendance_reward}</p><button onClick={()=>setShowAttendanceModal(false)} className="bg-slate-900 text-white px-8 py-2 rounded-xl font-bold">OK</button></div></div>}
+          {showExitConfirm && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-6">
+              <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl space-y-4 animate-in fade-in zoom-in-95 duration-200">
+                <div className="text-center space-y-2">
+                  <h3 className="text-lg font-black text-slate-800">오독오독을 나가실까요?</h3>
+                  <p className="text-sm text-slate-600">
+                    종료하려면 나가기를 선택해주세요.
+                  </p>
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setShowExitConfirm(false)}
+                    className="flex-1 bg-slate-100 text-slate-600 py-2.5 rounded-xl font-bold hover:bg-slate-200 transition-colors"
+                  >
+                    취소
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowExitConfirm(false);
+                      allowExitRef.current = true;
+                      window.history.back();
+                    }}
+                    className="flex-1 bg-slate-900 text-white py-2.5 rounded-xl font-black"
+                  >
+                    나가기
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
           
           {/* 수정 1: 책 읽기용 잉크 확인 모달 */}
           {showInkConfirmModal && pendingBook && !pendingBookData && (
