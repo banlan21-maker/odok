@@ -59,13 +59,75 @@ export const generateBook = async ({
     return {
       title: bookData.title,
       content: bookData.content,
-      summary: bookData.summary || bookData.content.substring(0, 100) + '...'
+      summary: bookData.summary || bookData.content.substring(0, 100) + '...',
+      steps: bookData.steps || [],
+      storySummary: bookData.storySummary || '',
+      synopsis: bookData.synopsis || '',
+      characterSheet: bookData.characterSheet || ''
     };
   } catch (error) {
     console.error('[AI Service] 책 생성 오류:', error);
     
     // 에러 메시지 추출
     const errorMessage = error?.message || error?.details?.message || '책 생성에 실패했습니다. 다시 시도해주세요.';
+    
+    throw new Error(errorMessage);
+  }
+};
+
+/**
+ * 시리즈 다음 화 생성
+ */
+export const generateSeriesEpisode = async ({
+  seriesId,
+  category,
+  subCategory,
+  genre,
+  keywords,
+  title,
+  cumulativeSummary,
+  lastEpisodeContent,
+  synopsis,
+  characterSheet,
+  continuationType,
+  selectedMood
+}) => {
+  try {
+    const generateSeriesEpisodeFn = httpsCallable(functions, 'generateSeriesEpisode', {
+      timeout: 540000
+    });
+    
+    const result = await generateSeriesEpisodeFn({
+      seriesId,
+      category,
+      subCategory,
+      genre,
+      keywords,
+      title,
+      cumulativeSummary,
+      lastEpisodeContent,
+      synopsis,
+      characterSheet,
+      continuationType,
+      selectedMood
+    });
+    
+    const episodeData = result.data;
+
+    if (!episodeData || !episodeData.content) {
+      throw new Error('AI가 올바른 형식의 응답을 반환하지 않았습니다.');
+    }
+
+    return {
+      content: episodeData.content,
+      summary: episodeData.summary || '',
+      cumulativeSummary: episodeData.cumulativeSummary || cumulativeSummary,
+      isFinale: episodeData.isFinale || false
+    };
+  } catch (error) {
+    console.error('[AI Service] 시리즈 이어쓰기 오류:', error);
+    
+    const errorMessage = error?.message || error?.details?.message || '시리즈 집필에 실패했습니다. 다시 시도해주세요.';
     
     throw new Error(errorMessage);
   }

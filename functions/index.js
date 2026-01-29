@@ -548,6 +548,112 @@ exports.generateBookAI = onCall(
   }
 );
 
+// 시리즈 이어쓰기 함수
+exports.generateSeriesEpisode = onCall(
+  {
+    region: REGION,
+    maxInstances: 10,
+    timeoutSeconds: 540
+  },
+  async (request) => {
+    try {
+      if (!GEMINI_API_KEY) {
+        throw new HttpsError("failed-precondition", "Gemini API 키가 설정되지 않았습니다.");
+      }
+
+      const {
+        seriesId,
+        category,
+        subCategory,
+        genre,
+        keywords,
+        title,
+        cumulativeSummary,
+        lastEpisodeContent,
+        synopsis,
+        characterSheet,
+        continuationType,
+        selectedMood
+      } = request.data;
+
+      if (!seriesId || !continuationType) {
+        throw new HttpsError("invalid-argument", "필수 파라미터가 누락되었습니다.");
+      }
+
+      const isNovel = true;
+      const temperature = 0.8;
+      const isFinalize = continuationType === 'finalize';
+
+      // 시스템 프롬프트
+      const systemPrompt = buildSystemPrompt({
+        isNovel: true,
+        category,
+        subCategory,
+        genre,
+        endingStyle: isFinalize ? '닫힌 결말 (해피 엔딩)' : null,
+        selectedTone: null,
+        selectedMood
+      });
+
+      const topic = `${keywords || ""} ${genre || ""}`.trim();
+      const requestedTitle = (title || "").toString().trim();
+      
+      const lastParagraph = extractLastSentences(lastEpisodeContent || "", 10);
+      const previousStorySummary = cumulativeSummary || "";
+
+      const step = isFinalize
+        ? {
+            name: "완결",
+            instruction: "지금까지의 떡밥(Clues)을 모두 회수하고, 독자에게 여운을 주는 확실한 결말(Ending)을 지어라. 모든 갈등을 해결하고 캐릭터의 여정을 마무리하라."
+          }
+        : {
+            name: "다음 화",
+            instruction: "앞 내용을 바탕으로 흥미진진하게 이야기를 이어가라. 새로운 갈등을 암시하거나 사건을 확장해라. 절대 결말을 짓지 마라."
+          };
+
+      const stepContent = await generateStep({
+        systemPrompt,
+        topic,
+        currentStep: step,
+        previousStorySummary,
+        lastParagraph,
+        synopsis: synopsis || "",
+        characterSheet: characterSheet || "",
+        temperature,
+        isNovel: true,
+        title: requestedTitle
+      });
+
+      if (!stepContent || !stepContent.trim()) {
+        throw new Error("빈 응답이 반환되었습니다.");
+      }
+
+      const stepSummary = await summarizeStepContent(stepContent, systemPrompt, true);
+      const updatedSummary = previousStorySummary
+        ? `${previousStorySummary}\n${stepSummary}`
+        : stepSummary;
+
+      return {
+        content: stepContent.trim(),
+        summary: stepSummary,
+        cumulativeSummary: updatedSummary,
+        isFinale: isFinalize
+      };
+    } catch (error) {
+      logger.error("[generateSeriesEpisode] 에러:", {
+        message: error?.message,
+        stack: error?.stack
+      });
+      
+      if (error instanceof HttpsError) {
+        throw error;
+      }
+      
+      throw new HttpsError("internal", `시리즈 집필 중 오류가 발생했습니다: ${error.message}`);
+    }
+  }
+);
+
 // 호환성 유지용 함수
 exports.generateStoryAI = onCall(
   {

@@ -219,16 +219,22 @@ const HomeView = ({
                     <h4 className="font-black text-slate-800 text-base mb-1 line-clamp-1">
                       {book.title}
                     </h4>
-                    <div className="flex items-center gap-2 text-xs text-slate-500">
+                    <div className="flex items-center gap-2 text-xs text-slate-500 flex-wrap">
                       <span className="font-bold">{book.authorName || '익명'}</span>
                       <span className="bg-slate-100 px-2 py-0.5 rounded-full font-bold text-slate-600">
                         {book.category === 'webnovel' ? '웹소설' :
                          book.category === 'novel' ? '소설' :
+                         book.category === 'series' ? '시리즈' :
                          book.category === 'essay' ? '에세이' :
                          book.category === 'self-improvement' ? '자기계발' :
                          book.category === 'self-help' ? '자기계발' :
                          book.category === 'humanities' ? '인문.철학' : book.category}
                       </span>
+                      {(book.isSeries || book.category === 'series') && book.episodes && (
+                        <span className="text-[10px] font-bold text-orange-600">
+                          현재 {book.episodes.length}화 {book.status === 'ongoing' ? '연재 중' : '완결'}
+                        </span>
+                      )}
                       <span className="flex items-center gap-1 text-slate-400">
                         <Calendar className="w-3 h-3" />
                         {dateString}
@@ -308,11 +314,16 @@ const HomeView = ({
                   </div>
                   <div className="flex-1 min-w-0">
                     <h4 className="font-bold text-slate-800 truncate mb-1">{book.title}</h4>
-                    <div className="flex items-center gap-2 text-xs text-slate-500">
+                    <div className="flex items-center gap-2 text-xs text-slate-500 flex-wrap">
                       <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-gradient-to-r from-orange-500 to-rose-500 text-white text-[11px] font-black shadow-sm">
                         <Book className="w-3 h-3" />
                         작가: {book.authorName || '익명'}
                       </span>
+                      {(book.isSeries || book.category === 'series') && book.episodes && (
+                        <span className="text-[10px] font-bold text-orange-600">
+                          {book.episodes.length}화 {book.status === 'ongoing' ? '연재 중' : '완결'}
+                        </span>
+                      )}
                       <span className="flex items-center gap-1 text-slate-400">
                         <Eye className="w-3 h-3" />
                         {formatCount(book.views)}

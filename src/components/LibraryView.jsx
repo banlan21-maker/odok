@@ -166,11 +166,17 @@ const LibraryView = ({ books, onBookClick, filter = 'all', onFilterChange }) => 
                       <span className="bg-slate-100 px-2 py-0.5 rounded-full font-bold text-slate-600">
                         {book.category === 'webnovel' ? '웹소설' :
                          book.category === 'novel' ? '소설' :
+                         book.category === 'series' ? '시리즈' :
                          book.category === 'essay' ? '에세이' :
                          book.category === 'self-improvement' ? '자기계발' :
                          book.category === 'self-help' ? '자기계발' :
                          book.category === 'humanities' ? '인문.철학' : book.category}
                       </span>
+                      {(book.isSeries || book.category === 'series') && book.episodes && (
+                        <span className="text-[10px] font-bold text-orange-600">
+                          {book.episodes.length}화 {book.status === 'ongoing' ? '연재 중' : '완결'}
+                        </span>
+                      )}
                       {book.subCategory && (
                         <span className="bg-slate-100 px-2 py-0.5 rounded-full text-slate-600">
                           {formatTag(book.subCategory)}

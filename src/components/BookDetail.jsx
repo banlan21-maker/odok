@@ -1,11 +1,12 @@
 // src/components/BookDetail.jsx
 // 책 상세/뷰어 페이지 컴포넌트
 import React, { useEffect, useMemo, useState } from 'react';
-import { ChevronLeft, Book, Calendar, User, Heart, Send, Bookmark, CheckCircle } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Book, Calendar, User, Heart, Send, Bookmark, CheckCircle, PenTool } from 'lucide-react';
 import { formatDateDetailed } from '../utils/dateUtils';
 import { getCoverImageFromBook } from '../utils/bookCovers';
-import { collection, addDoc, deleteDoc, doc, onSnapshot, serverTimestamp, setDoc, updateDoc, increment, runTransaction } from 'firebase/firestore';
+import { collection, addDoc, deleteDoc, doc, onSnapshot, serverTimestamp, setDoc, updateDoc, increment, runTransaction, getDoc } from 'firebase/firestore';
 import { db } from '../firebase';
+import { generateSeriesEpisode } from '../utils/aiService';
 
 const MAX_LEVEL = 99;
 
@@ -51,8 +52,15 @@ const BookDetail = ({ book, onClose, fontSize = 'text-base', user, userProfile, 
     'essay': '에세이',
     'self-improvement': '자기계발',
     'self-help': '자기계발',
-    'humanities': '인문·철학'
+    'humanities': '인문·철학',
+    'series': '시리즈'
   }[book.category] || book.category;
+
+  const isSeries = book.isSeries === true || book.category === 'series';
+  const episodes = (isSeries && book.episodes) ? book.episodes : [];
+  const [currentEpisodeIndex, setCurrentEpisodeIndex] = useState(episodes.length > 0 ? episodes.length - 1 : 0);
+  const [showContinuationModal, setShowContinuationModal] = useState(false);
+  const [isGeneratingEpisode, setIsGeneratingEpisode] = useState(false);
 
   const [likesCount, setLikesCount] = useState(book.likes || 0);
   const [favoritesCount, setFavoritesCount] = useState(book.favorites || 0);
@@ -69,6 +77,11 @@ const BookDetail = ({ book, onClose, fontSize = 'text-base', user, userProfile, 
   const [replyTo, setReplyTo] = useState(null);
   const [inkAmount, setInkAmount] = useState(1);
   const [isSendingInk, setIsSendingInk] = useState(false);
+
+  const currentEpisode = isSeries && episodes.length > 0 ? episodes[currentEpisodeIndex] : null;
+  const displayContent = isSeries ? (currentEpisode?.content || '') : (book.content || '');
+  const isLastEpisode = isSeries && currentEpisodeIndex === episodes.length - 1;
+  const canWriteNext = isSeries && book.status === 'ongoing' && isLastEpisode;
 
   const bookId = book.id;
   const likeDocId = useMemo(() => (user && bookId ? `${user.uid}_${bookId}` : null), [user, bookId]);
@@ -305,6 +318,59 @@ const BookDetail = ({ book, onClose, fontSize = 'text-base', user, userProfile, 
     setReplyTo(null);
   };
 
+  const handleWriteNextEpisode = async (continuationType) => {
+    if (!user || !appId || !isSeries) return;
+    setShowContinuationModal(false);
+    setIsGeneratingEpisode(true);
+    
+    try {
+      const lastEpisode = episodes[episodes.length - 1];
+      const result = await generateSeriesEpisode({
+        seriesId: book.seriesId || book.id,
+        category: book.category,
+        subCategory: book.subCategory,
+        genre: book.subCategory,
+        keywords: book.keywords || '',
+        title: book.title,
+        cumulativeSummary: book.summary || '',
+        lastEpisodeContent: lastEpisode?.content || '',
+        synopsis: book.synopsis || '',
+        characterSheet: book.characterSheet || '',
+        continuationType,
+        selectedMood: book.selectedMood || ''
+      });
+
+      const newEpisode = {
+        ep_number: episodes.length + 1,
+        title: result.isFinale ? `${book.title} [완결]` : `${book.title} ${episodes.length + 1}화`,
+        content: result.content,
+        writer: user.uid,
+        writerName: userProfile?.nickname || '익명',
+        createdAt: new Date().toISOString(),
+        summary: result.summary
+      };
+
+      const bookRef = doc(db, 'artifacts', appId, 'books', book.id);
+      const updateData = {
+        episodes: [...episodes, newEpisode],
+        summary: result.cumulativeSummary
+      };
+
+      if (result.isFinale) {
+        updateData.status = 'completed';
+      }
+
+      await updateDoc(bookRef, updateData);
+      setCurrentEpisodeIndex(episodes.length);
+      alert(result.isFinale ? '시리즈가 완결되었습니다!' : '다음 화가 추가되었습니다!');
+    } catch (err) {
+      console.error('시리즈 이어쓰기 실패:', err);
+      alert(err?.message || '시리즈 집필에 실패했습니다. 다시 시도해주세요.');
+    } finally {
+      setIsGeneratingEpisode(false);
+    }
+  };
+
   const saveEditComment = async (commentId) => {
     if (!user || !appId) return;
     const text = editingText.trim();
@@ -393,12 +459,35 @@ const BookDetail = ({ book, onClose, fontSize = 'text-base', user, userProfile, 
         </div>
       </div>
 
+      {/* 시리즈 네비게이션 */}
+      {isSeries && episodes.length > 0 && (
+        <div className="mb-4 flex items-center justify-between bg-orange-50 px-4 py-2 rounded-xl">
+          <button
+            onClick={() => setCurrentEpisodeIndex(Math.max(0, currentEpisodeIndex - 1))}
+            disabled={currentEpisodeIndex === 0}
+            className="p-2 rounded-lg hover:bg-orange-100 disabled:opacity-30 disabled:cursor-not-allowed"
+          >
+            <ChevronLeft className="w-5 h-5 text-orange-600" />
+          </button>
+          <div className="text-sm font-black text-orange-600">
+            제 {currentEpisodeIndex + 1} 화 {book.status === 'completed' && currentEpisodeIndex === episodes.length - 1 ? '[완결]' : ''}
+          </div>
+          <button
+            onClick={() => setCurrentEpisodeIndex(Math.min(episodes.length - 1, currentEpisodeIndex + 1))}
+            disabled={currentEpisodeIndex === episodes.length - 1}
+            className="p-2 rounded-lg hover:bg-orange-100 disabled:opacity-30 disabled:cursor-not-allowed"
+          >
+            <ChevronRight className="w-5 h-5 text-orange-600" />
+          </button>
+        </div>
+      )}
+
       {/* 본문 내용 */}
       <div className="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm">
         <div className="prose prose-slate max-w-none mb-6">
           {/* 수정 5: fontSize를 동적으로 적용 */}
           <div className={`${fontSizeClass} leading-relaxed text-slate-700 whitespace-pre-line`}>
-            {book.content || book.summary || '내용이 없습니다.'}
+            {displayContent || book.summary || '내용이 없습니다.'}
           </div>
         </div>
 
@@ -462,6 +551,20 @@ const BookDetail = ({ book, onClose, fontSize = 'text-base', user, userProfile, 
         </div>
       </div>
       {!user && <p className="text-xs text-slate-400">로그인 후 사용 가능</p>}
+
+      {/* 시리즈 다음 화 집필 */}
+      {canWriteNext && user && (
+        <div className="mt-4">
+          <button
+            onClick={() => setShowContinuationModal(true)}
+            disabled={isGeneratingEpisode}
+            className="w-full bg-gradient-to-r from-orange-500 to-orange-600 text-white py-3 rounded-xl text-sm font-black hover:from-orange-600 hover:to-orange-700 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+          >
+            <PenTool className="w-4 h-4" />
+            {isGeneratingEpisode ? '집필 중...' : '다음 화 집필하기'}
+          </button>
+        </div>
+      )}
 
       {/* 잉크 보내기 */}
       <div className="flex items-center justify-center gap-3 mt-5">
@@ -576,6 +679,42 @@ const BookDetail = ({ book, onClose, fontSize = 'text-base', user, userProfile, 
         )}
         <p className="text-xs text-slate-400">댓글은 200자 이내로 작성하세요.</p>
       </div>
+
+      {/* 시리즈 이어쓰기 모달 */}
+      {showContinuationModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-6">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl space-y-4 animate-in fade-in zoom-in-95 duration-200">
+            <div className="text-center space-y-2">
+              <h3 className="text-lg font-black text-slate-800">다음 화 전개 방식</h3>
+              <p className="text-sm text-slate-600">
+                이야기를 어떻게 이어갈까요?
+              </p>
+            </div>
+            <div className="space-y-2">
+              <button
+                onClick={() => handleWriteNextEpisode('ongoing')}
+                disabled={isGeneratingEpisode}
+                className="w-full bg-orange-500 text-white py-3 rounded-xl text-sm font-black hover:bg-orange-600 transition-colors disabled:opacity-50"
+              >
+                계속 연재 (이야기 확장)
+              </button>
+              <button
+                onClick={() => handleWriteNextEpisode('finalize')}
+                disabled={isGeneratingEpisode}
+                className="w-full bg-slate-900 text-white py-3 rounded-xl text-sm font-black hover:bg-slate-800 transition-colors disabled:opacity-50"
+              >
+                완결 짓기 (결말)
+              </button>
+              <button
+                onClick={() => setShowContinuationModal(false)}
+                className="w-full bg-slate-100 text-slate-600 py-2 rounded-xl text-sm font-bold hover:bg-slate-200 transition-colors"
+              >
+                취소
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

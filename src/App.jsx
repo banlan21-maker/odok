@@ -963,9 +963,22 @@ const App = () => {
       // 수정 2: 시리즈인 경우 추가 필드 설정
       if (isSeries) {
         bookDocumentData.seriesId = crypto.randomUUID(); // UUID 생성
-        bookDocumentData.episode = 1; // 현재 회차
-        bookDocumentData.maxEpisodes = 7; // 총 7화 완결 예정
-        bookDocumentData.summary = bookData.summary || bookData.content.substring(0, 300) + '...'; // 3줄 요약 텍스트
+        bookDocumentData.status = 'ongoing'; // 상태: ongoing/completed
+        bookDocumentData.episodes = [
+          {
+            ep_number: 1,
+            title: bookData.title,
+            content: bookData.content,
+            writer: user.uid,
+            writerName: authorName,
+            createdAt: new Date().toISOString(),
+            summary: bookData.storySummary || bookData.summary || bookData.content.substring(0, 300) + '...'
+          }
+        ];
+        // summary는 전체 시리즈 요약 (누적)
+        bookDocumentData.summary = bookData.storySummary || bookData.summary || bookData.content.substring(0, 300) + '...';
+        // 단편과 달리 content는 빈 문자열로 (episodes 배열 사용)
+        bookDocumentData.content = '';
       }
       
       // 새 스키마에 맞게 책 저장

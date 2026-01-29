@@ -1137,8 +1137,8 @@ const WriteView = ({ user, userProfile, onBookGenerated, slotStatus, setView, se
                 </div>
               )}
 
-              {/* 결말 스타일 (소설류 전용) */}
-              {selectedCategory.isNovel && (
+              {/* 결말 스타일 (소설류 전용, 시리즈 제외) */}
+              {selectedCategory.isNovel && selectedCategory.id !== 'series' && (
                 <div className="space-y-2">
                   <label className="text-sm font-bold text-slate-700">
                     결말 스타일
