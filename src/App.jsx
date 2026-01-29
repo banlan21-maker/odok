@@ -17,6 +17,7 @@ import {
 import { httpsCallable } from 'firebase/functions';
 import { auth, db, functions } from './firebase';
 import { startOfDay, subDays, endOfDay, format, startOfWeek, endOfWeek } from 'date-fns';
+import { getTodayDateKey } from './utils/dateUtils';
 
 // 데이터와 컴포넌트 불러오기
 import { T, genres } from './data';
@@ -32,6 +33,34 @@ import ArchiveView from './components/ArchiveView';
 import BookDetail from './components/BookDetail';
 
 // Firebase configuration은 firebase.js에서 가져옴
+
+function computeSlotStatus(booksData, todayDateKey, dssData) {
+  let todayBooksForSlots = (booksData || []).filter((b) => {
+    const bookDateKey = b.dateKey;
+    if (!bookDateKey) return false;
+    return bookDateKey === todayDateKey;
+  }).sort((a, b) => {
+    const tA = a.createdAt?.toDate?.() || (a.createdAt?.seconds ? new Date(a.createdAt.seconds * 1000) : new Date(0));
+    const tB = b.createdAt?.toDate?.() || (b.createdAt?.seconds ? new Date(b.createdAt.seconds * 1000) : new Date(0));
+    return tA - tB;
+  });
+  const st = { webnovel: null, novel: null, series: null, essay: null, 'self-help': null, humanities: null };
+  todayBooksForSlots.forEach((book) => {
+    const category = String(book.category || '').trim().toLowerCase();
+    const isSeries = book.isSeries === true;
+    if (category === 'series' || isSeries) {
+      if (!st.series) st.series = { book, authorName: book.authorName || '익명' };
+      return;
+    }
+    if (category === 'webnovel' && !st.webnovel) st.webnovel = { book, authorName: book.authorName || '익명' };
+    else if (category === 'novel' && !st.novel) st.novel = { book, authorName: book.authorName || '익명' };
+    else if (category === 'essay' && !st.essay) st.essay = { book, authorName: book.authorName || '익명' };
+    else if ((category === 'self-improvement' || category === 'self-help') && !st['self-help']) st['self-help'] = { book, authorName: book.authorName || '익명' };
+    else if (category === 'humanities' && !st.humanities) st.humanities = { book, authorName: book.authorName || '익명' };
+  });
+  if (!st.series && dssData) st.series = { book: { id: dssData.bookId }, authorName: dssData.authorName || '익명' };
+  return st;
+}
 
 const rawAppId = typeof __app_id !== 'undefined' ? __app_id : 'odok-app-default';
 const appId = rawAppId.replace(/\//g, '_');
@@ -51,21 +80,21 @@ const App = () => {
   const [user, setUser] = useState(null);
   const [userProfile, setUserProfile] = useState(null);
   
+  const latestBooksRef = useRef([]);
   // Step 1: 기본 구조용 상태
   const [books, setBooks] = useState([]); // 생성된 책 목록
   const [currentBook, setCurrentBook] = useState(null); // 현재 읽고 있는 책 (기존 읽기 화면용)
   const [selectedBook, setSelectedBook] = useState(null); // 상세 보기용 책 (BookDetail용)
   const [libraryFilter, setLibraryFilter] = useState('all'); // 서재 필터: 'all', 'webnovel', 'novel', 'essay', 'self-improvement', 'humanities'
-  // Step 5: 글로벌 일일 생성 제한용 상태 (7개 슬롯 - 시리즈 분리)
+  // Step 5: 글로벌 일일 생성 제한용 상태 (시리즈는 통합 1슬롯)
   const [slotStatus, setSlotStatus] = useState({
-    'webnovel': null, // 웹소설 (단편 고정)
-    'novel': null, // 소설 (단편 고정)
-    'series-webnovel': null, // 시리즈 - 웹소설형
-    'series-novel': null, // 시리즈 - 소설형
+    'webnovel': null,
+    'novel': null,
+    'series': null, // 시리즈 통합 (하루 1회, 웹소설/소설 구분 없음)
     'essay': null,
-    'self-help': null, // 자기계발 (self-improvement -> self-help로 변경)
+    'self-help': null,
     'humanities': null
-  }); // 각 슬롯의 상태: null(사용 가능) 또는 { book: {...}, authorName: '...' }
+  }); // 각 슬롯: null(사용 가능) 또는 { book, authorName }
   // Step 3: 홈 화면용 상태
   const [todayBooks, setTodayBooks] = useState([]); // 오늘 생성된 책들
   const [weeklyBestBooks, setWeeklyBestBooks] = useState([]); // 주간 베스트셀러
@@ -153,15 +182,6 @@ const App = () => {
   } : { level: 1, currentExp: 0, maxExp: 100, progress: 0, remainingExp: 100 };
 
   const getTodayString = () => new Date().toISOString().split('T')[0];
-  
-  // 로컬 타임(KST) 기준으로 오늘 날짜를 YYYY-MM-DD 형식으로 반환
-  const getTodayDateKey = () => {
-    const now = new Date();
-    const year = now.getFullYear();
-    const month = String(now.getMonth() + 1).padStart(2, '0');
-    const day = String(now.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-  };
 
   const todayDateKey = getTodayDateKey();
   const dailyWriteCount = userProfile?.dailyWriteCount || 0;
@@ -562,9 +582,9 @@ const App = () => {
         
         // 서재는 모든 책을 표시, 보관함에서는 필터링하여 사용
         setBooks(booksData);
+        latestBooksRef.current = booksData;
       
-      // Step 3: 홈 화면용 데이터 계산
-      const todayDateKey = getTodayDateKey(); // 오늘 날짜 키 (한 번만 선언)
+      const todayDateKey = getTodayDateKey();
       const today = startOfDay(new Date());
       const weekStart = startOfWeek(today, { weekStartsOn: 1 });
       const weekEnd = endOfWeek(today, { weekStartsOn: 1 });
@@ -595,114 +615,19 @@ const App = () => {
       })).sort((a, b) => b.score - a.score).slice(0, 3);
       setWeeklyBestBooks(weeklyBooks);
       
-      // Step 5: 글로벌 일일 생성 제한 - 슬롯 상태 확인 (단순화된 버전: dateKey 사용)
-      
-      // dateKey로 오늘 생성된 책 필터링 (단순 문자열 비교)
-      const todayBooksForSlots = booksData.filter(book => {
-        const bookDateKey = book.dateKey; // dateKey 필드 사용
-        
-        if (!bookDateKey) {
-          // dateKey가 없는 오래된 책들은 무시 (마이그레이션 전 데이터)
-          return false;
-        }
-        
-        return bookDateKey === todayDateKey;
+      const dssRef = doc(db, 'artifacts', appId, 'public', 'data', 'daily_series_slot', todayDateKey);
+      getDoc(dssRef).then((dssSnap) => {
+        const dssData = dssSnap.exists() ? dssSnap.data() : null;
+        const newSlotStatus = computeSlotStatus(booksData, todayDateKey, dssData);
+        console.log('[슬롯 상태] 최종 슬롯 상태:', Object.keys(newSlotStatus).map(key => ({
+          slot: key,
+          status: newSlotStatus[key] ? `마감됨 (${newSlotStatus[key].authorName})` : '사용 가능'
+        })));
+        setSlotStatus(newSlotStatus);
+      }).catch((e) => {
+        console.warn('[슬롯] daily_series_slot 조회 실패', e);
+        setSlotStatus(computeSlotStatus(booksData, todayDateKey, null));
       });
-      
-      // 로그 최소화: 슬롯 체크 로그 제거
-      
-      // 각 슬롯 상태 확인 (7개 슬롯 - 시리즈 분리)
-      const newSlotStatus = {
-        'webnovel': null, // 웹소설 (단편 고정)
-        'novel': null, // 소설 (단편 고정)
-        'series-webnovel': null, // 시리즈 - 웹소설형
-        'series-novel': null, // 시리즈 - 소설형
-        'essay': null,
-        'self-help': null, // 자기계발
-        'humanities': null
-      };
-      
-      // 슬롯 매핑 (7개 슬롯 체제 - 시리즈 분리)
-      todayBooksForSlots.forEach(book => {
-        const category = String(book.category || '').trim().toLowerCase(); // 소문자로 정규화
-        const isSeries = book.isSeries === true; // 명시적으로 boolean 확인
-        const subCategory = String(book.subCategory || '').trim().toLowerCase(); // 서브 카테고리
-        
-        // 시리즈는 웹소설형/소설형으로 분리하여 관리
-        if (category === 'series' || isSeries) {
-          // subCategory로 구분: 'webnovel' 또는 'novel'
-          const seriesSlotKey = (subCategory === 'webnovel' || subCategory === 'web-novel') 
-            ? 'series-webnovel' 
-            : 'series-novel';
-          
-          if (!newSlotStatus[seriesSlotKey]) {
-            newSlotStatus[seriesSlotKey] = {
-              book: book,
-              authorName: book.authorName || '익명'
-            };
-          }
-        }
-        // 웹소설 (단편 고정)
-        else if (category === 'webnovel') {
-          if (!newSlotStatus['webnovel']) {
-            newSlotStatus['webnovel'] = {
-              book: book,
-              authorName: book.authorName || '익명'
-            };
-            // 로그 최소화
-          }
-        }
-        // 소설 (단편 고정)
-        else if (category === 'novel') {
-          if (!newSlotStatus['novel']) {
-            newSlotStatus['novel'] = {
-              book: book,
-              authorName: book.authorName || '익명'
-            };
-            // 로그 최소화
-          }
-        }
-        // 에세이
-        else if (category === 'essay') {
-          if (!newSlotStatus['essay']) {
-            newSlotStatus['essay'] = {
-              book: book,
-              authorName: book.authorName || '익명'
-            };
-            console.log('[슬롯 매핑] essay 슬롯 차지됨:', book.authorName);
-          }
-        }
-        // 자기계발 (self-improvement -> self-help 매핑)
-        else if (category === 'self-improvement' || category === 'self-help') {
-          if (!newSlotStatus['self-help']) {
-            newSlotStatus['self-help'] = {
-              book: book,
-              authorName: book.authorName || '익명'
-            };
-            console.log('[슬롯 매핑] self-help 슬롯 차지됨:', book.authorName);
-          }
-        }
-        // 인문/철학
-        else if (category === 'humanities') {
-          if (!newSlotStatus['humanities']) {
-            newSlotStatus['humanities'] = {
-              book: book,
-              authorName: book.authorName || '익명'
-            };
-            console.log('[슬롯 매핑] humanities 슬롯 차지됨:', book.authorName);
-          }
-        } else {
-          console.warn('[슬롯 매핑] 알 수 없는 카테고리:', category, book);
-        }
-      });
-      
-      // 슬롯 상태 로그
-      console.log('[슬롯 상태] 최종 슬롯 상태:', Object.keys(newSlotStatus).map(key => ({
-        slot: key,
-        status: newSlotStatus[key] ? `마감됨 (${newSlotStatus[key].authorName})` : '사용 가능'
-      })));
-      
-      setSlotStatus(newSlotStatus);
       setIsLoadingHomeData(false);
     }, 
     (err) => {
@@ -715,7 +640,20 @@ const App = () => {
       unsubBooks();
     };
   }, [user]);
-  
+
+  // daily_series_slot 구독 (이어쓰기로 슬롯 사용 시 즉시 반영)
+  useEffect(() => {
+    if (!user || !appId) return;
+    const todayKey = getTodayDateKey();
+    const dssRef = doc(db, 'artifacts', appId, 'public', 'data', 'daily_series_slot', todayKey);
+    const unsub = onSnapshot(dssRef, (snap) => {
+      const dssData = snap.exists() ? snap.data() : null;
+      const next = computeSlotStatus(latestBooksRef.current, todayKey, dssData);
+      setSlotStatus(next);
+    }, (e) => console.warn('[슬롯] daily_series_slot 구독 오류', e));
+    return () => unsub();
+  }, [user, appId]);
+
   // Step 3: 주간 집필왕 (월~일 기준, 주간 집필 수 TOP 3)
   useEffect(() => {
     if (!user || books.length === 0) return;
@@ -774,33 +712,14 @@ const App = () => {
     };
   }, [user, books]);
 
-  // Step 5: 슬롯 키 생성 헬퍼 함수 (7개 슬롯 체제 - 시리즈 분리)
+  // Step 5: 슬롯 키 생성 헬퍼 (시리즈는 통합 1슬롯)
   const getSlotKey = (category, isSeries, subCategory) => {
-    // category를 소문자로 정규화하여 정확한 매칭 보장
     const normalizedCategory = String(category || '').trim().toLowerCase();
-    const normalizedSubCategory = String(subCategory || '').trim().toLowerCase();
     
-    // 시리즈는 웹소설형/소설형으로 분리
-    if (isSeries || normalizedCategory === 'series') {
-      // subCategory로 구분: 'webnovel' 또는 'novel'
-      if (normalizedSubCategory === 'webnovel' || normalizedSubCategory === 'web-novel') {
-        return 'series-webnovel';
-      }
-      return 'series-novel';
-    }
-    
-    // 웹소설/소설은 단편 고정이므로 카테고리 그대로 사용
-    if (normalizedCategory === 'webnovel' || normalizedCategory === 'novel') {
-      return normalizedCategory; // 'webnovel' 또는 'novel'
-    }
-    
-    // 자기계발: self-improvement -> self-help로 변환
-    if (normalizedCategory === 'self-improvement') {
-      return 'self-help';
-    }
-    
-    // 다른 카테고리는 그대로 반환
-    return normalizedCategory; // essay, humanities
+    if (isSeries || normalizedCategory === 'series') return 'series';
+    if (normalizedCategory === 'webnovel' || normalizedCategory === 'novel') return normalizedCategory;
+    if (normalizedCategory === 'self-improvement') return 'self-help';
+    return normalizedCategory;
   };
 
   // Step 1: 책 생성 완료 후 Firestore에 저장 (Step 5: 동시성 제어 추가)
@@ -909,12 +828,22 @@ const App = () => {
         });
         
         if (existingBook) {
-          // 이미 다른 유저가 생성함
           const existingAuthor = existingBook.authorName || '익명';
           const errorMsg = `아쉽지만 간발의 차로 다른 작가님이 먼저 집필하셨어요! (By. ${existingAuthor}) 서재에서 읽어보세요.`;
           console.error('[동시성 제어] 슬롯이 이미 차있음:', existingBook);
           setError(errorMsg);
           throw new Error('SLOT_ALREADY_TAKEN');
+        }
+
+        if (slotKey === 'series') {
+          const dssRef = doc(db, 'artifacts', appId, 'public', 'data', 'daily_series_slot', todayDateKey);
+          const dssSnap = await getDoc(dssRef);
+          if (dssSnap.exists()) {
+            const d = dssSnap.data();
+            const errMsg = `오늘 시리즈 집필은 마감되었어요. (By. ${d.authorName || '익명'})`;
+            setError(errMsg);
+            throw new Error('SLOT_ALREADY_TAKEN');
+          }
         }
         
         console.log('[동시성 제어] 슬롯 사용 가능, 생성 진행');
@@ -2707,9 +2636,9 @@ const App = () => {
                 user={user}
                 userProfile={userProfile}
                 appId={appId}
-                fontSize={fontSize}  // 수정 5: 폰트 크기 연동 버그 픽스
+                fontSize={fontSize}
+                slotStatus={slotStatus}
                 onClose={() => {
-                  // 이전 화면으로 돌아가기 (서재 또는 보관함)
                   const isMyBook = selectedBook.authorId === user?.uid;
                   setSelectedBook(null);
                   setView(isMyBook ? 'archive' : 'library');

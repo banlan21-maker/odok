@@ -1,0 +1,17 @@
+// Firestore 규칙 – daily_series_slot 전용
+//
+// ⚠️ 이 파일 전체를 deploy하면 기존 콘솔 규칙을 덮어씁니다.
+//    books, users 등 다른 규칙이 있다면 반드시 콘솔에 이 블록만 추가해서 사용하세요.
+//
+// [콘솔에 추가할 블록]
+// Firestore > 규칙 > match /databases/.../documents { ... } 안에 아래를 추가 후 게시.
+//
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    match /artifacts/{artifactId}/public/data/daily_series_slot/{dateKey} {
+      allow read, write: if request.auth != null;
+    }
+  }
+}

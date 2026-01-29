@@ -317,16 +317,9 @@ const WriteView = ({ user, userProfile, onBookGenerated, slotStatus, setView, se
     return [];
   };
 
-  // 슬롯 상태 확인 (시리즈는 웹소설형/소설형 분리)
-  const getSlotStatus = (categoryId, subCategoryId = null) => {
-    // 시리즈의 경우 subCategory로 구분
-    if (categoryId === 'series' && subCategoryId) {
-      const normalizedSubCategory = String(subCategoryId || '').trim().toLowerCase();
-      const seriesSlotKey = (normalizedSubCategory === 'webnovel' || normalizedSubCategory === 'web-novel')
-        ? 'series-webnovel'
-        : 'series-novel';
-      return slotStatus?.[seriesSlotKey] || null;
-    }
+  // 슬롯 상태 확인 (시리즈는 통합 1슬롯, 하위 구분 없음)
+  const getSlotStatus = (categoryId, _subCategoryId = null) => {
+    if (categoryId === 'series') return slotStatus?.['series'] || null;
     return slotStatus?.[categoryId] || null;
   };
 
@@ -334,22 +327,15 @@ const WriteView = ({ user, userProfile, onBookGenerated, slotStatus, setView, se
     return getSlotStatus(categoryId, subCategoryId) === null;
   };
   
-  // 시리즈 카테고리의 경우 두 슬롯 중 하나라도 사용 가능하면 활성화
-  const isSeriesCategoryAvailable = () => {
-    return isSlotAvailable('series', 'webnovel') || isSlotAvailable('series', 'novel');
-  };
+  const isSeriesCategoryAvailable = () => isSlotAvailable('series');
 
   // 카테고리 선택 핸들러
   const handleCategorySelect = (category) => {
-    // 시리즈의 경우 두 슬롯 중 하나라도 사용 가능하면 진입 가능
     if (category.id === 'series') {
       if (!isSeriesCategoryAvailable()) {
-        // 두 슬롯 모두 마감
-        const webnovelSlot = getSlotStatus('series', 'webnovel');
-        const novelSlot = getSlotStatus('series', 'novel');
-        const soldOutBook = webnovelSlot?.book || novelSlot?.book;
-        if (soldOutBook && setSelectedBook && setView) {
-          setSelectedBook(soldOutBook);
+        const seriesSlot = getSlotStatus('series');
+        if (seriesSlot?.book && setSelectedBook && setView) {
+          setSelectedBook(seriesSlot.book);
           setView('book_detail');
         }
         return;
@@ -810,13 +796,10 @@ const WriteView = ({ user, userProfile, onBookGenerated, slotStatus, setView, se
         <h3 className="text-sm font-bold text-slate-500 px-1">카테고리 선택</h3>
         <div className="grid grid-cols-2 gap-3">
           {categories.map((category) => {
-            // 시리즈는 두 슬롯 모두 마감되었는지 확인
             const isSoldOut = category.id === 'series' 
               ? !isSeriesCategoryAvailable()
               : getSlotStatus(category.id) !== null;
-            const slotInfo = category.id === 'series'
-              ? (getSlotStatus('series', 'webnovel') || getSlotStatus('series', 'novel'))
-              : getSlotStatus(category.id);
+            const slotInfo = getSlotStatus(category.id);
 
             return (
               <button
@@ -992,55 +975,30 @@ const WriteView = ({ user, userProfile, onBookGenerated, slotStatus, setView, se
           {/* 소설류 카테고리 (웹소설/소설/시리즈) */}
           {selectedCategory.isNovel && (
             <>
-              {/* 시리즈만: 웹소설형/일반소설형 선택 */}
+              {/* 시리즈만: 웹소설형/일반소설형 선택 (잠금 없음, 시리즈 버튼에서만 통합 잠금) */}
               {selectedCategory.id === 'series' && (
                 <div className="space-y-2">
                   <label className="text-sm font-bold text-slate-700">
                     세부 장르 <span className="text-orange-500">*</span>
                   </label>
                   <div className="grid grid-cols-2 gap-2">
-                    {seriesSubTypes.map((subType) => {
-                      const isSlotAvailableForSubType = isSlotAvailable('series', subType.id);
-                      const slotInfo = getSlotStatus('series', subType.id);
-                      
-                      return (
-                        <button
-                          key={subType.id}
-                          onClick={() => {
-                            if (!isSlotAvailableForSubType) {
-                              if (slotInfo?.book && setSelectedBook && setView) {
-                                setSelectedBook(slotInfo.book);
-                                setView('book_detail');
-                              }
-                              return;
-                            }
-                            setSeriesSubType(subType);
-                            setSelectedGenre(null);
-                            setSelectedMood('');
-                          }}
-                          disabled={!isSlotAvailableForSubType}
-                          className={`py-3 rounded-xl font-bold text-sm transition-all relative ${
-                            !isSlotAvailableForSubType
-                              ? 'bg-slate-100 text-slate-400 cursor-not-allowed opacity-60'
-                              : seriesSubType?.id === subType.id
-                              ? 'bg-orange-500 text-white'
-                              : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                          }`}
-                        >
-                          {!isSlotAvailableForSubType && (
-                            <div className="absolute top-1 right-1">
-                              <Lock className="w-3 h-3 text-slate-400" />
-                            </div>
-                          )}
-                          {subType.name}
-                          {!isSlotAvailableForSubType && slotInfo?.authorName && (
-                            <div className="text-[10px] text-slate-400 mt-1">
-                              By. {slotInfo.authorName}
-                            </div>
-                          )}
-                        </button>
-                      );
-                    })}
+                    {seriesSubTypes.map((subType) => (
+                      <button
+                        key={subType.id}
+                        onClick={() => {
+                          setSeriesSubType(subType);
+                          setSelectedGenre(null);
+                          setSelectedMood('');
+                        }}
+                        className={`py-3 rounded-xl font-bold text-sm transition-all ${
+                          seriesSubType?.id === subType.id
+                            ? 'bg-orange-500 text-white'
+                            : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                        }`}
+                      >
+                        {subType.name}
+                      </button>
+                    ))}
                   </div>
                 </div>
               )}

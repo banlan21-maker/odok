@@ -70,7 +70,7 @@ const ArchiveView = ({ books, user, onBookClick, favoriteBookIds = [] }) => {
                   className="w-full p-4 bg-white rounded-xl border border-slate-100 shadow-sm text-left hover:border-orange-200 active:bg-slate-50 transition-colors"
                 >
                   <div className="flex items-start gap-3">
-                    <div className="w-16 h-20 rounded-md overflow-hidden shrink-0 bg-slate-100">
+                    <div className="relative w-16 h-20 rounded-md overflow-hidden shrink-0 bg-slate-100">
                       <img 
                         src={coverImage} 
                         alt={book.title}
@@ -84,6 +84,17 @@ const ArchiveView = ({ books, user, onBookClick, favoriteBookIds = [] }) => {
                       <div className="w-full h-full bg-gradient-to-br from-orange-100 to-orange-200 flex items-center justify-center hidden">
                         <Book className="w-6 h-6 text-orange-600" />
                       </div>
+                      {(book.isSeries || book.category === 'series') && book.episodes && (
+                        <div
+                          className={`absolute top-1 right-1 w-8 h-8 rounded-full flex items-center justify-center text-[9px] font-black shadow-md ${
+                            book.status === 'ongoing'
+                              ? 'bg-amber-400 text-amber-900'
+                              : 'bg-red-500 text-white'
+                          }`}
+                        >
+                          {book.status === 'ongoing' ? '연재중' : '완결'}
+                        </div>
+                      )}
                     </div>
                     <div className="flex-1 min-w-0">
                       <h3 className="font-black text-slate-800 text-lg mb-2 line-clamp-1">
@@ -103,11 +114,6 @@ const ArchiveView = ({ books, user, onBookClick, favoriteBookIds = [] }) => {
                            book.category === 'self-help' ? '자기계발' :
                            book.category === 'humanities' ? '인문.철학' : book.category}
                         </span>
-                        {(book.isSeries || book.category === 'series') && book.episodes && (
-                          <span className="text-[10px] font-bold text-orange-600">
-                            {book.episodes.length}화 {book.status === 'ongoing' ? '연재 중' : '완결'}
-                          </span>
-                        )}
                         {book.subCategory && (
                           <span className="bg-slate-100 px-2 py-0.5 rounded-full text-slate-600">
                             {formatTag(book.subCategory)}
@@ -175,7 +181,7 @@ const ArchiveView = ({ books, user, onBookClick, favoriteBookIds = [] }) => {
                   className="w-full p-4 bg-white rounded-xl border border-slate-100 shadow-sm text-left hover:border-amber-200 active:bg-slate-50 transition-colors"
                 >
                   <div className="flex items-start gap-3">
-                    <div className="w-16 h-20 rounded-md overflow-hidden shrink-0 bg-slate-100">
+                    <div className="relative w-16 h-20 rounded-md overflow-hidden shrink-0 bg-slate-100">
                       <img 
                         src={coverImage} 
                         alt={book.title}
@@ -188,6 +194,17 @@ const ArchiveView = ({ books, user, onBookClick, favoriteBookIds = [] }) => {
                       <div className="w-full h-full bg-gradient-to-br from-orange-100 to-orange-200 flex items-center justify-center hidden">
                         <Book className="w-6 h-6 text-orange-600" />
                       </div>
+                      {(book.isSeries || book.category === 'series') && book.episodes && (
+                        <div
+                          className={`absolute top-1 right-1 w-8 h-8 rounded-full flex items-center justify-center text-[9px] font-black shadow-md ${
+                            book.status === 'ongoing'
+                              ? 'bg-amber-400 text-amber-900'
+                              : 'bg-red-500 text-white'
+                          }`}
+                        >
+                          {book.status === 'ongoing' ? '연재중' : '완결'}
+                        </div>
+                      )}
                     </div>
                     <div className="flex-1 min-w-0">
                       <h3 className="font-black text-slate-800 text-lg mb-2 line-clamp-1">
@@ -207,11 +224,6 @@ const ArchiveView = ({ books, user, onBookClick, favoriteBookIds = [] }) => {
                            book.category === 'self-help' ? '자기계발' :
                            book.category === 'humanities' ? '인문.철학' : book.category}
                         </span>
-                        {(book.isSeries || book.category === 'series') && book.episodes && (
-                          <span className="text-[10px] font-bold text-orange-600">
-                            {book.episodes.length}화 {book.status === 'ongoing' ? '연재 중' : '완결'}
-                          </span>
-                        )}
                         {book.subCategory && (
                           <span className="bg-slate-100 px-2 py-0.5 rounded-full text-slate-600">
                             {formatTag(book.subCategory)}

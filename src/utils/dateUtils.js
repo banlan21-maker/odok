@@ -71,3 +71,12 @@ export const formatDateDetailed = (dateValue) => {
     day: 'numeric'
   });
 };
+
+/** 오늘 날짜 키 (YYYY-MM-DD). 슬롯/일일 제한 등에 사용 */
+export const getTodayDateKey = () => {
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = String(now.getMonth() + 1).padStart(2, '0');
+  const d = String(now.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+};

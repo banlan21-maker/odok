@@ -200,7 +200,7 @@ const HomeView = ({
                   onClick={() => handleBookClick(book)}
                   className="w-full bg-white p-4 rounded-xl border border-slate-100 shadow-sm flex items-center gap-4 hover:bg-orange-50 transition-colors active:scale-[0.98] text-left"
                 >
-                  <div className="w-16 h-20 rounded-md overflow-hidden shrink-0 bg-slate-100">
+                  <div className="relative w-16 h-20 rounded-md overflow-hidden shrink-0 bg-slate-100">
                     <img 
                       src={coverImage} 
                       alt={book.title}
@@ -214,6 +214,17 @@ const HomeView = ({
                     <div className="w-full h-full bg-gradient-to-br from-orange-100 to-orange-200 flex items-center justify-center hidden">
                       <Book className="w-6 h-6 text-orange-600" />
                     </div>
+                    {(book.isSeries || book.category === 'series') && book.episodes && (
+                      <div
+                        className={`absolute top-1 right-1 w-8 h-8 rounded-full flex items-center justify-center text-[9px] font-black shadow-md ${
+                          book.status === 'ongoing'
+                            ? 'bg-amber-400 text-amber-900'
+                            : 'bg-red-500 text-white'
+                        }`}
+                      >
+                        {book.status === 'ongoing' ? '연재중' : '완결'}
+                      </div>
+                    )}
                   </div>
                   <div className="flex-1 min-w-0">
                     <h4 className="font-black text-slate-800 text-base mb-1 line-clamp-1">
@@ -230,11 +241,6 @@ const HomeView = ({
                          book.category === 'self-help' ? '자기계발' :
                          book.category === 'humanities' ? '인문.철학' : book.category}
                       </span>
-                      {(book.isSeries || book.category === 'series') && book.episodes && (
-                        <span className="text-[10px] font-bold text-orange-600">
-                          현재 {book.episodes.length}화 {book.status === 'ongoing' ? '연재 중' : '완결'}
-                        </span>
-                      )}
                       <span className="flex items-center gap-1 text-slate-400">
                         <Calendar className="w-3 h-3" />
                         {dateString}

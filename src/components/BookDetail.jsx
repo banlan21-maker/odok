@@ -7,6 +7,7 @@ import { getCoverImageFromBook } from '../utils/bookCovers';
 import { collection, addDoc, deleteDoc, doc, onSnapshot, serverTimestamp, setDoc, updateDoc, increment, runTransaction, getDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { generateSeriesEpisode } from '../utils/aiService';
+import { getTodayDateKey } from '../utils/dateUtils';
 
 const MAX_LEVEL = 99;
 
@@ -33,7 +34,7 @@ const calculateLevelUp = (currentLevel, currentExp, expGain, maxExp) => {
   };
 };
 
-const BookDetail = ({ book, onClose, fontSize = 'text-base', user, userProfile, appId }) => {
+const BookDetail = ({ book, onClose, fontSize = 'text-base', user, userProfile, appId, slotStatus }) => {
   if (!book) return null;
   
   // 수정 5: fontSize 값을 Tailwind 클래스로 매핑
@@ -81,7 +82,7 @@ const BookDetail = ({ book, onClose, fontSize = 'text-base', user, userProfile, 
   const currentEpisode = isSeries && episodes.length > 0 ? episodes[currentEpisodeIndex] : null;
   const displayContent = isSeries ? (currentEpisode?.content || '') : (book.content || '');
   const isLastEpisode = isSeries && currentEpisodeIndex === episodes.length - 1;
-  const canWriteNext = isSeries && book.status === 'ongoing' && isLastEpisode;
+  const seriesSlotTaken = !!(slotStatus?.series);
 
   const bookId = book.id;
   const likeDocId = useMemo(() => (user && bookId ? `${user.uid}_${bookId}` : null), [user, bookId]);
@@ -320,10 +321,30 @@ const BookDetail = ({ book, onClose, fontSize = 'text-base', user, userProfile, 
 
   const handleWriteNextEpisode = async (continuationType) => {
     if (!user || !appId || !isSeries) return;
+    if (seriesSlotTaken) {
+      alert('오늘 시리즈 집필은 마감되었어요.');
+      return;
+    }
     setShowContinuationModal(false);
     setIsGeneratingEpisode(true);
-    
+    const todayKey = getTodayDateKey();
+    const dssRef = doc(db, 'artifacts', appId, 'public', 'data', 'daily_series_slot', todayKey);
+    let claimCreated = false;
+
     try {
+      await runTransaction(db, async (tx) => {
+        const snap = await tx.get(dssRef);
+        if (snap.exists()) throw new Error('SLOT_TAKEN');
+        tx.set(dssRef, {
+          bookId: book.id,
+          authorId: user.uid,
+          authorName: userProfile?.nickname || '익명',
+          type: 'episode',
+          createdAt: serverTimestamp()
+        });
+      });
+      claimCreated = true;
+
       const lastEpisode = episodes[episodes.length - 1];
       const result = await generateSeriesEpisode({
         seriesId: book.seriesId || book.id,
@@ -355,15 +376,19 @@ const BookDetail = ({ book, onClose, fontSize = 'text-base', user, userProfile, 
         episodes: [...episodes, newEpisode],
         summary: result.cumulativeSummary
       };
-
-      if (result.isFinale) {
-        updateData.status = 'completed';
-      }
+      if (result.isFinale) updateData.status = 'completed';
 
       await updateDoc(bookRef, updateData);
       setCurrentEpisodeIndex(episodes.length);
       alert(result.isFinale ? '시리즈가 완결되었습니다!' : '다음 화가 추가되었습니다!');
     } catch (err) {
+      if (claimCreated) {
+        try { await deleteDoc(dssRef); } catch (e) { console.warn('클레임 해제 실패', e); }
+      }
+      if (err?.message === 'SLOT_TAKEN') {
+        alert('오늘 시리즈 집필은 마감되었어요.');
+        return;
+      }
       console.error('시리즈 이어쓰기 실패:', err);
       alert(err?.message || '시리즈 집필에 실패했습니다. 다시 시도해주세요.');
     } finally {
@@ -553,16 +578,25 @@ const BookDetail = ({ book, onClose, fontSize = 'text-base', user, userProfile, 
       {!user && <p className="text-xs text-slate-400">로그인 후 사용 가능</p>}
 
       {/* 시리즈 다음 화 집필 */}
-      {canWriteNext && user && (
+      {isSeries && book.status === 'ongoing' && isLastEpisode && user && (
         <div className="mt-4">
-          <button
-            onClick={() => setShowContinuationModal(true)}
-            disabled={isGeneratingEpisode}
-            className="w-full bg-gradient-to-r from-orange-500 to-orange-600 text-white py-3 rounded-xl text-sm font-black hover:from-orange-600 hover:to-orange-700 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
-          >
-            <PenTool className="w-4 h-4" />
-            {isGeneratingEpisode ? '집필 중...' : '다음 화 집필하기'}
-          </button>
+          {seriesSlotTaken ? (
+            <div className="w-full bg-slate-100 text-slate-500 py-3 rounded-xl text-sm font-bold text-center">
+              오늘 시리즈 집필 마감
+              {slotStatus?.series?.authorName && (
+                <span className="block text-xs text-slate-400 mt-0.5">By. {slotStatus.series.authorName}</span>
+              )}
+            </div>
+          ) : (
+            <button
+              onClick={() => setShowContinuationModal(true)}
+              disabled={isGeneratingEpisode}
+              className="w-full bg-gradient-to-r from-orange-500 to-orange-600 text-white py-3 rounded-xl text-sm font-black hover:from-orange-600 hover:to-orange-700 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+            >
+              <PenTool className="w-4 h-4" />
+              {isGeneratingEpisode ? '집필 중...' : '다음 화 집필하기'}
+            </button>
+          )}
         </div>
       )}
 
