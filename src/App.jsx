@@ -6,6 +6,7 @@ import {
   Star, MessageCircle, Reply, Send, MoreHorizontal, Bookmark, Heart, Globe, Home, Edit2, Flag, X, Library, Vote, Trophy, CheckCircle, HelpCircle, Smile, Zap, Brain, Sparkles, LogOut, Lock, Droplets
 } from 'lucide-react';
 import { FirebaseAuthentication } from '@capacitor-firebase/authentication';
+import { LocalNotifications } from '@capacitor/local-notifications';
 import { 
   collection, query, onSnapshot, 
   doc, setDoc, getDoc, addDoc, deleteDoc, serverTimestamp, updateDoc, increment, where, getDocs, limit, orderBy, Timestamp
@@ -80,6 +81,8 @@ const App = () => {
   const [noticeTitle, setNoticeTitle] = useState('');
   const [noticeContent, setNoticeContent] = useState('');
   const [isSavingNotice, setIsSavingNotice] = useState(false);
+  const [isWritingInProgress, setIsWritingInProgress] = useState(false);
+  const [writingToast, setWritingToast] = useState(null);
   const [ratings, setRatings] = useState([]);
   const [comments, setComments] = useState([]);
   const [readHistory, setReadHistory] = useState([]); 
@@ -294,6 +297,22 @@ const App = () => {
     tryNativeSilentSignIn();
   }, []);
 
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return;
+    const setupNotificationListener = async () => {
+      await LocalNotifications.addListener('localNotificationActionPerformed', (notification) => {
+        console.log('알림 클릭됨:', notification);
+        if (view !== 'archive') {
+          setView('archive');
+        }
+      });
+    };
+    setupNotificationListener();
+    return () => {
+      LocalNotifications.removeAllListeners();
+    };
+  }, []);
+
   // 2. 프로필 (Part 1: 데이터 지속성 강화)
   useEffect(() => {
     viewRef.current = view;
@@ -306,6 +325,12 @@ const App = () => {
       window.history.replaceState(window.history.state, '', '/');
     }
   }, [view]);
+
+  useEffect(() => {
+    if (!writingToast) return;
+    const timer = setTimeout(() => setWritingToast(null), 6000);
+    return () => clearTimeout(timer);
+  }, [writingToast]);
 
   useEffect(() => {
     if (window.location.pathname === '/notice' && user && userProfile?.nickname) {
@@ -921,6 +946,19 @@ const App = () => {
         likes: 0,
         isSeries: isSeries
       };
+
+      if (bookData.steps && Array.isArray(bookData.steps)) {
+        bookDocumentData.steps = bookData.steps;
+      }
+      if (bookData.storySummary) {
+        bookDocumentData.storySummary = bookData.storySummary;
+      }
+      if (bookData.synopsis) {
+        bookDocumentData.synopsis = bookData.synopsis;
+      }
+      if (bookData.characterSheet) {
+        bookDocumentData.characterSheet = bookData.characterSheet;
+      }
       
       // 수정 2: 시리즈인 경우 추가 필드 설정
       if (isSeries) {
@@ -932,6 +970,10 @@ const App = () => {
       
       // 새 스키마에 맞게 책 저장
       const bookRef = await addDoc(collection(db, 'artifacts', appId, 'books'), bookDocumentData);
+      const savedBook = {
+        id: bookRef.id,
+        ...bookDocumentData
+      };
       
       // 저장 성공 로그
       console.log("✅ Document written with ID: ", bookRef.id);
@@ -1005,13 +1047,17 @@ const App = () => {
       }
 
       // 저장 성공 시 보관함으로 이동
-      setView('archive');
+      if (!options?.skipNavigate) {
+        setView('archive');
+      }
       setError(null);
       
       // 집필 완료 토스트 메시지 (간단한 알림)
       setTimeout(() => {
         console.log(`📚 집필 완료! 잉크 ${REWARD_INK}과 경험치를 획득했습니다!`);
       }, 100);
+
+      return savedBook;
     } catch (err) {
       console.error('책 저장 오류:', err);
       if (err.message === 'SLOT_ALREADY_TAKEN') {
@@ -2600,18 +2646,28 @@ const App = () => {
             {/* 기존 책 읽기 (기존 ReaderView) */}
             {view === 'reader' && currentStory && !currentBook && <ReaderView t={t} user={user} currentStory={currentStory} readerLang={readerLang} isTranslating={isTranslating} displayTitle={displayTitle} displayBody={displayBody} fontSize={fontSize} translateStory={translateStory} toggleFavorite={toggleFavorite} isFavorited={isFavorited} handleShare={handleShare} setIsReportModalOpen={setIsReportModalOpen} currentStoryStats={currentStoryStats} getFavoriteCount={getFavoriteCount} canFinishRead={canFinishRead} finishReading={finishReading} submitSeriesVote={submitSeriesVote} myVote={myVote} voteCounts={voteCounts} getTodayString={getTodayString} ratings={ratings} submitRating={submitRating} comments={comments} commentInput={commentInput} setCommentInput={setCommentInput} editingCommentId={editingCommentId} replyTo={replyTo} setReplyTo={setReplyTo} setEditingCommentId={setEditingCommentId} submitComment={submitComment} startEditComment={startEditComment} error={error} isSubmittingComment={isSubmittingComment} />}
             {/* Step 1: 집필 화면 */}
-            {view === 'write' && (
-              <WriteView 
-                user={user}
-                userProfile={userProfile}
-                onBookGenerated={handleBookGenerated}
-                slotStatus={slotStatus}
-                setView={setView}
-                setSelectedBook={setSelectedBook}
-                error={error}
-                setError={setError}
-                deductInk={deductInk}
-              />
+            {(view === 'write' || isWritingInProgress) && (
+              <div className={view === 'write' ? '' : 'hidden'}>
+                <WriteView
+                  user={user}
+                  userProfile={userProfile}
+                  onBookGenerated={handleBookGenerated}
+                  slotStatus={slotStatus}
+                  setView={setView}
+                  setSelectedBook={setSelectedBook}
+                  error={error}
+                  setError={setError}
+                  deductInk={deductInk}
+                  onGeneratingChange={setIsWritingInProgress}
+                  onGenerationComplete={(book) => {
+                    if (!book) return;
+                    setWritingToast({
+                      id: book.id,
+                      title: book.title
+                    });
+                  }}
+                />
+              </div>
             )}
             {/* Step 1: 서재 화면 */}
             {view === 'library' && (
@@ -2674,6 +2730,23 @@ const App = () => {
             )}
           </div>
         </main>
+
+        {writingToast && (
+          <div className="fixed bottom-20 left-1/2 -translate-x-1/2 z-50">
+            <button
+              onClick={() => {
+                const book = books.find((b) => b.id === writingToast.id)
+                  || { id: writingToast.id, title: writingToast.title };
+                setSelectedBook(book);
+                setView('book_detail');
+                setWritingToast(null);
+              }}
+              className="bg-slate-900 text-white px-4 py-2 rounded-full shadow-lg text-xs font-bold hover:bg-slate-800"
+            >
+              집필이 완료되었습니다! 확인해보세요.
+            </button>
+          </div>
+        )}
 
         {/* 하단 탭 네비게이션 바 - 5개 탭 (로그인 O and 닉네임 O일 때만 표시) */}
         {user && userProfile && userProfile.nickname && view !== 'reader' && view !== 'book_detail' && (

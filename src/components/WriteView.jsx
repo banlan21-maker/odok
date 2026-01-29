@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Capacitor } from '@capacitor/core';
 import { KeepAwake } from '@capacitor-community/keep-awake';
+import { LocalNotifications } from '@capacitor/local-notifications';
 import { PenTool, RefreshCw, Book, Edit2, Lock, Droplets } from 'lucide-react';
 import { generateBook } from '../utils/aiService';
 
@@ -106,7 +107,7 @@ const endingStyles = [
   '수미상관 (처음과 끝이 연결됨)'
 ];
 
-const WriteView = ({ user, userProfile, onBookGenerated, slotStatus, setView, setSelectedBook, error, setError, deductInk }) => {
+const WriteView = ({ user, userProfile, onBookGenerated, slotStatus, setView, setSelectedBook, error, setError, deductInk, onGeneratingChange, onGenerationComplete }) => {
   // 메인 카테고리 목록 (6개)
   const categories = [
     { id: 'webnovel', name: '웹소설', icon: '📱', isNovel: true, isSingle: true },
@@ -135,6 +136,10 @@ const WriteView = ({ user, userProfile, onBookGenerated, slotStatus, setView, se
   const [showNoWritesNotice, setShowNoWritesNotice] = useState(false);
   const cancelRequestedRef = useRef(false);
   const [localError, setLocalError] = useState(null);
+  const [isGeneratingHidden, setIsGeneratingHidden] = useState(false);
+  const [loadingMessageIndex, setLoadingMessageIndex] = useState(0);
+  const [currentLoadingMessage, setCurrentLoadingMessage] = useState('');
+  const [currentLoadingMessages, setCurrentLoadingMessages] = useState([]);
 
   useEffect(() => {
     if (!Capacitor.isNativePlatform()) return;
@@ -157,6 +162,20 @@ const WriteView = ({ user, userProfile, onBookGenerated, slotStatus, setView, se
   }, [isGenerating]);
 
   const displayError = error || localError;
+  const novelLoadingMessages = [
+    "흥미진진한 시놉시스를 구상 중입니다...",
+    "주인공의 성격을 입체적으로 만드는 중...",
+    "예상치 못한 반전을 준비하고 있습니다...",
+    "문장을 윤문하고 오탈자를 확인 중입니다...",
+    "거의 다 됐어요! 잉크를 말리는 중..."
+  ];
+  const nonfictionLoadingMessages = [
+    "주제를 선명하게 정리하고 있습니다...",
+    "설득력 있는 관점을 구성 중입니다...",
+    "핵심 메시지를 다듬고 있습니다...",
+    "독자에게 더 잘 전달되도록 윤문 중...",
+    "마무리 문장을 정돈하고 있어요..."
+  ];
   
   const getTodayKey = () => {
     const now = new Date();
@@ -214,6 +233,43 @@ const WriteView = ({ user, userProfile, onBookGenerated, slotStatus, setView, se
       setShowNoWritesNotice(true);
     }
   }, [remainingDailyWrites]);
+
+  useEffect(() => {
+    if (typeof onGeneratingChange === 'function') {
+      onGeneratingChange(isGenerating);
+    }
+  }, [isGenerating, onGeneratingChange]);
+
+  useEffect(() => {
+    const requestNotificationPermission = async () => {
+      if (!Capacitor.isNativePlatform()) return;
+      try {
+        const result = await LocalNotifications.requestPermissions();
+        if (result.display !== 'granted') {
+          console.warn('알림 권한이 거부되었습니다.');
+        }
+      } catch (err) {
+        console.warn('알림 권한 요청 실패:', err);
+      }
+    };
+    requestNotificationPermission();
+  }, []);
+
+  useEffect(() => {
+    if (!isGenerating || currentLoadingMessages.length === 0) return;
+    const timer = setInterval(() => {
+      setLoadingMessageIndex((prev) => (prev + 1) % currentLoadingMessages.length);
+    }, 4000);
+    return () => clearInterval(timer);
+  }, [isGenerating, currentLoadingMessages.length]);
+
+  useEffect(() => {
+    if (currentLoadingMessages.length === 0) {
+      setCurrentLoadingMessage('');
+      return;
+    }
+    setCurrentLoadingMessage(currentLoadingMessages[loadingMessageIndex] || '');
+  }, [currentLoadingMessages, loadingMessageIndex]);
 
   const getMoodOptions = () => {
     if (!selectedCategory || !selectedGenre) return [];
@@ -463,6 +519,10 @@ const WriteView = ({ user, userProfile, onBookGenerated, slotStatus, setView, se
 
     cancelRequestedRef.current = false;
     setIsGenerating(true);
+    setIsGeneratingHidden(false);
+    const messages = selectedCategory?.isNovel ? novelLoadingMessages : nonfictionLoadingMessages;
+    setCurrentLoadingMessages(messages);
+    setLoadingMessageIndex(0);
     setLocalError(null);
     if (setError) setError(null);
 
@@ -484,13 +544,19 @@ const WriteView = ({ user, userProfile, onBookGenerated, slotStatus, setView, se
       }
 
       if (onBookGenerated) {
-        onBookGenerated({
+        const savedBook = await onBookGenerated({
           ...result,
           category: selectedCategory.id,
           subCategory: null,
           isSeries: false,
           keywords: selectedTopic
-        }, false, { skipDailyCheck: true });
+        }, false, { skipDailyCheck: true, skipNavigate: isGeneratingHidden });
+        if (isGeneratingHidden) {
+          await sendGenerationCompleteNotification(result.title || bookTitle);
+          if (typeof onGenerationComplete === 'function') {
+            onGenerationComplete(savedBook);
+          }
+        }
       }
 
       // 폼 초기화
@@ -582,6 +648,10 @@ const WriteView = ({ user, userProfile, onBookGenerated, slotStatus, setView, se
 
     cancelRequestedRef.current = false;
     setIsGenerating(true);
+    setIsGeneratingHidden(false);
+    const messages = selectedCategory?.isNovel ? novelLoadingMessages : nonfictionLoadingMessages;
+    setCurrentLoadingMessages(messages);
+    setLoadingMessageIndex(0);
     setLocalError(null);
     if (setError) setError(null);
 
@@ -601,13 +671,19 @@ const WriteView = ({ user, userProfile, onBookGenerated, slotStatus, setView, se
       if (cancelRequestedRef.current) return;
 
       if (onBookGenerated) {
-        onBookGenerated({
+        const savedBook = await onBookGenerated({
           ...result,
           category: selectedCategory.id === 'series' ? 'series' : selectedCategory.id,
           subCategory: selectedGenre.id,
           isSeries: selectedCategory.id === 'series',
           keywords: keywords.trim()
-        }, false, { skipDailyCheck: true });
+        }, false, { skipDailyCheck: true, skipNavigate: isGeneratingHidden });
+        if (isGeneratingHidden) {
+          await sendGenerationCompleteNotification(result.title || bookTitle);
+          if (typeof onGenerationComplete === 'function') {
+            onGenerationComplete(savedBook);
+          }
+        }
       }
 
       // 폼 초기화
@@ -635,9 +711,28 @@ const WriteView = ({ user, userProfile, onBookGenerated, slotStatus, setView, se
       cancelRequestedRef.current = false;
     }
   };
+  const sendGenerationCompleteNotification = async (bookTitle) => {
+    if (!Capacitor.isNativePlatform()) return;
+    try {
+      await LocalNotifications.schedule({
+        notifications: [
+          {
+            id: Date.now(),
+            title: '집필이 완료되었습니다!',
+            body: `"${bookTitle}" 작품을 확인해보세요.`,
+            schedule: { at: new Date(Date.now() + 1000) }
+          }
+        ]
+      });
+    } catch (err) {
+      console.warn('알림 전송 실패:', err);
+    }
+  };
+
   const handleCancelGenerate = () => {
     cancelRequestedRef.current = true;
     setIsGenerating(false);
+    setIsGeneratingHidden(false);
     setLocalError('집필이 취소되었습니다.');
     if (setError) setError('집필이 취소되었습니다.');
   };
@@ -657,12 +752,25 @@ const WriteView = ({ user, userProfile, onBookGenerated, slotStatus, setView, se
         <p className="text-xs text-slate-400">
           취소 후에 다른 작업을 진행할 수 있습니다.
         </p>
-        <button
-          onClick={handleCancelGenerate}
-          className="w-full py-3 rounded-xl text-sm font-black bg-white border border-orange-300 text-orange-600 hover:bg-orange-100"
-        >
-          집필 취소
-        </button>
+        {currentLoadingMessage && (
+          <p className="text-xs text-slate-500 font-bold">
+            {currentLoadingMessage}
+          </p>
+        )}
+        <div className="flex gap-2">
+          <button
+            onClick={() => setIsGeneratingHidden(true)}
+            className="flex-1 py-3 rounded-xl text-sm font-black bg-slate-900 text-white hover:bg-slate-800"
+          >
+            숨기기
+          </button>
+          <button
+            onClick={handleCancelGenerate}
+            className="flex-1 py-3 rounded-xl text-sm font-black bg-white border border-orange-300 text-orange-600 hover:bg-orange-100"
+          >
+            집필 취소
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -877,7 +985,7 @@ const WriteView = ({ user, userProfile, onBookGenerated, slotStatus, setView, se
                   )}
                 </button>
               )}
-              {isGenerating && <GeneratingNotice />}
+              {isGenerating && !isGeneratingHidden && <GeneratingNotice />}
             </>
           )}
 
@@ -1074,7 +1182,7 @@ const WriteView = ({ user, userProfile, onBookGenerated, slotStatus, setView, se
                   )}
                 </button>
               )}
-              {isGenerating && <GeneratingNotice />}
+              {isGenerating && !isGeneratingHidden && <GeneratingNotice />}
             </>
           )}
         </div>

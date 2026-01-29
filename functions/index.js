@@ -217,18 +217,38 @@ function buildSystemPrompt({isNovel, category, subCategory, genre, endingStyle, 
   ].filter(Boolean).join(" ");
 }
 
-function buildStepPrompt({topic, currentStep, previousStorySummary, isNovel, title}) {
+function buildStepPrompt({
+  topic,
+  currentStep,
+  previousStorySummary,
+  lastParagraph,
+  synopsis,
+  characterSheet,
+  isNovel,
+  title
+}) {
   const seed = topic || "";
   const titleLine = title ? `책 제목은 "${title}"입니다. 제목의 분위기와 주제에 어울리게 전개하세요.` : "";
   const summaryBlock = previousStorySummary
-    ? `이전 내용 요약:\n${previousStorySummary}\n\n`
+    ? `Story Summary (누적 요약):\n${previousStorySummary}\n`
+    : "Story Summary (누적 요약): (없음)\n";
+  const lastBlock = lastParagraph
+    ? `Last Paragraph (직전 내용 3~5문장):\n${lastParagraph}\n`
+    : "Last Paragraph (직전 내용 3~5문장): (없음)\n";
+  const staticContext = isNovel
+    ? `Static Context:\nSynopsis:\n${synopsis || "(없음)"}\n\nCharacter Sheet (이름/성격 절대 유지):\n${characterSheet || "(없음)"}\n\n`
     : "";
+  const dynamicContext = isNovel
+    ? `Dynamic Context:\n${summaryBlock}\n${lastBlock}\n`
+    : summaryBlock + "\n";
   const baseInstruction = [
     `사용자가 준 주제는 "${seed}"입니다. 이 짧은 문장을 씨앗으로 삼아 풍성한 디테일을 상상하여 확장하세요.`,
     titleLine,
-    `이번 단계는 "${currentStep.name}" 입니다.`,
-    `목표: ${currentStep.instruction}`,
-    "단순한 줄거리가 아니라 대사와 묘사가 살아있는 생생한 본문을 작성하세요.",
+    `Task: 이번에는 "${currentStep.name}" 단계를 작성하세요.`,
+    `가이드라인: ${currentStep.instruction}`,
+    isNovel
+      ? "Show, Don't Tell 방식으로 보여주기 위주로 서술하세요. 대화문과 묘사를 적극 활용하세요."
+      : "Persuasive & Insightful 톤으로 논리적 흐름을 유지하고, 독자에게 말을 거는 듯한 어조로 작성하세요.",
     "순수 텍스트로만 작성하세요 (JSON 형식, 코드, 특수 기호 사용 금지).",
     "이전 내용을 반복하지 마세요.",
     "한국어로 작성하세요."
@@ -237,10 +257,60 @@ function buildStepPrompt({topic, currentStep, previousStorySummary, isNovel, tit
   if (isNovel) {
     baseInstruction.push("장면 전환과 감정선의 흐름이 자연스럽게 이어지도록 구성하세요.");
   } else {
-    baseInstruction.push("논리적 흐름과 사례를 통해 설득력 있게 전개하세요.");
+    baseInstruction.push("논리적 흐름과 설득력 있는 근거로 전개하세요.");
   }
 
-  return `주제(Seed): ${seed}\n단계: ${currentStep.name}\n\n${summaryBlock}${baseInstruction.join("\n")}`;
+  return `주제(Seed): ${seed}\n단계: ${currentStep.name}\n\n${staticContext}${dynamicContext}${baseInstruction.join("\n")}`;
+}
+
+function extractLastSentences(content, maxSentences = 5) {
+  const cleaned = (content || "").replace(/\s+/g, " ").trim();
+  if (!cleaned) return "";
+  const sentences = cleaned.split(/(?<=[.!?…])\s+/).filter(Boolean);
+  const take = Math.min(maxSentences, sentences.length);
+  return sentences.slice(Math.max(0, sentences.length - take)).join(" ");
+}
+
+async function summarizeStepContent(content, systemPrompt, isNovel) {
+  const prompt = [
+    "다음 글을 한국어로 정확히 3줄로 요약해라.",
+    "각 줄은 1~2문장으로 간결하게 작성하라.",
+    "불릿/번호/특수기호 없이 줄바꿈만 사용하라.",
+    "요약문에 새 정보를 추가하지 마라.",
+    "본문:",
+    content || ""
+  ].join("\n");
+  const result = await callGemini(systemPrompt, prompt, 0.2, isNovel);
+  return (result.content || "").trim();
+}
+
+async function generateStaticContext(systemPrompt, topic, title, genre, isNovel) {
+  if (!isNovel) {
+    return {synopsis: "", characterSheet: ""};
+  }
+  const prompt = [
+    "다음 정보를 바탕으로 소설의 고정 정보를 만들어라.",
+    "출력 형식은 반드시 아래 구조를 지켜라:",
+    "Synopsis:",
+    "- 5~7문장 분량의 전체 시놉시스",
+    "",
+    "Character Sheet:",
+    "- 이름: (고유명사)",
+    "  성격: (핵심 성격 2~3가지)",
+    "  절대 유지 조건: (이름/성격은 절대 변경 금지)",
+    "",
+    `주제: ${topic || ""}`,
+    title ? `책 제목: ${title}` : "",
+    genre ? `장르: ${genre}` : ""
+  ].filter(Boolean).join("\n");
+  const result = await callGemini(systemPrompt, prompt, 0.6, true);
+  const text = (result.content || "").trim();
+  const synopsisMatch = text.match(/Synopsis:\s*([\s\S]*?)(?:\n\s*Character Sheet:|\n\s*Characters:|$)/i);
+  const characterMatch = text.match(/Character Sheet:\s*([\s\S]*)/i) || text.match(/Characters:\s*([\s\S]*)/i);
+  return {
+    synopsis: (synopsisMatch?.[1] || text).trim(),
+    characterSheet: (characterMatch?.[1] || "").trim()
+  };
 }
 
 function getErrorStatus(error) {
@@ -312,11 +382,25 @@ async function callGemini(systemPrompt, userPrompt, temperature = 0.75, isNovel 
 }
 
 // 단계별 생성 함수
-async function generateStep(systemPrompt, topic, currentStep, previousStorySummary, temperature, isNovel, title) {
+async function generateStep({
+  systemPrompt,
+  topic,
+  currentStep,
+  previousStorySummary,
+  lastParagraph,
+  synopsis,
+  characterSheet,
+  temperature,
+  isNovel,
+  title
+}) {
   const userPrompt = buildStepPrompt({
     topic,
     currentStep,
     previousStorySummary,
+    lastParagraph,
+    synopsis,
+    characterSheet,
     isNovel,
     title
   });
@@ -364,37 +448,61 @@ exports.generateBookAI = onCall(
             {name: "결말", instruction: "스토리를 해결하고 마무리하세요."}
           ]
         : [
-            {name: "서론", instruction: "주제를 소개하고 독자의 관심을 끄세요."},
-            {name: "본론", instruction: "주요 논점을 발전시키고 예시를 제시하세요."},
-            {name: "결론", instruction: "핵심 메시지를 요약하고 마무리하세요."}
+            {name: "서론", instruction: "주제 제기, 독자의 흥미 유발, 문제 의식 공유."},
+            {name: "본론 1", instruction: "주제에 대한 깊이 있는 통찰, 작가의 경험이나 예시."},
+            {name: "본론 2", instruction: "구체적인 해결책, 철학적 사색, 혹은 반전된 시각 제시."},
+            {name: "결론", instruction: "핵심 메시지 요약, 독자에게 주는 제언, 여운이 남는 마무리."}
           ];
 
       let fullContent = "";
       const topic = `${keywords || ""} ${genre || ""}`.trim();
 
       const requestedTitle = (title || "").toString().trim().slice(0, 15);
+      const staticContext = await generateStaticContext(
+        systemPrompt,
+        topic,
+        requestedTitle,
+        genre,
+        isNovel
+      );
+      let storySummary = (previousContext || "").toString().trim();
+      let lastParagraph = "";
+      const stepResults = [];
 
       // 단계별 생성
       for (let i = 0; i < steps.length; i++) {
         const step = steps[i];
-        const previousStorySummary = fullContent 
-          ? fullContent.substring(Math.max(0, fullContent.length - 500)) 
-          : (previousContext || "");
+        const previousStorySummary = storySummary || "";
         
         try {
-          const stepContent = await generateStep(
+          const stepContent = await generateStep({
             systemPrompt,
             topic,
-            step,
+            currentStep: step,
             previousStorySummary,
+            lastParagraph,
+            synopsis: staticContext.synopsis,
+            characterSheet: staticContext.characterSheet,
             temperature,
             isNovel,
-            requestedTitle
-          );
+            title: requestedTitle
+          });
 
           if (!stepContent || !stepContent.trim()) {
             throw new Error("빈 응답이 반환되었습니다.");
           }
+
+          const stepSummary = await summarizeStepContent(stepContent, systemPrompt, isNovel);
+          if (stepSummary) {
+            storySummary = storySummary ? `${storySummary}\n${stepSummary}` : stepSummary;
+          }
+          lastParagraph = extractLastSentences(stepContent, 5);
+
+          stepResults.push({
+            name: step.name,
+            content: stepContent.trim(),
+            summary: stepSummary
+          });
 
           fullContent += stepContent + "\n\n";
         } catch (error) {
@@ -419,7 +527,11 @@ exports.generateBookAI = onCall(
       return {
         title: finalTitle,
         content: fullContent.trim(),
-        summary: summary
+        summary: summary,
+        steps: stepResults,
+        storySummary: storySummary,
+        synopsis: staticContext.synopsis,
+        characterSheet: staticContext.characterSheet
       };
     } catch (error) {
       logger.error("[generateBookAI] 에러:", {

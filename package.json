@@ -16,6 +16,7 @@
     "@capacitor/android": "^8.0.2",
     "@capacitor/cli": "^8.0.2",
     "@capacitor/core": "^8.0.2",
+    "@capacitor/local-notifications": "^8.0.0",
     "browser-image-compression": "^2.0.2",
     "date-fns": "^4.1.0",
     "firebase": "^12.7.0",
