@@ -10,6 +10,9 @@ import { generateSeriesEpisode } from '../utils/aiService';
 import { getTodayDateKey } from '../utils/dateUtils';
 
 const MAX_LEVEL = 99;
+const DAILY_WRITE_LIMIT = 2;
+const REWARD_INK = 25;
+const INK_MAX = 999;
 
 const calculateLevelUp = (currentLevel, currentExp, expGain, maxExp) => {
   const newExp = currentExp + expGain;
@@ -325,9 +328,25 @@ const BookDetail = ({ book, onClose, fontSize = 'text-base', user, userProfile, 
       alert('오늘 시리즈 집필은 마감되었어요.');
       return;
     }
+    // 하루 집필 횟수 제한 (시리즈 다음 화도 1회로 카운트)
+    const profileRef = doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'info');
+    const profileSnap = await getDoc(profileRef);
+    const todayKey = getTodayDateKey();
+    let dailyWriteCount = 0;
+    let lastBookCreatedDate = null;
+    if (profileSnap.exists()) {
+      const d = profileSnap.data();
+      lastBookCreatedDate = d.lastBookCreatedDate;
+      dailyWriteCount = Number(d.dailyWriteCount || 0);
+    }
+    if (lastBookCreatedDate !== todayKey) dailyWriteCount = 0;
+    if (dailyWriteCount >= DAILY_WRITE_LIMIT) {
+      alert('하루에 최대 2회까지만 집필할 수 있어요.');
+      return;
+    }
+
     setShowContinuationModal(false);
     setIsGeneratingEpisode(true);
-    const todayKey = getTodayDateKey();
     const dssRef = doc(db, 'artifacts', appId, 'public', 'data', 'daily_series_slot', todayKey);
     let claimCreated = false;
 
@@ -380,6 +399,16 @@ const BookDetail = ({ book, onClose, fontSize = 'text-base', user, userProfile, 
 
       await updateDoc(bookRef, updateData);
       setCurrentEpisodeIndex(episodes.length);
+
+      // 시리즈 다음 화 집필도 하루 집필 1회로 카운트 + 잉크 보상
+      const nextDailyWriteCount = lastBookCreatedDate === todayKey ? dailyWriteCount + 1 : 1;
+      const currentInk = profileSnap.exists() ? Number(profileSnap.data().ink || 0) : 0;
+      await updateDoc(profileRef, {
+        dailyWriteCount: nextDailyWriteCount,
+        lastBookCreatedDate: todayKey,
+        ink: Math.min(INK_MAX, currentInk + REWARD_INK)
+      });
+
       alert(result.isFinale ? '시리즈가 완결되었습니다!' : '다음 화가 추가되었습니다!');
     } catch (err) {
       if (claimCreated) {
