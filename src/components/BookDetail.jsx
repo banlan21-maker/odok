@@ -564,6 +564,29 @@ const BookDetail = ({ book, onClose, fontSize = 'text-base', user, userProfile, 
             <span>완독 {completionsCount}회</span>
           </div>
         </div>
+
+        {/* 시리즈 회차 이동 (하단) - 한 편 다 읽은 뒤 다음 화로 이동용 */}
+        {isSeries && episodes.length > 0 && (
+          <div className="mt-4 flex items-center justify-between bg-orange-50 px-4 py-2 rounded-xl">
+            <button
+              onClick={() => setCurrentEpisodeIndex(Math.max(0, currentEpisodeIndex - 1))}
+              disabled={currentEpisodeIndex === 0}
+              className="p-2 rounded-lg hover:bg-orange-100 disabled:opacity-30 disabled:cursor-not-allowed"
+            >
+              <ChevronLeft className="w-5 h-5 text-orange-600" />
+            </button>
+            <div className="text-sm font-black text-orange-600">
+              제 {currentEpisodeIndex + 1} 화 {book.status === 'completed' && currentEpisodeIndex === episodes.length - 1 ? '[완결]' : ''}
+            </div>
+            <button
+              onClick={() => setCurrentEpisodeIndex(Math.min(episodes.length - 1, currentEpisodeIndex + 1))}
+              disabled={currentEpisodeIndex === episodes.length - 1}
+              className="p-2 rounded-lg hover:bg-orange-100 disabled:opacity-30 disabled:cursor-not-allowed"
+            >
+              <ChevronRight className="w-5 h-5 text-orange-600" />
+            </button>
+          </div>
+        )}
       </div>
 
       {/* 좋아요 */}
