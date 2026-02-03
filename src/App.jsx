@@ -1528,49 +1528,22 @@ const App = () => {
     }
 
     // 확인 메시지
-    const confirmMessage = '⚠️ 개발용 리셋 기능입니다.\n\n다음 작업이 수행됩니다:\n1. 내가 작성한 모든 책 삭제\n2. 모든 책의 조회수/좋아요/즐겨찾기 수 0으로 초기화\n3. 모든 책 댓글/좋아요/즐겨찾기 기록 삭제\n4. 유저 정보 초기화 (닉네임, 잉크, 레벨, 경험치 등)\n5. 페이지 새로고침\n\n계속하시겠습니까?';
+    const confirmMessage = '⚠️ 개발용 리셋 기능입니다.\n\n다음 작업이 수행됩니다:\n1. 오늘 시리즈 집필 슬롯 초기화\n2. 내 프로필 정보 (닉네임/잉크/레벨 등) 초기화\n3. 페이지 새로고침\n\n※ 기존에 생성된 책과 통계는 그대로 유지됩니다.\n\n계속하시겠습니까?';
     if (!window.confirm(confirmMessage)) {
       return;
     }
 
     try {
       console.log('🔄 개발용 리셋 시작...');
-      
-      // 1. 내가 작성한 모든 책 삭제
-      const booksRef = collection(db, 'artifacts', appId, 'books');
-      const booksQuery = query(booksRef, where('authorId', '==', user.uid));
-      const booksSnapshot = await getDocs(booksQuery);
-      
-      const deletePromises = booksSnapshot.docs.map(bookDoc => deleteDoc(bookDoc.ref));
-      await Promise.all(deletePromises);
-      
-      console.log(`✅ ${booksSnapshot.docs.length}개의 책 삭제 완료`);
-      
-      // 2. 전체 책 통계 초기화 (조회수/좋아요/즐겨찾기)
-      const allBooksSnapshot = await getDocs(collection(db, 'artifacts', appId, 'books'));
-      const resetBookStatsPromises = allBooksSnapshot.docs.map((bookDoc) =>
-        updateDoc(bookDoc.ref, { views: 0, likes: 0, favorites: 0 })
-      );
-      await Promise.all(resetBookStatsPromises);
-      console.log(`✅ ${allBooksSnapshot.docs.length}개의 책 통계 초기화 완료`);
 
-      // 3. 댓글/좋아요/즐겨찾기 기록 전체 삭제
-      const commentsSnapshot = await getDocs(collection(db, 'artifacts', appId, 'public', 'data', 'book_comments'));
-      const commentDeletePromises = commentsSnapshot.docs.map((c) => deleteDoc(c.ref));
-      await Promise.all(commentDeletePromises);
-      console.log(`✅ 댓글 ${commentsSnapshot.docs.length}개 삭제 완료`);
+      // 1. 시리즈 집필 슬롯 초기화 (daily_series_slot 전체 삭제)
+      const dailySeriesRef = collection(db, 'artifacts', appId, 'public', 'data', 'daily_series_slot');
+      const dailySeriesSnapshot = await getDocs(dailySeriesRef);
+      const dailySeriesDeletePromises = dailySeriesSnapshot.docs.map((slotDoc) => deleteDoc(slotDoc.ref));
+      await Promise.all(dailySeriesDeletePromises);
+      console.log(`✅ 시리즈 집필 슬롯 ${dailySeriesSnapshot.docs.length}개 초기화 완료`);
 
-      const bookLikesSnapshot = await getDocs(collection(db, 'artifacts', appId, 'public', 'data', 'book_likes'));
-      const bookLikeDeletePromises = bookLikesSnapshot.docs.map((l) => deleteDoc(l.ref));
-      await Promise.all(bookLikeDeletePromises);
-      console.log(`✅ 좋아요 기록 ${bookLikesSnapshot.docs.length}개 삭제 완료`);
-
-      const bookFavSnapshot = await getDocs(collection(db, 'artifacts', appId, 'public', 'data', 'book_favorites'));
-      const bookFavDeletePromises = bookFavSnapshot.docs.map((f) => deleteDoc(f.ref));
-      await Promise.all(bookFavDeletePromises);
-      console.log(`✅ 즐겨찾기 기록 ${bookFavSnapshot.docs.length}개 삭제 완료`);
-
-      // 4. 유저 정보 초기화
+      // 2. 유저 정보 초기화
       const profileRef = doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'info');
       await updateDoc(profileRef, {
         nickname: null,  // 다시 설정하게
@@ -1585,8 +1558,8 @@ const App = () => {
       });
       
       console.log('✅ 유저 정보 초기화 완료');
-      
-      // 5. 페이지 새로고침
+
+      // 3. 페이지 새로고침
       alert('리셋이 완료되었습니다. 페이지를 새로고침합니다.');
       window.location.reload();
       
