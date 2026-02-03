@@ -285,16 +285,19 @@ async function summarizeStepContent(content, systemPrompt, isNovel) {
   return (result.content || "").trim();
 }
 
-async function generateStaticContext(systemPrompt, topic, title, genre, isNovel) {
+async function generateStaticContext(systemPrompt, topic, title, genre, isNovel, isSeries = false) {
   if (!isNovel) {
     return {synopsis: "", characterSheet: "", settingSheet: ""};
   }
+  const seriesNote = isSeries
+    ? " (이 작품은 연재 시리즈이므로, 시놉시스는 전체 서사 골격만 잡고 결말을 드러내지 마라. 1화에서 시작할 이야기의 씨앗과 갈등의 가능성만 제시하라.)"
+    : "";
   const prompt = [
     "다음 정보를 바탕으로 소설의 고정 정보를 만들어라.",
     "출력 형식은 반드시 아래 구조를 지켜라:",
     "",
     "Synopsis:",
-    "- 5~7문장 분량의 전체 시놉시스",
+    `- 5~7문장 분량의 전체 시놉시스${seriesNote}`,
     "",
     "Character Sheet:",
     "- 이름: (고유명사)",
@@ -450,15 +453,20 @@ exports.generateBookAI = onCall(
         selectedMood
       });
 
-      // 단계 정의
+      // 단계 정의 (시리즈 1화는 훅으로 끝나게, 단편/비시리즈는 5단계)
       const steps = isNovel
-        ? [
-            {name: "발단", instruction: "스토리의 시작과 등장인물을 소개하세요."},
-            {name: "전개", instruction: "사건을 발전시키고 갈등을 구축하세요."},
-            {name: "위기", instruction: "갈등을 심화시키고 긴장감을 높이세요."},
-            {name: "절정", instruction: "갈등을 최고조로 끌어올리고 전환점을 만드세요."},
-            {name: "결말", instruction: "스토리를 해결하고 마무리하세요."}
-          ]
+        ? (isSeries
+            ? [
+                {name: "시작", instruction: "주인공과 배경을 매력적으로 묘사하세요. 독자가 이야기 세계에 빠져들 수 있도록 생생하게 그려내세요."},
+                {name: "사건과 훅", instruction: "평온하던 일상을 깨뜨리는 '사건(Inciting Incident)'을 발생시키세요. 주인공에게 모험이나 문제가 다가오는 장면을 보여주세요. [중요] 사건을 해결하지 말고, 주인공이 모험을 떠나거나 문제에 직면하는 순간에서 멈추세요. 마지막 문장은 다음 화가 궁금해서 미치게 만드는 '절단신공(Cliffhanger)'으로 끝내세요."}
+              ]
+            : [
+                {name: "발단", instruction: "스토리의 시작과 등장인물을 소개하세요."},
+                {name: "전개", instruction: "사건을 발전시키고 갈등을 구축하세요."},
+                {name: "위기", instruction: "갈등을 심화시키고 긴장감을 높이세요."},
+                {name: "절정", instruction: "갈등을 최고조로 끌어올리고 전환점을 만드세요."},
+                {name: "결말", instruction: "스토리를 해결하고 마무리하세요."}
+              ])
         : [
             {name: "서론", instruction: "주제 제기, 독자의 흥미 유발, 문제 의식 공유."},
             {name: "본론 1", instruction: "주제에 대한 깊이 있는 통찰, 작가의 경험이나 예시."},
@@ -475,7 +483,8 @@ exports.generateBookAI = onCall(
         topic,
         requestedTitle,
         genre,
-        isNovel
+        isNovel,
+        isSeries
       );
       let storySummary = (previousContext || "").toString().trim();
       let lastParagraph = "";
@@ -616,14 +625,26 @@ exports.generateSeriesEpisode = onCall(
       const lastParagraph = extractLastSentences(lastEpisodeContent || "", 10);
       const previousStorySummary = cumulativeSummary || "";
 
+      // 시리즈 집필 단계별 지침 (Narrative Arc)
       const step = isFinalize
         ? {
             name: "완결",
-            instruction: "지금까지의 떡밥(Clues)을 모두 회수하고, 독자에게 여운을 주는 확실한 결말(Ending)을 지어라. 모든 갈등을 해결하고 캐릭터의 여정을 마무리하라."
+            instruction: [
+              "지금까지 쌓아온 갈등이 터지는 '절정(Climax)'을 묘사하라.",
+              "악당을 물리치거나, 목표를 달성(또는 실패)하는 결과를 보여라.",
+              "등장인물들의 후일담이나 깨달음을 보여주며 이야기를 완전히 종결(Close)지어라.",
+              "떡밥(Clues)을 모두 회수하고 독자에게 여운을 남겨라."
+            ].join(" ")
           }
         : {
             name: "다음 화",
-            instruction: "앞 내용을 바탕으로 흥미진진하게 이야기를 이어가라. 새로운 갈등을 암시하거나 사건을 확장해라. 절대 결말을 짓지 마라."
+            instruction: [
+              "[금지] 절대 다시 '자기소개'나 '배경설명'을 하지 마라. 바로 직전 상황에서 이어가라.",
+              "주인공에게 시련, 딜레마, 새로운 적대자를 던져라.",
+              "문제를 쉽게 해결해주지 마라. 상황을 더 꼬이게 만들어라(Complication).",
+              "마지막 문장은 다음 화가 궁금해서 미치게 만드는 '절단신공(Cliffhanger)'으로 끝내라.",
+              "절대 결말을 짓지 마라."
+            ].join(" ")
           };
 
       const stepContent = await generateStep({
