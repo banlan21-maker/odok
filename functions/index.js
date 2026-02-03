@@ -13,9 +13,9 @@ const REGION = "asia-northeast3";
 // Gemini API 키
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || process.env.GOOGLE_GENERATIVE_AI_API_KEY;
 
-// Gemini API 모델 설정 (고정)
-const MODEL_NAME = "gemini-2.5-pro"; // 안정성 우선
-const FALLBACK_MODEL_NAME = "gemini-pro";
+// Gemini API 모델 설정 (운영 비용 절감 - Flash 모델 사용)
+const MODEL_NAME = "gemini-2.0-flash"; // 메인: 가성비 우수
+const FALLBACK_MODEL_NAME = "gemini-1.5-flash"; // 대체: 저렴한 Flash
 
 // 프롬프트 설정 (Strategy Pattern)
 const NOVEL_BASE_GUIDE = [
