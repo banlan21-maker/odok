@@ -8,7 +8,7 @@ import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { db, storage } from '../firebase';
 
 // 수정 3: 앱 버전 관리
-const APP_VERSION = "v1.02";
+const APP_VERSION = "v1.05";
 
 const ProfileView = ({
   user,
