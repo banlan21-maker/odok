@@ -111,7 +111,7 @@ const App = () => {
   const [noticeContent, setNoticeContent] = useState('');
   const [isSavingNotice, setIsSavingNotice] = useState(false);
   const [isWritingInProgress, setIsWritingInProgress] = useState(false);
-  const [writingToast, setWritingToast] = useState(null);
+  const [showWritingCompleteModal, setShowWritingCompleteModal] = useState(null); // { book } | null
   const [ratings, setRatings] = useState([]);
   const [comments, setComments] = useState([]);
   const [readHistory, setReadHistory] = useState([]); 
@@ -346,11 +346,6 @@ const App = () => {
     }
   }, [view]);
 
-  useEffect(() => {
-    if (!writingToast) return;
-    const timer = setTimeout(() => setWritingToast(null), 6000);
-    return () => clearTimeout(timer);
-  }, [writingToast]);
 
   useEffect(() => {
     if (window.location.pathname === '/notice' && user && userProfile?.nickname) {
@@ -888,11 +883,17 @@ const App = () => {
       if (bookData.characterSheet) {
         bookDocumentData.characterSheet = bookData.characterSheet;
       }
+      if (bookData.settingSheet) {
+        bookDocumentData.settingSheet = bookData.settingSheet;
+      }
       
       // 수정 2: 시리즈인 경우 추가 필드 설정
       if (isSeries) {
         bookDocumentData.seriesId = crypto.randomUUID(); // UUID 생성
         bookDocumentData.status = 'ongoing'; // 상태: ongoing/completed
+        if (bookData.seriesSubType) {
+          bookDocumentData.seriesSubType = bookData.seriesSubType; // 'webnovel' | 'novel' (서재 필터용)
+        }
         bookDocumentData.episodes = [
           {
             ep_number: 1,
@@ -988,16 +989,8 @@ const App = () => {
         }
       }
 
-      // 저장 성공 시 보관함으로 이동
-      if (!options?.skipNavigate) {
-        setView('archive');
-      }
       setError(null);
-      
-      // 집필 완료 토스트 메시지 (간단한 알림)
-      setTimeout(() => {
-        console.log(`📚 집필 완료! 잉크 ${REWARD_INK}과 경험치를 획득했습니다!`);
-      }, 100);
+      setShowWritingCompleteModal({ book: savedBook });
 
       return savedBook;
     } catch (err) {
@@ -2601,13 +2594,7 @@ const App = () => {
                   setError={setError}
                   deductInk={deductInk}
                   onGeneratingChange={setIsWritingInProgress}
-                  onGenerationComplete={(book) => {
-                    if (!book) return;
-                    setWritingToast({
-                      id: book.id,
-                      title: book.title
-                    });
-                  }}
+                  onGenerationComplete={() => {}}
                 />
               </div>
             )}
@@ -2633,6 +2620,7 @@ const App = () => {
             {view === 'book_detail' && selectedBook && (
               <BookDetail 
                 book={selectedBook}
+                onBookUpdate={setSelectedBook}
                 user={user}
                 userProfile={userProfile}
                 appId={appId}
@@ -2673,20 +2661,34 @@ const App = () => {
           </div>
         </main>
 
-        {writingToast && (
-          <div className="fixed bottom-20 left-1/2 -translate-x-1/2 z-50">
-            <button
-              onClick={() => {
-                const book = books.find((b) => b.id === writingToast.id)
-                  || { id: writingToast.id, title: writingToast.title };
-                setSelectedBook(book);
-                setView('book_detail');
-                setWritingToast(null);
-              }}
-              className="bg-slate-900 text-white px-4 py-2 rounded-full shadow-lg text-xs font-bold hover:bg-slate-800"
-            >
-              집필이 완료되었습니다! 확인해보세요.
-            </button>
+        {/* 집필 완료 모달 (메인 집필) */}
+        {showWritingCompleteModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-6">
+            <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl space-y-4 animate-in fade-in zoom-in-95 duration-200 text-center">
+              <p className="text-sm font-bold text-slate-700">
+                집필이 완료되었습니다!
+              </p>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => {
+                    const book = books.find((b) => b.id === showWritingCompleteModal.book.id)
+                      || showWritingCompleteModal.book;
+                    setSelectedBook(book);
+                    setView('book_detail');
+                    setShowWritingCompleteModal(null);
+                  }}
+                  className="flex-1 py-3 rounded-xl text-sm font-black bg-orange-500 text-white hover:bg-orange-600"
+                >
+                  생성소설 바로보기
+                </button>
+                <button
+                  onClick={() => setShowWritingCompleteModal(null)}
+                  className="flex-1 py-3 rounded-xl text-sm font-black bg-slate-100 text-slate-600 hover:bg-slate-200"
+                >
+                  머물기
+                </button>
+              </div>
+            </div>
           </div>
         )}
 

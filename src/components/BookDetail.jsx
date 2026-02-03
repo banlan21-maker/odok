@@ -1,7 +1,7 @@
 // src/components/BookDetail.jsx
 // 책 상세/뷰어 페이지 컴포넌트
-import React, { useEffect, useMemo, useState } from 'react';
-import { ChevronLeft, ChevronRight, Book, Calendar, User, Heart, Send, Bookmark, CheckCircle, PenTool } from 'lucide-react';
+import React, { useEffect, useMemo, useState, useRef } from 'react';
+import { ChevronLeft, ChevronRight, Book, Calendar, User, Heart, Send, Bookmark, CheckCircle, PenTool, RefreshCw } from 'lucide-react';
 import { formatDateDetailed } from '../utils/dateUtils';
 import { getCoverImageFromBook } from '../utils/bookCovers';
 import { collection, addDoc, deleteDoc, doc, onSnapshot, serverTimestamp, setDoc, updateDoc, increment, runTransaction, getDoc } from 'firebase/firestore';
@@ -37,7 +37,7 @@ const calculateLevelUp = (currentLevel, currentExp, expGain, maxExp) => {
   };
 };
 
-const BookDetail = ({ book, onClose, fontSize = 'text-base', user, userProfile, appId, slotStatus }) => {
+const BookDetail = ({ book, onClose, onBookUpdate, fontSize = 'text-base', user, userProfile, appId, slotStatus }) => {
   if (!book) return null;
   
   // 수정 5: fontSize 값을 Tailwind 클래스로 매핑
@@ -65,6 +65,16 @@ const BookDetail = ({ book, onClose, fontSize = 'text-base', user, userProfile, 
   const [currentEpisodeIndex, setCurrentEpisodeIndex] = useState(episodes.length > 0 ? episodes.length - 1 : 0);
   const [showContinuationModal, setShowContinuationModal] = useState(false);
   const [isGeneratingEpisode, setIsGeneratingEpisode] = useState(false);
+  const [isGeneratingEpisodeModalHidden, setIsGeneratingEpisodeModalHidden] = useState(false);
+  const [episodeLoadingMessageIndex, setEpisodeLoadingMessageIndex] = useState(0);
+  const [showSeriesCompleteModal, setShowSeriesCompleteModal] = useState(null); // { isFinale } | null
+  const contentAreaRef = useRef(null);
+  const episodeLoadingMessages = [
+    '다음 화를 구상하고 있습니다...',
+    '이전 내용과 연결 중...',
+    '문장을 다듬고 있습니다...',
+    '거의 다 됐어요! 잉크를 말리는 중...'
+  ];
 
   const [likesCount, setLikesCount] = useState(book.likes || 0);
   const [favoritesCount, setFavoritesCount] = useState(book.favorites || 0);
@@ -157,6 +167,15 @@ const BookDetail = ({ book, onClose, fontSize = 'text-base', user, userProfile, 
       setComments(sorted);
     });
   }, [appId, bookId]);
+
+  // 시리즈 다음 화 집필 중 로딩 메시지 순환
+  useEffect(() => {
+    if (!isGeneratingEpisode || episodeLoadingMessages.length === 0) return;
+    const timer = setInterval(() => {
+      setEpisodeLoadingMessageIndex((i) => (i + 1) % episodeLoadingMessages.length);
+    }, 3000);
+    return () => clearInterval(timer);
+  }, [isGeneratingEpisode, episodeLoadingMessages.length]);
 
   const toggleLike = async () => {
     if (!user) {
@@ -347,6 +366,7 @@ const BookDetail = ({ book, onClose, fontSize = 'text-base', user, userProfile, 
 
     setShowContinuationModal(false);
     setIsGeneratingEpisode(true);
+    setIsGeneratingEpisodeModalHidden(false);
     const dssRef = doc(db, 'artifacts', appId, 'public', 'data', 'daily_series_slot', todayKey);
     let claimCreated = false;
 
@@ -376,6 +396,7 @@ const BookDetail = ({ book, onClose, fontSize = 'text-base', user, userProfile, 
         lastEpisodeContent: lastEpisode?.content || '',
         synopsis: book.synopsis || '',
         characterSheet: book.characterSheet || '',
+        settingSheet: book.settingSheet || '',
         continuationType,
         selectedMood: book.selectedMood || ''
       });
@@ -400,6 +421,9 @@ const BookDetail = ({ book, onClose, fontSize = 'text-base', user, userProfile, 
       await updateDoc(bookRef, updateData);
       setCurrentEpisodeIndex(episodes.length);
 
+      const updatedBook = { ...book, episodes: [...episodes, newEpisode], summary: result.cumulativeSummary, ...(result.isFinale ? { status: 'completed' } : {}) };
+      if (typeof onBookUpdate === 'function') onBookUpdate(updatedBook);
+
       // 시리즈 다음 화 집필도 하루 집필 1회로 카운트 + 잉크 보상
       const nextDailyWriteCount = lastBookCreatedDate === todayKey ? dailyWriteCount + 1 : 1;
       const currentInk = profileSnap.exists() ? Number(profileSnap.data().ink || 0) : 0;
@@ -409,7 +433,7 @@ const BookDetail = ({ book, onClose, fontSize = 'text-base', user, userProfile, 
         ink: Math.min(INK_MAX, currentInk + REWARD_INK)
       });
 
-      alert(result.isFinale ? '시리즈가 완결되었습니다!' : '다음 화가 추가되었습니다!');
+      setShowSeriesCompleteModal({ isFinale: result.isFinale });
     } catch (err) {
       if (claimCreated) {
         try { await deleteDoc(dssRef); } catch (e) { console.warn('클레임 해제 실패', e); }
@@ -451,7 +475,38 @@ const BookDetail = ({ book, onClose, fontSize = 'text-base', user, userProfile, 
     }
   };
 
+  const EpisodeGeneratingNotice = () => (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-6">
+      <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl space-y-4 animate-in fade-in zoom-in-95 duration-200 text-center">
+        <div className="flex items-center justify-center">
+          <RefreshCw className="w-6 h-6 text-orange-500 animate-spin" />
+        </div>
+        <p className="text-sm text-slate-700 font-bold">
+          집필 중입니다…
+        </p>
+        <p className="text-xs text-slate-500">
+          다음 화 생성에는 약 2~3분이 소요될 수 있어요.
+        </p>
+        <p className="text-xs text-slate-400">
+          숨기면 다른 화면을 보면서 기다릴 수 있어요.
+        </p>
+        {episodeLoadingMessages[episodeLoadingMessageIndex] && (
+          <p className="text-xs text-slate-500 font-bold">
+            {episodeLoadingMessages[episodeLoadingMessageIndex]}
+          </p>
+        )}
+        <button
+          onClick={() => setIsGeneratingEpisodeModalHidden(true)}
+          className="w-full py-3 rounded-xl text-sm font-black bg-slate-900 text-white hover:bg-slate-800"
+        >
+          숨기기
+        </button>
+      </div>
+    </div>
+  );
+
   return (
+    <>
     <div className="animate-in slide-in-from-right-4 fade-in pb-20">
       {/* 헤더 */}
       <div className="mb-6 space-y-4">
@@ -537,13 +592,36 @@ const BookDetail = ({ book, onClose, fontSize = 'text-base', user, userProfile, 
       )}
 
       {/* 본문 내용 */}
-      <div className="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm">
+      <div ref={contentAreaRef} className="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm">
         <div className="prose prose-slate max-w-none mb-6">
           {/* 수정 5: fontSize를 동적으로 적용 */}
           <div className={`${fontSizeClass} leading-relaxed text-slate-700 whitespace-pre-line`}>
             {displayContent || book.summary || '내용이 없습니다.'}
           </div>
         </div>
+
+        {/* 시리즈 회차 이동 (본문 직하단) - 소설 끝나자마자 바로 다음 화로 이동 가능 */}
+        {isSeries && episodes.length > 0 && (
+          <div className="mb-4 flex items-center justify-between bg-orange-50 px-4 py-2 rounded-xl">
+            <button
+              onClick={() => setCurrentEpisodeIndex(Math.max(0, currentEpisodeIndex - 1))}
+              disabled={currentEpisodeIndex === 0}
+              className="p-2 rounded-lg hover:bg-orange-100 disabled:opacity-30 disabled:cursor-not-allowed"
+            >
+              <ChevronLeft className="w-5 h-5 text-orange-600" />
+            </button>
+            <div className="text-sm font-black text-orange-600">
+              제 {currentEpisodeIndex + 1} 화 {book.status === 'completed' && currentEpisodeIndex === episodes.length - 1 ? '[완결]' : ''}
+            </div>
+            <button
+              onClick={() => setCurrentEpisodeIndex(Math.min(episodes.length - 1, currentEpisodeIndex + 1))}
+              disabled={currentEpisodeIndex === episodes.length - 1}
+              className="p-2 rounded-lg hover:bg-orange-100 disabled:opacity-30 disabled:cursor-not-allowed"
+            >
+              <ChevronRight className="w-5 h-5 text-orange-600" />
+            </button>
+          </div>
+        )}
 
         {/* 하단 통계 (옵션) */}
         <div className="flex items-center gap-4 pt-4 border-t border-slate-100 text-xs text-slate-400 flex-wrap">
@@ -564,29 +642,6 @@ const BookDetail = ({ book, onClose, fontSize = 'text-base', user, userProfile, 
             <span>완독 {completionsCount}회</span>
           </div>
         </div>
-
-        {/* 시리즈 회차 이동 (하단) - 한 편 다 읽은 뒤 다음 화로 이동용 */}
-        {isSeries && episodes.length > 0 && (
-          <div className="mt-4 flex items-center justify-between bg-orange-50 px-4 py-2 rounded-xl">
-            <button
-              onClick={() => setCurrentEpisodeIndex(Math.max(0, currentEpisodeIndex - 1))}
-              disabled={currentEpisodeIndex === 0}
-              className="p-2 rounded-lg hover:bg-orange-100 disabled:opacity-30 disabled:cursor-not-allowed"
-            >
-              <ChevronLeft className="w-5 h-5 text-orange-600" />
-            </button>
-            <div className="text-sm font-black text-orange-600">
-              제 {currentEpisodeIndex + 1} 화 {book.status === 'completed' && currentEpisodeIndex === episodes.length - 1 ? '[완결]' : ''}
-            </div>
-            <button
-              onClick={() => setCurrentEpisodeIndex(Math.min(episodes.length - 1, currentEpisodeIndex + 1))}
-              disabled={currentEpisodeIndex === episodes.length - 1}
-              className="p-2 rounded-lg hover:bg-orange-100 disabled:opacity-30 disabled:cursor-not-allowed"
-            >
-              <ChevronRight className="w-5 h-5 text-orange-600" />
-            </button>
-          </div>
-        )}
       </div>
 
       {/* 좋아요 */}
@@ -801,7 +856,39 @@ const BookDetail = ({ book, onClose, fontSize = 'text-base', user, userProfile, 
           </div>
         </div>
       )}
+
+      {/* 시리즈 다음 화 집필 중 모달 */}
+      {isGeneratingEpisode && !isGeneratingEpisodeModalHidden && <EpisodeGeneratingNotice />}
+
+      {/* 시리즈 집필 완료 모달 */}
+      {showSeriesCompleteModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-6">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl space-y-4 animate-in fade-in zoom-in-95 duration-200 text-center">
+            <p className="text-sm font-bold text-slate-700">
+              {showSeriesCompleteModal.isFinale ? '시리즈가 완결되었습니다!' : '다음 화가 추가되었습니다!'}
+            </p>
+            <div className="flex gap-2">
+              <button
+                onClick={() => {
+                  contentAreaRef.current?.scrollIntoView({ behavior: 'smooth' });
+                  setShowSeriesCompleteModal(null);
+                }}
+                className="flex-1 py-3 rounded-xl text-sm font-black bg-orange-500 text-white hover:bg-orange-600"
+              >
+                생성소설 바로보기
+              </button>
+              <button
+                onClick={() => setShowSeriesCompleteModal(null)}
+                className="flex-1 py-3 rounded-xl text-sm font-black bg-slate-100 text-slate-600 hover:bg-slate-200"
+              >
+                머물기
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
+    </>
   );
 };
 

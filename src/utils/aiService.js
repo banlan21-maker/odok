@@ -63,7 +63,8 @@ export const generateBook = async ({
       steps: bookData.steps || [],
       storySummary: bookData.storySummary || '',
       synopsis: bookData.synopsis || '',
-      characterSheet: bookData.characterSheet || ''
+      characterSheet: bookData.characterSheet || '',
+      settingSheet: bookData.settingSheet || ''
     };
   } catch (error) {
     console.error('[AI Service] 책 생성 오류:', error);
@@ -89,6 +90,7 @@ export const generateSeriesEpisode = async ({
   lastEpisodeContent,
   synopsis,
   characterSheet,
+  settingSheet,
   continuationType,
   selectedMood
 }) => {
@@ -108,6 +110,7 @@ export const generateSeriesEpisode = async ({
       lastEpisodeContent,
       synopsis,
       characterSheet,
+      settingSheet,
       continuationType,
       selectedMood
     });

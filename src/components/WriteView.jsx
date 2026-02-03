@@ -661,6 +661,7 @@ const WriteView = ({ user, userProfile, onBookGenerated, slotStatus, setView, se
           ...result,
           category: selectedCategory.id === 'series' ? 'series' : selectedCategory.id,
           subCategory: selectedGenre.id,
+          seriesSubType: selectedCategory.id === 'series' ? seriesSubType?.id : null,
           isSeries: selectedCategory.id === 'series',
           keywords: keywords.trim()
         }, false, { skipDailyCheck: true, skipNavigate: isGeneratingHidden });

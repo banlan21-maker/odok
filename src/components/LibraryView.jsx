@@ -28,21 +28,26 @@ const LibraryView = ({ books, onBookClick, filter = 'all', onFilterChange }) => 
     if (filter === 'all') {
       // 전체 보기
       return filtered;
+    } else if (filter === 'series') {
+      // 시리즈 전체 (seriesSubType 없는 기존 데이터 포함)
+      filtered = books.filter(book => book.category === 'series' || book.isSeries === true);
     } else if (filter === 'series-webnovel') {
-      // 시리즈 - 웹소설형
+      // 시리즈 - 웹소설형 (seriesSubType 또는 subCategory로 판별, 기존 데이터 호환)
       filtered = books.filter(book => {
-        const category = String(book.category || '').trim().toLowerCase();
+        const isSeriesBook = book.category === 'series' || book.isSeries === true;
+        if (!isSeriesBook) return false;
+        const seriesType = String(book.seriesSubType || '').trim().toLowerCase();
         const subCategory = String(book.subCategory || '').trim().toLowerCase();
-        return (category === 'series' || book.isSeries === true) && 
-               (subCategory === 'webnovel' || subCategory === 'web-novel');
+        return seriesType === 'webnovel' || subCategory === 'webnovel' || subCategory === 'web-novel';
       });
     } else if (filter === 'series-novel') {
-      // 시리즈 - 소설형
+      // 시리즈 - 소설형 (seriesSubType 또는 subCategory로 판별, 기존 데이터 호환)
       filtered = books.filter(book => {
-        const category = String(book.category || '').trim().toLowerCase();
+        const isSeriesBook = book.category === 'series' || book.isSeries === true;
+        if (!isSeriesBook) return false;
+        const seriesType = String(book.seriesSubType || '').trim().toLowerCase();
         const subCategory = String(book.subCategory || '').trim().toLowerCase();
-        return (category === 'series' || book.isSeries === true) && 
-               (subCategory === 'novel' || subCategory === 'fiction');
+        return seriesType === 'novel' || subCategory === 'novel' || subCategory === 'fiction';
       });
     } else {
       // 일반 카테고리
@@ -72,6 +77,7 @@ const LibraryView = ({ books, onBookClick, filter = 'all', onFilterChange }) => 
     { id: 'all', name: '전체 보기' },
     { id: 'webnovel', name: '웹소설 (단편)' },
     { id: 'novel', name: '소설 (단편)' },
+    { id: 'series', name: '시리즈 (전체)' },
     { id: 'series-webnovel', name: '시리즈 - 웹소설' },
     { id: 'series-novel', name: '시리즈 - 소설' },
     { id: 'essay', name: '에세이' },

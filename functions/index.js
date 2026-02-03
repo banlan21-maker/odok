@@ -224,6 +224,7 @@ function buildStepPrompt({
   lastParagraph,
   synopsis,
   characterSheet,
+  settingSheet,
   isNovel,
   title
 }) {
@@ -236,7 +237,7 @@ function buildStepPrompt({
     ? `Last Paragraph (직전 내용 3~5문장):\n${lastParagraph}\n`
     : "Last Paragraph (직전 내용 3~5문장): (없음)\n";
   const staticContext = isNovel
-    ? `Static Context:\nSynopsis:\n${synopsis || "(없음)"}\n\nCharacter Sheet (이름/성격 절대 유지):\n${characterSheet || "(없음)"}\n\n`
+    ? `Static Context:\nSynopsis:\n${synopsis || "(없음)"}\n\nCharacter Sheet (이름/성격 절대 유지):\n${characterSheet || "(없음)"}\n\nSetting Sheet (시대/장소/세계관 절대 유지):\n${settingSheet || "(없음)"}\n\n`
     : "";
   const dynamicContext = isNovel
     ? `Dynamic Context:\n${summaryBlock}\n${lastBlock}\n`
@@ -286,11 +287,12 @@ async function summarizeStepContent(content, systemPrompt, isNovel) {
 
 async function generateStaticContext(systemPrompt, topic, title, genre, isNovel) {
   if (!isNovel) {
-    return {synopsis: "", characterSheet: ""};
+    return {synopsis: "", characterSheet: "", settingSheet: ""};
   }
   const prompt = [
     "다음 정보를 바탕으로 소설의 고정 정보를 만들어라.",
     "출력 형식은 반드시 아래 구조를 지켜라:",
+    "",
     "Synopsis:",
     "- 5~7문장 분량의 전체 시놉시스",
     "",
@@ -299,17 +301,25 @@ async function generateStaticContext(systemPrompt, topic, title, genre, isNovel)
     "  성격: (핵심 성격 2~3가지)",
     "  절대 유지 조건: (이름/성격은 절대 변경 금지)",
     "",
+    "Setting Sheet:",
+    "- 시대배경: (연대, 시대적 분위기, 역사적 맥락 등)",
+    "- 장소배경: (주요 무대가 되는 장소들, 지역 특성, 분위기)",
+    "- (판타지/SF 등이면) 세계관 규칙: (마법/기술/사회 체계 등 일관되게 유지할 규칙)",
+    "- 배경은 절대 변경 금지. 각 단계에서 이 배경을 정확히 따르라.",
+    "",
     `주제: ${topic || ""}`,
     title ? `책 제목: ${title}` : "",
     genre ? `장르: ${genre}` : ""
   ].filter(Boolean).join("\n");
   const result = await callGemini(systemPrompt, prompt, 0.6, true);
   const text = (result.content || "").trim();
-  const synopsisMatch = text.match(/Synopsis:\s*([\s\S]*?)(?:\n\s*Character Sheet:|\n\s*Characters:|$)/i);
-  const characterMatch = text.match(/Character Sheet:\s*([\s\S]*)/i) || text.match(/Characters:\s*([\s\S]*)/i);
+  const synopsisMatch = text.match(/Synopsis:\s*([\s\S]*?)(?=\n\s*Character Sheet:|\n\s*Characters:|$)/i);
+  const characterMatch = text.match(/Character Sheet:\s*([\s\S]*?)(?=\n\s*Setting Sheet:|\n\s*배경시트:|$)/i) || text.match(/Characters:\s*([\s\S]*?)(?=\n\s*Setting Sheet:|\n\s*배경시트:|$)/i);
+  const settingMatch = text.match(/Setting Sheet:\s*([\s\S]*)/i) || text.match(/배경시트:\s*([\s\S]*)/i);
   return {
     synopsis: (synopsisMatch?.[1] || text).trim(),
-    characterSheet: (characterMatch?.[1] || "").trim()
+    characterSheet: (characterMatch?.[1] || "").trim(),
+    settingSheet: (settingMatch?.[1] || "").trim()
   };
 }
 
@@ -390,6 +400,7 @@ async function generateStep({
   lastParagraph,
   synopsis,
   characterSheet,
+  settingSheet,
   temperature,
   isNovel,
   title
@@ -401,6 +412,7 @@ async function generateStep({
     lastParagraph,
     synopsis,
     characterSheet,
+    settingSheet,
     isNovel,
     title
   });
@@ -483,6 +495,7 @@ exports.generateBookAI = onCall(
             lastParagraph,
             synopsis: staticContext.synopsis,
             characterSheet: staticContext.characterSheet,
+            settingSheet: staticContext.settingSheet,
             temperature,
             isNovel,
             title: requestedTitle
@@ -531,7 +544,8 @@ exports.generateBookAI = onCall(
         steps: stepResults,
         storySummary: storySummary,
         synopsis: staticContext.synopsis,
-        characterSheet: staticContext.characterSheet
+        characterSheet: staticContext.characterSheet,
+        settingSheet: staticContext.settingSheet
       };
     } catch (error) {
       logger.error("[generateBookAI] 에러:", {
@@ -572,6 +586,7 @@ exports.generateSeriesEpisode = onCall(
         lastEpisodeContent,
         synopsis,
         characterSheet,
+        settingSheet,
         continuationType,
         selectedMood
       } = request.data;
@@ -619,6 +634,7 @@ exports.generateSeriesEpisode = onCall(
         lastParagraph,
         synopsis: synopsis || "",
         characterSheet: characterSheet || "",
+        settingSheet: settingSheet || "",
         temperature,
         isNovel: true,
         title: requestedTitle
