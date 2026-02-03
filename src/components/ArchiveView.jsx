@@ -5,27 +5,13 @@ import { Bookmark, Book, Heart, Clock, Eye, CheckCircle } from 'lucide-react';
 import { formatDate } from '../utils/dateUtils';
 import { getCoverImageFromBook } from '../utils/bookCovers';
 import { formatCount } from '../utils/numberFormat';
+import { formatGenreTag } from '../utils/formatGenre';
 
 const ArchiveView = ({ books, user, onBookClick, favoriteBookIds = [] }) => {
   // 내가 쓴 책 필터링
   const myBooks = books.filter(book => book.authorId === user?.uid) || [];
   
   const favoriteBooks = books.filter(book => favoriteBookIds.includes(book.id)) || [];
-  const formatTag = (value) => {
-    if (!value) return value;
-    const normalized = String(value).trim().toLowerCase();
-    if (normalized === 'webnovel') return '웹소설';
-    if (normalized === 'novel') return '소설';
-    if (normalized === 'essay') return '에세이';
-    if (normalized === 'self-help' || normalized === 'self-improvement') {
-      return '자기계발';
-    }
-    if (normalized === 'humanities') return '인문.철학';
-    if (/^[a-z0-9-]+$/.test(normalized)) {
-      return normalized.toUpperCase();
-    }
-    return value;
-  };
 
   return (
     <div className="space-y-6 animate-in slide-in-from-bottom-2 fade-in pb-20">
@@ -116,7 +102,7 @@ const ArchiveView = ({ books, user, onBookClick, favoriteBookIds = [] }) => {
                         </span>
                         {book.subCategory && (
                           <span className="bg-slate-100 px-2 py-0.5 rounded-full text-slate-600">
-                            {formatTag(book.subCategory)}
+                            {formatGenreTag(book.subCategory)}
                           </span>
                         )}
                         <span className="flex items-center gap-1 text-slate-400 ml-auto">
@@ -226,7 +212,7 @@ const ArchiveView = ({ books, user, onBookClick, favoriteBookIds = [] }) => {
                         </span>
                         {book.subCategory && (
                           <span className="bg-slate-100 px-2 py-0.5 rounded-full text-slate-600">
-                            {formatTag(book.subCategory)}
+                            {formatGenreTag(book.subCategory)}
                           </span>
                         )}
                         <span className="flex items-center gap-1 text-slate-400 ml-auto">

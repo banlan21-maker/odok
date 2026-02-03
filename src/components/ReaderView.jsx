@@ -2,6 +2,7 @@
 // Step 1: 간단한 책 읽기 화면
 import React from 'react';
 import { ChevronLeft, Book } from 'lucide-react';
+import { formatGenreTag } from '../utils/formatGenre';
 
 const ReaderView = ({ book, onBack, fontSize = 'text-base' }) => {
   if (!book) {
@@ -32,18 +33,11 @@ const ReaderView = ({ book, onBack, fontSize = 'text-base' }) => {
       <div className="space-y-2">
         <div className="flex gap-2">
           <span className="text-xs font-bold text-orange-600 bg-orange-50 px-2 py-1 rounded-full">
-            {book.category === 'webs novel' ? '웹소설' :
-             book.category === 'novel' ? '소설' :
-             book.category === 'essay' ? '에세이' :
-             book.category === 'self-help' ? '자기계발' :
-             book.category === 'philosophy' ? '인문·철학' : book.category}
+            {formatGenreTag(book.category)}
           </span>
-          {book.genre && (
+          {(book.genre || book.subCategory) && (
             <span className="text-xs font-bold text-slate-500 bg-slate-100 px-2 py-1 rounded-full">
-              {book.genre === 'romance' ? '로맨스' :
-               book.genre === 'fantasy' ? '판타지' :
-               book.genre === 'mystery' ? '미스터리' :
-               book.genre === 'drama' ? '드라마' : book.genre}
+              {formatGenreTag(book.genre || book.subCategory)}
             </span>
           )}
         </div>

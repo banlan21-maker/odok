@@ -4,23 +4,9 @@ import { Book, Calendar, Filter, ChevronDown, Eye, Heart, Bookmark, CheckCircle 
 import { formatDate } from '../utils/dateUtils';
 import { getCoverImageFromBook } from '../utils/bookCovers';
 import { formatCount } from '../utils/numberFormat';
+import { formatGenreTag } from '../utils/formatGenre';
 
 const LibraryView = ({ books, onBookClick, filter = 'all', onFilterChange }) => {
-  const formatTag = (value) => {
-    if (!value) return value;
-    const normalized = String(value).trim().toLowerCase();
-    if (normalized === 'webnovel') return '웹소설';
-    if (normalized === 'novel') return '소설';
-    if (normalized === 'essay') return '에세이';
-    if (normalized === 'self-help' || normalized === 'self-improvement') {
-      return '자기계발';
-    }
-    if (normalized === 'humanities') return '인문.철학';
-    if (/^[a-z0-9-]+$/.test(normalized)) {
-      return normalized.toUpperCase();
-    }
-    return value;
-  };
   // 필터별 책 목록 필터링
   const filteredBooks = useMemo(() => {
     let filtered = books;
@@ -191,7 +177,7 @@ const LibraryView = ({ books, onBookClick, filter = 'all', onFilterChange }) => 
                       </span>
                       {book.subCategory && (
                         <span className="bg-slate-100 px-2 py-0.5 rounded-full text-slate-600">
-                          {formatTag(book.subCategory)}
+                          {formatGenreTag(book.subCategory)}
                         </span>
                       )}
                       <span className="flex items-center gap-1 text-slate-400 ml-auto">
