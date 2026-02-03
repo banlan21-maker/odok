@@ -21,7 +21,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 24
+          node-version: "20"
           cache: npm
 
       - name: Install root dependencies
@@ -35,9 +35,15 @@ jobs:
 
       - name: Create service account file
         run: |
-          cat <<'EOF' > "$GOOGLE_APPLICATION_CREDENTIALS"
-          ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
-          EOF
+          if [ -z "${{ secrets.FIREBASE_SERVICE_ACCOUNT }}" ]; then
+            echo "::error::FIREBASE_SERVICE_ACCOUNT secret is not set. Add it in repo Settings > Secrets and variables > Actions"
+            exit 1
+          fi
+          printf '%s\n' '${{ secrets.FIREBASE_SERVICE_ACCOUNT }}' > "$GOOGLE_APPLICATION_CREDENTIALS"
+          if ! node -e "JSON.parse(require('fs').readFileSync(process.env.GOOGLE_APPLICATION_CREDENTIALS,'utf8'))"; then
+            echo "::error::FIREBASE_SERVICE_ACCOUNT is invalid JSON. Use the full JSON from Firebase Console > Project Settings > Service Accounts > Generate new private key"
+            exit 1
+          fi
 
       - name: Deploy to Firebase
-        run: npx firebase-tools deploy --project "$FIREBASE_PROJECT_ID" --only hosting,functions
+        run: npx firebase-tools deploy --project "$FIREBASE_PROJECT_ID" --only hosting,functions --non-interactive

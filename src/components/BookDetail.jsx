@@ -8,10 +8,11 @@ import { collection, addDoc, deleteDoc, doc, onSnapshot, serverTimestamp, setDoc
 import { db } from '../firebase';
 import { generateSeriesEpisode } from '../utils/aiService';
 import { getTodayDateKey } from '../utils/dateUtils';
+import { getExtraWriteInkCost, getFreeWriteRewardInk } from '../utils/levelUtils';
 
 const MAX_LEVEL = 99;
 const DAILY_WRITE_LIMIT = 2;
-const REWARD_INK = 25;
+const DAILY_FREE_WRITES = 1;
 const INK_MAX = 999;
 
 const calculateLevelUp = (currentLevel, currentExp, expGain, maxExp) => {
@@ -37,7 +38,7 @@ const calculateLevelUp = (currentLevel, currentExp, expGain, maxExp) => {
   };
 };
 
-const BookDetail = ({ book, onClose, onBookUpdate, fontSize = 'text-base', user, userProfile, appId, slotStatus }) => {
+const BookDetail = ({ book, onClose, onBookUpdate, fontSize = 'text-base', user, userProfile, appId, slotStatus, deductInk }) => {
   if (!book) return null;
   
   // 수정 5: fontSize 값을 Tailwind 클래스로 매핑
@@ -364,6 +365,26 @@ const BookDetail = ({ book, onClose, onBookUpdate, fontSize = 'text-base', user,
       return;
     }
 
+    // 2회째 집필 시 잉크 소모 (레벨에 따라 할인)
+    if (dailyWriteCount >= DAILY_FREE_WRITES) {
+      const level = profileSnap.exists() ? (profileSnap.data().level || 1) : 1;
+      const extraCost = getExtraWriteInkCost(level);
+      const currentInk = profileSnap.exists() ? Number(profileSnap.data().ink || 0) : 0;
+      if (currentInk < extraCost) {
+        alert('잉크가 부족합니다! 💧 잉크를 충전해주세요.');
+        return;
+      }
+      if (typeof deductInk !== 'function') {
+        alert('잉크 차감 기능을 사용할 수 없습니다.');
+        return;
+      }
+      const success = await deductInk(extraCost);
+      if (!success) {
+        alert('잉크 차감에 실패했습니다. 다시 시도해주세요.');
+        return;
+      }
+    }
+
     setShowContinuationModal(false);
     setIsGeneratingEpisode(true);
     setIsGeneratingEpisodeModalHidden(false);
@@ -424,13 +445,15 @@ const BookDetail = ({ book, onClose, onBookUpdate, fontSize = 'text-base', user,
       const updatedBook = { ...book, episodes: [...episodes, newEpisode], summary: result.cumulativeSummary, ...(result.isFinale ? { status: 'completed' } : {}) };
       if (typeof onBookUpdate === 'function') onBookUpdate(updatedBook);
 
-      // 시리즈 다음 화 집필도 하루 집필 1회로 카운트 + 잉크 보상
+      // 시리즈 다음 화 집필도 하루 집필 1회로 카운트 + 잉크 보상 (1회 무료 시 레벨별 보상)
       const nextDailyWriteCount = lastBookCreatedDate === todayKey ? dailyWriteCount + 1 : 1;
+      const level = profileSnap.exists() ? (profileSnap.data().level || 1) : 1;
+      const rewardInk = dailyWriteCount === 0 ? getFreeWriteRewardInk(level) : 0;
       const currentInk = profileSnap.exists() ? Number(profileSnap.data().ink || 0) : 0;
       await updateDoc(profileRef, {
         dailyWriteCount: nextDailyWriteCount,
         lastBookCreatedDate: todayKey,
-        ink: Math.min(INK_MAX, currentInk + REWARD_INK)
+        ink: Math.min(INK_MAX, currentInk + rewardInk)
       });
 
       setShowSeriesCompleteModal({ isFinale: result.isFinale });

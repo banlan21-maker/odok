@@ -141,6 +141,11 @@ const ProfileView = ({
                       <div className="text-xl font-black text-slate-800 leading-none mt-0.5">
                         Lv.{levelInfo.level}
                       </div>
+                      {levelInfo.title && (
+                        <div className="text-xs font-bold text-orange-500 mt-1">
+                          {levelInfo.title}
+                        </div>
+                      )}
                     </div>
                     <div className="text-xs font-bold text-orange-500">{levelInfo.progress}%</div>
                   </div>
