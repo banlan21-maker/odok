@@ -68,7 +68,7 @@ const appId = rawAppId.replace(/\//g, '_');
 
 const MAX_LEVEL = 99;
 const INK_MAX = 999;
-const INITIAL_INK = 20;           // 가입 시 지급
+const INITIAL_INK = 10;           // 가입 시 지급
 const DAILY_WRITE_LIMIT = 2;
 const DAILY_FREE_WRITES = 1;
 
@@ -2151,7 +2151,7 @@ const App = () => {
                   <div>1. 홈/서재에서 원하는 책을 선택하거나, 집필 탭에서 새 책을 생성합니다.</div>
                   <div>2. 집필은 하루 2회까지 가능합니다. 1회는 무료, 2회째부터는 잉크가 소모됩니다.</div>
                   <div className="pt-2 font-bold text-slate-800">잉크 시스템</div>
-                  <div>- 가입 시 20 잉크가 지급됩니다.</div>
+                  <div>- 가입 시 10 잉크가 지급됩니다.</div>
                   <div>- 매일 출석 시 +1~3 잉크 (레벨에 따라 증가).</div>
                   <div>- 1회 무료 집필 성공 시 +5~ 잉크 (레벨에 따라 증가).</div>
                   <div>- 프로필 탭에서 “광고 보고 잉크 얻기”로 +10 잉크를 받을 수 있습니다.</div>
