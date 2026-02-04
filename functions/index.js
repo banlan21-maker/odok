@@ -347,9 +347,16 @@ function isRetryableWithFallback(error) {
   if (status === 500 || status === 503 || status === 429) {
     return true;
   }
-  // status 추출 실패 시 에러 메시지에서 429/Resource exhausted 확인
+  // status 추출 실패 시 에러 메시지에서 확인
   const msg = (error?.message || "").toString();
-  return msg.includes("429") || msg.includes("Resource exhausted") || msg.includes("Too Many Requests");
+  return (
+    msg.includes("429") ||
+    msg.includes("Resource exhausted") ||
+    msg.includes("Too Many Requests") ||
+    msg.includes("fetch failed") ||  // 네트워크/타임아웃 등 일시적 오류
+    msg.includes("ECONNRESET") ||
+    msg.includes("ETIMEDOUT")
+  );
 }
 
 // Gemini API 호출 함수 (폴백 체인 지원)
