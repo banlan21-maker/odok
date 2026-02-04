@@ -15,7 +15,7 @@ const GEMINI_API_KEY = process.env.GEMINI_API_KEY || process.env.GOOGLE_GENERATI
 
 // Gemini API 모델 설정 (운영 비용 절감 - Flash 모델 사용)
 const MODEL_NAME = "gemini-2.0-flash"; // 메인: 가성비 우수
-const FALLBACK_MODEL_NAME = "gemini-1.5-flash"; // 대체: 저렴한 Flash
+const FALLBACK_MODEL_NAME = "gemini-2.0-flash-lite"; // 대체: 429 시 별도 쿼터, 저렴
 
 // 프롬프트 설정 (Strategy Pattern)
 const NOVEL_BASE_GUIDE = [
