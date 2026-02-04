@@ -14,8 +14,13 @@ const REGION = "asia-northeast3";
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || process.env.GOOGLE_GENERATIVE_AI_API_KEY;
 
 // Gemini API 모델 설정 (운영 비용 절감 - Flash 모델 사용)
-const MODEL_NAME = "gemini-2.0-flash"; // 메인: 가성비 우수
-const FALLBACK_MODEL_NAME = "gemini-2.0-flash-lite"; // 대체: 429 시 별도 쿼터, 저렴
+// 429 시 순서대로 시도 (모델별 쿼터가 다를 수 있음)
+const MODEL_FALLBACK_CHAIN = [
+  "gemini-2.0-flash",       // 메인
+  "gemini-2.0-flash-lite",  // 대체 1
+  "gemini-2.5-flash",       // 대체 2 (2.5 계열 별도 쿼터)
+  "gemini-2.5-flash-lite"   // 대체 3
+];
 
 // 프롬프트 설정 (Strategy Pattern)
 const NOVEL_BASE_GUIDE = [
@@ -347,14 +352,17 @@ function isRetryableWithFallback(error) {
   return msg.includes("429") || msg.includes("Resource exhausted") || msg.includes("Too Many Requests");
 }
 
-// Gemini API 호출 함수
-async function callGemini(systemPrompt, userPrompt, temperature = 0.75, isNovel = false, modelName = MODEL_NAME, allowFallback = true) {
+// Gemini API 호출 함수 (폴백 체인 지원)
+async function callGemini(systemPrompt, userPrompt, temperature = 0.75, isNovel = false, modelIndex = 0) {
   if (!GEMINI_API_KEY) {
     throw new Error("Gemini API 키가 설정되지 않았습니다.");
   }
 
+  const modelName = MODEL_FALLBACK_CHAIN[modelIndex];
+  const hasNext = modelIndex + 1 < MODEL_FALLBACK_CHAIN.length;
+
   try {
-    logger.info(`[Gemini API] 모델 사용: ${modelName}`);
+    logger.info(`[Gemini API] 모델 사용: ${modelName} (${modelIndex + 1}/${MODEL_FALLBACK_CHAIN.length})`);
     const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
     const model = genAI.getGenerativeModel({model: modelName});
 
@@ -386,15 +394,15 @@ async function callGemini(systemPrompt, userPrompt, temperature = 0.75, isNovel 
 
     logger.info(`[Gemini API] ✅ 성공! 사용 모델: ${modelName} (응답 길이: ${text.length}자)`);
     
-    // 순수 텍스트만 반환
     return {content: text};
   } catch (error) {
     const status = getErrorStatus(error);
     logger.error(`[Gemini API] 호출 실패 (모델: ${modelName}):`, error.message);
 
-    if (allowFallback && isRetryableWithFallback(error)) {
-      logger.warn(`[Gemini API] 대체 모델로 재시도: ${FALLBACK_MODEL_NAME} (status: ${status})`);
-      return callGemini(systemPrompt, userPrompt, temperature, isNovel, FALLBACK_MODEL_NAME, false);
+    if (hasNext && isRetryableWithFallback(error)) {
+      const nextModel = MODEL_FALLBACK_CHAIN[modelIndex + 1];
+      logger.warn(`[Gemini API] 대체 모델로 재시도: ${nextModel} (status: ${status})`);
+      return callGemini(systemPrompt, userPrompt, temperature, isNovel, modelIndex + 1);
     }
 
     throw error;
