@@ -336,8 +336,15 @@ function getErrorStatus(error) {
   );
 }
 
-function isRetryableStatus(status) {
-  return status === 500 || status === 503;
+function isRetryableWithFallback(error) {
+  const status = getErrorStatus(error);
+  // 500/503: 서버 오류, 429: Rate Limit(리소스 소진) → 대체 모델로 재시도
+  if (status === 500 || status === 503 || status === 429) {
+    return true;
+  }
+  // status 추출 실패 시 에러 메시지에서 429/Resource exhausted 확인
+  const msg = (error?.message || "").toString();
+  return msg.includes("429") || msg.includes("Resource exhausted") || msg.includes("Too Many Requests");
 }
 
 // Gemini API 호출 함수
@@ -385,8 +392,8 @@ async function callGemini(systemPrompt, userPrompt, temperature = 0.75, isNovel 
     const status = getErrorStatus(error);
     logger.error(`[Gemini API] 호출 실패 (모델: ${modelName}):`, error.message);
 
-    if (allowFallback && isRetryableStatus(status)) {
-      logger.warn(`[Gemini API] 재시도: ${FALLBACK_MODEL_NAME} (status: ${status})`);
+    if (allowFallback && isRetryableWithFallback(error)) {
+      logger.warn(`[Gemini API] 대체 모델로 재시도: ${FALLBACK_MODEL_NAME} (status: ${status})`);
       return callGemini(systemPrompt, userPrompt, temperature, isNovel, FALLBACK_MODEL_NAME, false);
     }
 
