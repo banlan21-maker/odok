@@ -8,36 +8,12 @@ import { collection, addDoc, deleteDoc, doc, onSnapshot, serverTimestamp, setDoc
 import { db } from '../firebase';
 import { generateSeriesEpisode } from '../utils/aiService';
 import { getTodayDateKey } from '../utils/dateUtils';
-import { getExtraWriteInkCost, getFreeWriteRewardInk } from '../utils/levelUtils';
+import { getExtraWriteInkCost, getFreeWriteRewardInk, canDonate, getLevelFromXp, getXpPerInk } from '../utils/levelUtils';
 import { formatGenreTag } from '../utils/formatGenre';
 
-const MAX_LEVEL = 99;
 const DAILY_WRITE_LIMIT = 2;
 const DAILY_FREE_WRITES = 1;
 const INK_MAX = 999;
-
-const calculateLevelUp = (currentLevel, currentExp, expGain, maxExp) => {
-  const newExp = currentExp + expGain;
-
-  if (newExp >= maxExp && currentLevel < MAX_LEVEL) {
-    const newLevel = currentLevel + 1;
-    const remainingExp = newExp - maxExp;
-    const nextMaxExp = Math.max(100, Math.floor(maxExp * 1.2));
-    return {
-      leveledUp: true,
-      newLevel,
-      newExp: remainingExp,
-      newMaxExp: nextMaxExp
-    };
-  }
-
-  return {
-    leveledUp: false,
-    newLevel: currentLevel,
-    newExp,
-    newMaxExp: maxExp
-  };
-};
 
 const BookDetail = ({ book, onClose, onBookUpdate, fontSize = 'text-base', user, userProfile, appId, slotStatus, deductInk }) => {
   if (!book) return null;
@@ -283,6 +259,11 @@ const BookDetail = ({ book, onClose, onBookUpdate, fontSize = 'text-base', user,
       alert('본인에게는 잉크를 보낼 수 없어요.');
       return;
     }
+    const senderLevel = getLevelFromXp(userProfile?.xp ?? 0);
+    if (!canDonate(senderLevel)) {
+      alert('레벨 6부터 선물하기가 가능합니다.');
+      return;
+    }
     const amount = Math.min(10, Math.max(1, Number(inkAmount) || 1));
     if (!appId) return;
     setIsSendingInk(true);
@@ -294,24 +275,35 @@ const BookDetail = ({ book, onClose, onBookUpdate, fontSize = 'text-base', user,
         const receiverSnap = await tx.get(receiverRef);
         const senderInk = senderSnap.exists() ? (senderSnap.data().ink || 0) : 0;
         const receiverInk = receiverSnap.exists() ? (receiverSnap.data().ink || 0) : 0;
-        const senderLevel = senderSnap.exists() ? (senderSnap.data().level || 1) : 1;
-        const senderExp = senderSnap.exists() ? (senderSnap.data().exp || 0) : 0;
-        const senderMaxExp = senderSnap.exists() ? (senderSnap.data().maxExp || 100) : 100;
         if (senderInk < amount) {
           throw new Error('잉크가 부족합니다.');
         }
-        const nextReceiverInk = Math.min(999, receiverInk + amount);
-        const levelUpResult = calculateLevelUp(senderLevel, senderExp, amount, senderMaxExp);
-        const senderUpdate = {
+        const senderXp = senderSnap.exists() ? (senderSnap.data().xp ?? 0) : 0;
+        const xpGain = amount * getXpPerInk();
+        const newXp = senderXp + xpGain;
+        const newLevel = getLevelFromXp(newXp);
+        const nextReceiverInk = Math.min(INK_MAX, receiverInk + amount);
+        tx.update(senderRef, {
           ink: senderInk - amount,
-          exp: levelUpResult.newExp,
-          maxExp: levelUpResult.newMaxExp
-        };
-        if (levelUpResult.leveledUp) {
-          senderUpdate.level = levelUpResult.newLevel;
-        }
-        tx.update(senderRef, senderUpdate);
+          xp: newXp,
+          total_ink_spent: increment(amount),
+          level: newLevel
+        });
         tx.set(receiverRef, { ink: nextReceiverInk }, { merge: true });
+        tx.set(doc(db, 'artifacts', appId, 'users', user.uid, 'ink_history', `donation_${Date.now()}_${book.id}`), {
+          reason: 'donation_sent',
+          amount: -amount,
+          toUserId: book.authorId,
+          bookId: book.id,
+          createdAt: serverTimestamp()
+        });
+        tx.set(doc(db, 'artifacts', appId, 'users', book.authorId, 'ink_history', `donation_${Date.now()}_${user.uid}`), {
+          reason: 'donation_received',
+          amount,
+          fromUserId: user.uid,
+          bookId: book.id,
+          createdAt: serverTimestamp()
+        });
       });
       alert(`잉크 ${amount}개를 보냈습니다!`);
     } catch (err) {
@@ -368,7 +360,7 @@ const BookDetail = ({ book, onClose, onBookUpdate, fontSize = 'text-base', user,
 
     // 2회째 집필 시 잉크 소모 (레벨에 따라 할인)
     if (dailyWriteCount >= DAILY_FREE_WRITES) {
-      const level = profileSnap.exists() ? (profileSnap.data().level || 1) : 1;
+      const level = getLevelFromXp(profileSnap.exists() ? (profileSnap.data().xp ?? 0) : 0);
       const extraCost = getExtraWriteInkCost(level);
       const currentInk = profileSnap.exists() ? Number(profileSnap.data().ink || 0) : 0;
       if (currentInk < extraCost) {
@@ -731,31 +723,41 @@ const BookDetail = ({ book, onClose, onBookUpdate, fontSize = 'text-base', user,
         </div>
       )}
 
-      {/* 잉크 보내기 */}
-      <div className="flex items-center justify-center gap-3 mt-5">
-        <span className="text-sm font-black text-blue-600 bg-blue-50 px-3 py-1 rounded-full border border-blue-200">
-          잉크쏘기
-        </span>
-        <select
-          value={inkAmount}
-          onChange={(e) => setInkAmount(e.target.value)}
-          className="text-sm border border-blue-200 rounded-full px-3 py-1.5 bg-white text-blue-700 font-bold"
-        >
-          {[1,2,3,4,5,6,7,8,9,10].map((n) => (
-            <option key={n} value={n}>{n}개</option>
-          ))}
-        </select>
-        <button
-          onClick={sendInkToAuthor}
-          disabled={isSendingInk || !user}
-          className="px-4 py-2 rounded-full text-sm font-black bg-blue-500 text-white hover:bg-blue-600 disabled:bg-slate-200 disabled:text-slate-400"
-        >
-          {isSendingInk ? '보내는 중...' : '보내기'}
-        </button>
-      </div>
-      <p className="text-xs text-slate-500 text-center mt-2">
-        작품이 마음에 드셨다면 응원 한마디와 잉크를 쏴주세요
-      </p>
+      {/* 잉크 보내기 (선물하기) - Lv 6 이상 해제 */}
+      {book.authorId !== user?.uid && (
+        <div className="flex flex-col items-center gap-2 mt-5">
+          {!canDonate(getLevelFromXp(userProfile?.xp ?? 0)) ? (
+            <div className="text-center py-3 px-4 bg-slate-100 rounded-xl border border-slate-200">
+              <span className="text-sm font-bold text-slate-500">🔒 선물하기는 레벨 6부터 가능해요</span>
+            </div>
+          ) : (
+            <div className="flex items-center justify-center gap-3">
+              <span className="text-sm font-black text-blue-600 bg-blue-50 px-3 py-1 rounded-full border border-blue-200">
+                잉크쏘기
+              </span>
+              <select
+                value={inkAmount}
+                onChange={(e) => setInkAmount(e.target.value)}
+                className="text-sm border border-blue-200 rounded-full px-3 py-1.5 bg-white text-blue-700 font-bold"
+              >
+                {[1,2,3,4,5,6,7,8,9,10].map((n) => (
+                  <option key={n} value={n}>{n}개</option>
+                ))}
+              </select>
+              <button
+                onClick={sendInkToAuthor}
+                disabled={isSendingInk || !user}
+                className="px-4 py-2 rounded-full text-sm font-black bg-blue-500 text-white hover:bg-blue-600 disabled:bg-slate-200 disabled:text-slate-400"
+              >
+                {isSendingInk ? '보내는 중...' : '보내기'}
+              </button>
+            </div>
+          )}
+          <p className="text-xs text-slate-500 text-center">
+            작품이 마음에 드셨다면 응원 한마디와 잉크를 쏴주세요
+          </p>
+        </div>
+      )}
 
       {/* 댓글 */}
       <div className="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm space-y-4">

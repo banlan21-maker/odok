@@ -18,7 +18,7 @@ import { httpsCallable } from 'firebase/functions';
 import { auth, db, functions } from './firebase';
 import { startOfDay, subDays, endOfDay, format, startOfWeek, endOfWeek } from 'date-fns';
 import { getTodayDateKey } from './utils/dateUtils';
-import { getLevelUpInkBonus, getAttendanceInk, getExtraWriteInkCost, getFreeWriteRewardInk, getReadInkCost, getTitleByLevel } from './utils/levelUtils';
+import { getLevelUpInkBonus, getAttendanceInk, getExtraWriteInkCost, getFreeWriteRewardInk, getReadInkCost, getTitleByLevel, getLevelFromXp, getXpPerInk, getLevelProgressPercent, getXpToNextLevel, getGradeInfo } from './utils/levelUtils';
 
 // 데이터와 컴포넌트 불러오기
 import { T, genres } from './data';
@@ -167,19 +167,17 @@ const App = () => {
   const t = (T && T[language]) ? T[language] : T['ko']; 
   const isNoticeAdmin = user?.email === 'banlan21@gmail.com';
   
-  // 레벨 정보 계산 (새로운 필드 구조 사용 + 칭호)
+  // 레벨 정보 계산 (XP 누적 기준)
+  const userXp = userProfile?.xp ?? 0;
   const levelInfo = userProfile ? {
-    level: userProfile.level || 1,
-    currentExp: userProfile.exp || 0,
-    maxExp: userProfile.maxExp || 100,
-    progress: userProfile.maxExp 
-      ? Math.min(100, Math.floor(((userProfile.exp || 0) / userProfile.maxExp) * 100))
-      : 0,
-    remainingExp: userProfile.maxExp 
-      ? Math.max(0, userProfile.maxExp - (userProfile.exp || 0))
-      : 100,
-    title: getTitleByLevel(userProfile.level)
-  } : { level: 1, currentExp: 0, maxExp: 100, progress: 0, remainingExp: 100, title: '독서가' };
+    level: getLevelFromXp(userXp),
+    currentExp: userXp,
+    progress: getLevelProgressPercent(userXp),
+    remainingExp: getXpToNextLevel(userXp),
+    title: getTitleByLevel(getLevelFromXp(userXp)),
+    gradeIcon: getGradeInfo(getLevelFromXp(userXp)).icon,
+    badge: getGradeInfo(getLevelFromXp(userXp)).badge
+  } : { level: 1, currentExp: 0, progress: 0, remainingExp: 100, title: '새싹', gradeIcon: '🌱', badge: null };
 
   const getTodayString = () => new Date().toISOString().split('T')[0];
 
@@ -370,9 +368,9 @@ const App = () => {
             language: 'ko',
             fontSize: 'text-base',
             points: 0,
-            exp: 0,
+            xp: 0,
             level: 1,
-            maxExp: 100,
+            total_ink_spent: 0,
             ink: INITIAL_INK,
             bookCount: 0,
             dailyGenerationCount: 0,
@@ -383,7 +381,7 @@ const App = () => {
             lastAttendanceDate: '',
             dailyWriteCount: 0,
             lastBookCreatedDate: null,
-            lastNicknameChangeDate: null, // Part 2: 닉네임 변경 날짜 추적
+            lastNicknameChangeDate: null,
             createdAt: serverTimestamp(),
             updatedAt: serverTimestamp()
           };
@@ -416,11 +414,11 @@ const App = () => {
         if (data.level === undefined || data.level === null) {
           needsUpdate.level = 1;
         }
-        if (data.exp === undefined || data.exp === null) {
-          needsUpdate.exp = 0;
+        if (data.xp === undefined || data.xp === null) {
+          needsUpdate.xp = 0;
         }
-        if (data.maxExp === undefined || data.maxExp === null) {
-          needsUpdate.maxExp = 100;
+        if (data.total_ink_spent === undefined || data.total_ink_spent === null) {
+          needsUpdate.total_ink_spent = 0;
         }
         if (data.dailyWriteCount === undefined || data.dailyWriteCount === null) {
           needsUpdate.dailyWriteCount = 0;
@@ -558,7 +556,7 @@ const App = () => {
       const snap = await getDoc(profileRef);
       const data = snap.exists() ? snap.data() : {};
       const currentInk = data.ink || 0;
-      const level = data.level || 1;
+      const level = getLevelFromXp(data.xp ?? 0);
       const attendanceInk = getAttendanceInk(level);
       const nextInk = Math.min(INK_MAX, currentInk + attendanceInk);
       await updateDoc(profileRef, { lastAttendanceDate: today, ink: nextInk });
@@ -772,7 +770,7 @@ const App = () => {
       // 잉크를 사용하는 경우 잉크 확인 (레벨에 따라 할인)
       if (useInk && !skipInkDeduct) {
         const currentInk = userProfile?.ink || 0;
-        const requiredInk = getExtraWriteInkCost(userProfile?.level);
+        const requiredInk = getExtraWriteInkCost(getLevelFromXp(userProfile?.xp ?? 0));
         
         if (currentInk < requiredInk) {
           setError('잉크가 부족합니다! 💧 잉크를 충전해주세요.');
@@ -987,10 +985,10 @@ const App = () => {
               bookCount: 1, 
               ink: INITIAL_INK,
               level: 1,
-              exp: 0,  // 수정 3: 초기 경험치는 0 (잉크 소비 시에만 획득)
-              maxExp: 100,
+              xp: 0,
+              total_ink_spent: 0,
               dailyWriteCount: 1,
-              lastBookCreatedDate: todayDateKey // 수정 1: 하루 2회 제한용 날짜 문자열
+              lastBookCreatedDate: todayDateKey
             }, { merge: true });
           }
         } catch (fallbackErr) {
@@ -1013,62 +1011,31 @@ const App = () => {
     }
   };
 
-  // 레벨업 계산 함수
-  const calculateLevelUp = (currentLevel, currentExp, expGain, maxExp) => {
-    const newExp = currentExp + expGain;
-    
-    // 레벨업이 필요한지 확인
-    if (newExp >= maxExp && currentLevel < MAX_LEVEL) {
-      const newLevel = currentLevel + 1;
-      const remainingExp = newExp - maxExp;
-      // 다음 레벨의 maxExp 계산 (이전 maxExp의 1.2배, 최소 100)
-      const nextMaxExp = Math.max(100, Math.floor(maxExp * 1.2));
-      
-      return {
-        leveledUp: true,
-        newLevel,
-        newExp: remainingExp,
-        newMaxExp: nextMaxExp
-      };
-    }
-    
-    return {
-      leveledUp: false,
-      newLevel: currentLevel,
-      newExp,
-      newMaxExp: maxExp
-    };
-  };
-
-  // 잉크 차감 함수 (경험치 획득 포함, 레벨업 시 잉크 보너스)
+  // 잉크 차감 함수 (XP: 1잉크=10XP, total_ink_spent 누적, 레벨업 시 잉크 보너스)
   const deductInk = async (amount) => {
     if (!user || !userProfile) return false;
     const profileRef = doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'info');
     try {
-      const currentLevel = userProfile.level || 1;
-      const currentExp = userProfile.exp || 0;
-      const maxExp = userProfile.maxExp || 100;
-      const expGain = amount; // 잉크 사용량만큼 경험치 획득
-      
-      const levelUpResult = calculateLevelUp(currentLevel, currentExp, expGain, maxExp);
-      const levelUpBonus = levelUpResult.leveledUp ? getLevelUpInkBonus() : 0;
-      const inkDelta = -amount + levelUpBonus; // 레벨업 시 +5 보너스
+      const currentXp = userProfile.xp ?? 0;
+      const xpGain = amount * getXpPerInk(); // 1 잉크 = 10 XP
+      const newXp = currentXp + xpGain;
+      const oldLevel = getLevelFromXp(currentXp);
+      const newLevel = getLevelFromXp(newXp);
+      const leveledUp = newLevel > oldLevel;
+      const levelUpBonus = leveledUp ? getLevelUpInkBonus() : 0;
+      const inkDelta = -amount + levelUpBonus;
       
       const updateData = {
         ink: increment(inkDelta),
-        exp: levelUpResult.newExp,
-        maxExp: levelUpResult.newMaxExp
+        xp: newXp,
+        total_ink_spent: increment(amount),
+        level: newLevel
       };
-      
-      if (levelUpResult.leveledUp) {
-        updateData.level = levelUpResult.newLevel;
-      }
       
       await updateDoc(profileRef, updateData);
       
-      // 레벨업 시 모달 표시
-      if (levelUpResult.leveledUp) {
-        setNewLevel(levelUpResult.newLevel);
+      if (leveledUp) {
+        setNewLevel(newLevel);
         setShowLevelUpModal(true);
       }
       
@@ -1110,7 +1077,7 @@ const App = () => {
     }
 
     // 잉크 확인 (레벨에 따라 비용 감소, Lv10+ 무료)
-    const requiredInk = getReadInkCost(userProfile?.level);
+    const requiredInk = getReadInkCost(getLevelFromXp(userProfile?.xp ?? 0));
     if (requiredInk === 0) {
       // Lv10+ 무료 독서
       setSelectedBook(book);
@@ -1136,7 +1103,7 @@ const App = () => {
   const confirmOpenBook = async () => {
     if (!pendingBook) return;
 
-    const requiredInk = getReadInkCost(userProfile?.level);
+    const requiredInk = getReadInkCost(getLevelFromXp(userProfile?.xp ?? 0));
     const currentInk = userProfile?.ink || 0;
     if (currentInk < requiredInk) {
       setError('잉크가 부족합니다! 💧 잉크를 충전해주세요.');
@@ -1546,14 +1513,14 @@ const App = () => {
       // 2. 유저 정보 초기화
       const profileRef = doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'info');
       await updateDoc(profileRef, {
-        nickname: null,  // 다시 설정하게
+        nickname: null,
         lastNicknameChangeDate: null,
         ink: INITIAL_INK,
         level: 1,
-        exp: 0,  // 수정 3: 초기 경험치는 0 (잉크 소비 시에만 획득)
-        maxExp: 100,
+        xp: 0,
+        total_ink_spent: 0,
         dailyWriteCount: 0,
-        lastBookCreatedDate: null,  // 수정 1: 즉시 집필 가능하게 (날짜 문자열)
+        lastBookCreatedDate: null,
         updatedAt: serverTimestamp()
       });
       
@@ -2152,21 +2119,19 @@ const App = () => {
                   <div>2. 집필은 하루 2회까지 가능합니다. 1회는 무료, 2회째부터는 잉크가 소모됩니다.</div>
                   <div className="pt-2 font-bold text-slate-800">잉크 시스템</div>
                   <div>- 가입 시 10 잉크가 지급됩니다.</div>
-                  <div>- 매일 출석 시 +1~3 잉크 (레벨에 따라 증가).</div>
+                  <div>- 매일 출석: Lv1~5는 3잉크, Lv6+는 4잉크.</div>
                   <div>- 1회 무료 집필 성공 시 +5~ 잉크 (레벨에 따라 증가).</div>
                   <div>- 프로필 탭에서 “광고 보고 잉크 얻기”로 +10 잉크를 받을 수 있습니다.</div>
                   <div>- 다른 유저가 잉크쏘기를 보내면 1~10 잉크를 받을 수 있습니다.</div>
-                  <div>- 다른 사람의 책 읽기: Lv1-4는 2잉크, Lv5-9는 1잉크, Lv10+ 무료.</div>
-                  <div>- 2회째 집필: Lv1-9는 5잉크, Lv10+ 할인 (레벨마다 감소).</div>
+                  <div>- 다른 사람의 책 읽기: Lv1~10은 2잉크, Lv11+는 1잉크.</div>
+                  <div>- 2회째 집필: Lv1~20은 5잉크, Lv21+는 4잉크.</div>
                   <div>- 비소설 키워드 새로고침: Lv10+ 무료, 그 외 1잉크.</div>
-                  <div>- 잉크쏘기 보내기 시 입력한 만큼(1~10) 잉크가 소모됩니다.</div>
+                  <div>- 선물하기(잉크쏘기): Lv6부터 가능, 입력한 만큼(1~10) 잉크 소모.</div>
                   <div>- 잉크 최대치는 999입니다.</div>
                   <div className="pt-2 font-bold text-slate-800">레벨 시스템</div>
-                  <div>- 잉크를 사용할 때마다 사용한 만큼 경험치를 얻습니다.</div>
-                  <div>- 기본 필요 경험치는 100이며, 레벨업 시 1.2배씩 증가합니다.</div>
+                  <div>- 잉크를 소모할 때마다 1잉크당 10 XP를 얻습니다.</div>
+                  <div>- Lv1~5 새싹🌱, Lv6~10 작가✍️, Lv11~20 베스트🏆, Lv21+ 마스터👑</div>
                   <div>- 레벨업 시 잉크 +5 보너스 & 새로운 칭호 해금!</div>
-                  <div>- 경험치가 최대치에 도달하면 레벨이 올라갑니다.</div>
-                  <div>- 최고 레벨은 99입니다.</div>
                   <div className="pt-2 font-bold text-slate-800">랭킹 기준</div>
                   <div>- 주간 베스트셀러: 월~일 생성된 책의 조회+좋아요+즐겨찾기+완독 합산 TOP 3</div>
                   <div>- 금주의 집필왕: 월~일 집필 권수 TOP 3</div>
@@ -2302,7 +2267,7 @@ const App = () => {
                   </div>
                   <h3 className="text-lg font-black text-slate-800">잉크를 사용하시겠습니까?</h3>
                   <p className="text-sm text-slate-600">
-                    💧 잉크 <span className="font-black text-blue-600">{getReadInkCost(userProfile?.level)}방울</span>을 사용하여
+                    💧 잉크 <span className="font-black text-blue-600">{getReadInkCost(getLevelFromXp(userProfile?.xp ?? 0))}방울</span>을 사용하여
                   </p>
                   <p className="text-sm font-bold text-slate-800">
                     "{pendingBook.title}"을 읽으시겠습니까?
@@ -2316,7 +2281,7 @@ const App = () => {
                 <div className="space-y-2 pt-2">
                   <button
                     onClick={confirmOpenBook}
-                    disabled={(userProfile?.ink || 0) < getReadInkCost(userProfile?.level)}
+                    disabled={(userProfile?.ink || 0) < getReadInkCost(getLevelFromXp(userProfile?.xp ?? 0))}
                     className="w-full bg-blue-500 text-white py-3 rounded-xl font-black hover:bg-blue-600 transition-colors flex items-center justify-center gap-2 disabled:bg-slate-200 disabled:text-slate-400"
                   >
                     <Droplets className="w-4 h-4" />
@@ -2349,7 +2314,7 @@ const App = () => {
                     오늘 무료 집필 1회를 사용했습니다.
                   </p>
                   <p className="text-sm text-slate-600 font-bold">
-                    <span className="text-orange-500">{getExtraWriteInkCost(userProfile?.level)} 잉크</span>를 사용하여 추가로 집필하시겠습니까?
+                    <span className="text-orange-500">{getExtraWriteInkCost(getLevelFromXp(userProfile?.xp ?? 0))} 잉크</span>를 사용하여 추가로 집필하시겠습니까?
                   </p>
                   <div className="pt-2">
                     <p className="text-xs text-slate-400">
@@ -2374,11 +2339,11 @@ const App = () => {
                       setPendingBookData(null);
                       await handleBookGenerated(bookData, true); // useInk = true로 호출
                     }}
-                    disabled={(userProfile?.ink || 0) < getExtraWriteInkCost(userProfile?.level)}
+                    disabled={(userProfile?.ink || 0) < getExtraWriteInkCost(getLevelFromXp(userProfile?.xp ?? 0))}
                     className="w-full bg-orange-500 text-white py-3 rounded-xl font-black hover:bg-orange-600 transition-colors flex items-center justify-center gap-2 disabled:bg-slate-200 disabled:text-slate-400"
                   >
                     <Droplets className="w-4 h-4" />
-                    잉크 {getExtraWriteInkCost(userProfile?.level)} 사용하고 집필
+                    잉크 {getExtraWriteInkCost(getLevelFromXp(userProfile?.xp ?? 0))} 사용하고 집필
                   </button>
                 </div>
               </div>

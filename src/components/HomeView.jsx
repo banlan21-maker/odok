@@ -89,7 +89,8 @@ const HomeView = ({
             <div className="flex items-center gap-2">
               <span>{userProfile?.nickname || '게스트'}님 환영합니다!</span>
               {levelInfo && (
-                <span className="bg-orange-100 text-orange-600 text-[10px] px-2 py-0.5 rounded-full font-black">
+                <span className="bg-orange-100 text-orange-600 text-[10px] px-2 py-0.5 rounded-full font-black flex items-center gap-0.5">
+                  {levelInfo.gradeIcon && <span>{levelInfo.gradeIcon}</span>}
                   Lv.{levelInfo.level}
                 </span>
               )}

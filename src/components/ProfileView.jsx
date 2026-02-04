@@ -138,8 +138,11 @@ const ProfileView = ({
                   <div className="flex items-center justify-between mb-2">
                     <div>
                       <span className="text-[10px] text-slate-400 font-bold">LEVEL</span>
-                      <div className="text-xl font-black text-slate-800 leading-none mt-0.5">
+                      <div className="text-xl font-black text-slate-800 leading-none mt-0.5 flex items-center gap-1">
                         Lv.{levelInfo.level}
+                        {levelInfo.gradeIcon && <span className="text-lg">{levelInfo.gradeIcon}</span>}
+                        {levelInfo.badge === 'silver' && <span className="text-xs px-1.5 py-0.5 rounded bg-slate-300 text-white font-bold">은색</span>}
+                        {levelInfo.badge === 'gold' && <span className="text-xs px-1.5 py-0.5 rounded bg-amber-400 text-amber-900 font-bold">금색</span>}
                       </div>
                       {levelInfo.title && (
                         <div className="text-xs font-bold text-orange-500 mt-1">
@@ -159,7 +162,7 @@ const ProfileView = ({
                     <span>
                       다음 레벨까지 <span className="text-orange-600 font-black">{levelInfo.remainingExp} XP</span>
                     </span>
-                    <span>{levelInfo.currentExp}/{levelInfo.maxExp} XP</span>
+                    <span>{levelInfo.currentExp} XP · 다음 {levelInfo.remainingExp} XP</span>
                   </div>
                 </div>
                 <div className="w-24 flex flex-col items-center justify-center gap-2 border-l border-slate-100 pl-4">

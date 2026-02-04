@@ -5,7 +5,7 @@ import { KeepAwake } from '@capacitor-community/keep-awake';
 import { LocalNotifications } from '@capacitor/local-notifications';
 import { PenTool, RefreshCw, Book, Edit2, Lock, Droplets } from 'lucide-react';
 import { generateBook } from '../utils/aiService';
-import { getExtraWriteInkCost, isKeywordRefreshFree } from '../utils/levelUtils';
+import { getExtraWriteInkCost, isKeywordRefreshFree, getLevelFromXp } from '../utils/levelUtils';
 
 // 비문학 키워드 은행
 const ESSAY_KEYWORDS = [
@@ -477,7 +477,7 @@ const WriteView = ({ user, userProfile, onBookGenerated, slotStatus, setView, se
     }
 
     if (requiresPaidWrite && forcePaid) {
-      const extraCost = getExtraWriteInkCost(userProfile?.level);
+      const extraCost = getExtraWriteInkCost(getLevelFromXp(userProfile?.xp ?? 0));
       const currentInk = userProfile?.ink || 0;
       if (currentInk < extraCost) {
         const errorMsg = '잉크가 부족합니다! 💧 잉크를 충전해주세요.';
@@ -600,7 +600,7 @@ const WriteView = ({ user, userProfile, onBookGenerated, slotStatus, setView, se
     }
 
     if (requiresPaidWrite && forcePaid) {
-      const extraCost = getExtraWriteInkCost(userProfile?.level);
+      const extraCost = getExtraWriteInkCost(getLevelFromXp(userProfile?.xp ?? 0));
       const currentInk = userProfile?.ink || 0;
       if (currentInk < extraCost) {
         const errorMsg = '잉크가 부족합니다! 💧 잉크를 충전해주세요.';
@@ -879,7 +879,7 @@ const WriteView = ({ user, userProfile, onBookGenerated, slotStatus, setView, se
                         ? 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed'
                         : 'bg-blue-50 text-blue-600 border-blue-200 hover:bg-blue-100'
                     }`}
-                    title={isKeywordRefreshFree(userProfile?.level) ? "키워드 새로고침 (무료)" : "키워드 새로고침 (잉크 1)"}
+                    title={isKeywordRefreshFree(getLevelFromXp(userProfile?.xp ?? 0)) ? "키워드 새로고침 (무료)" : "키워드 새로고침 (잉크 1)"}
                   >
                     <RefreshCw className={`w-4 h-4 ${isRefreshingKeywords ? 'animate-spin' : ''}`} />
                   </button>
@@ -969,7 +969,7 @@ const WriteView = ({ user, userProfile, onBookGenerated, slotStatus, setView, se
                   ) : (
                     <>
                       <PenTool className="w-5 h-5" />
-                      <span>{requiresPaidWrite ? `잉크 ${getExtraWriteInkCost(userProfile?.level)} 사용하고 집필` : '책 생성하기'}</span>
+                      <span>{requiresPaidWrite ? `잉크 ${getExtraWriteInkCost(getLevelFromXp(userProfile?.xp ?? 0))} 사용하고 집필` : '책 생성하기'}</span>
                     </>
                   )}
                 </button>
@@ -1141,7 +1141,7 @@ const WriteView = ({ user, userProfile, onBookGenerated, slotStatus, setView, se
                   ) : (
                     <>
                       <PenTool className="w-5 h-5" />
-                      <span>{requiresPaidWrite ? `잉크 ${getExtraWriteInkCost(userProfile?.level)} 사용하고 집필` : '책 생성하기'}</span>
+                      <span>{requiresPaidWrite ? `잉크 ${getExtraWriteInkCost(getLevelFromXp(userProfile?.xp ?? 0))} 사용하고 집필` : '책 생성하기'}</span>
                     </>
                   )}
                 </button>
@@ -1164,7 +1164,7 @@ const WriteView = ({ user, userProfile, onBookGenerated, slotStatus, setView, se
                 하루 무료 횟수를 사용했습니다.
               </p>
               <p className="text-sm text-slate-600 font-bold">
-                <span className="text-orange-500">{getExtraWriteInkCost(userProfile?.level)} 잉크</span>를 사용하여 집필하시겠습니까?
+                <span className="text-orange-500">{getExtraWriteInkCost(getLevelFromXp(userProfile?.xp ?? 0))} 잉크</span>를 사용하여 집필하시겠습니까?
               </p>
               <div className="pt-2">
                 <p className="text-xs text-slate-400">
@@ -1184,7 +1184,7 @@ const WriteView = ({ user, userProfile, onBookGenerated, slotStatus, setView, se
                 className="flex-1 bg-orange-500 text-white py-2 rounded-lg text-xs font-black hover:bg-orange-600 transition-colors flex items-center justify-center gap-1.5"
               >
                 <Droplets className="w-4 h-4" />
-                잉크 {getExtraWriteInkCost(userProfile?.level)} 사용하고 집필
+                잉크 {getExtraWriteInkCost(getLevelFromXp(userProfile?.xp ?? 0))} 사용하고 집필
               </button>
             </div>
           </div>
