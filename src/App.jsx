@@ -1,17 +1,18 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Capacitor } from '@capacitor/core';
-import { 
-  BookOpen, Coffee, Lightbulb, ChevronLeft, 
+import {
+  BookOpen, Coffee, Lightbulb, ChevronLeft,
   RefreshCw, Book, Calendar, List, ArrowRight, User, PenTool, Save,
-  Star, MessageCircle, Reply, Send, MoreHorizontal, Bookmark, Heart, Globe, Home, Edit2, Flag, X, Library, Vote, Trophy, CheckCircle, HelpCircle, Smile, Zap, Brain, Sparkles, LogOut, Lock, Droplets
+  Star, MessageCircle, Reply, Send, MoreHorizontal, Bookmark, Heart, Globe, Home, Edit2, Flag, X, Library, Vote, Trophy, CheckCircle, HelpCircle, Smile, Zap, Brain, Sparkles, LogOut, Lock, Droplets, Video
 } from 'lucide-react';
+import { showRewardVideoAd, initializeAdMob } from './utils/admobService';
 import { FirebaseAuthentication } from '@capacitor-firebase/authentication';
 import { LocalNotifications } from '@capacitor/local-notifications';
-import { 
-  collection, query, onSnapshot, 
+import {
+  collection, query, onSnapshot,
   doc, setDoc, getDoc, addDoc, deleteDoc, serverTimestamp, updateDoc, increment, where, getDocs, limit, orderBy, Timestamp
 } from 'firebase/firestore';
-import { 
+import {
   signInWithCustomToken, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signInWithCredential, signOut, deleteUser
 } from 'firebase/auth';
 import { httpsCallable } from 'firebase/functions';
@@ -73,11 +74,11 @@ const DAILY_WRITE_LIMIT = 2;
 const DAILY_FREE_WRITES = 1;
 
 const App = () => {
-  const [view, setView] = useState('profile_setup'); 
+  const [view, setView] = useState('profile_setup');
   const viewRef = useRef(view);
   const [user, setUser] = useState(null);
   const [userProfile, setUserProfile] = useState(null);
-  
+
   const latestBooksRef = useRef([]);
   // Step 1: 기본 구조용 상태
   const [books, setBooks] = useState([]); // 생성된 책 목록
@@ -98,7 +99,7 @@ const App = () => {
   const [weeklyBestBooks, setWeeklyBestBooks] = useState([]); // 주간 베스트셀러
   const [topWriters, setTopWriters] = useState([]); // 주간 집필왕
   const [isLoadingHomeData, setIsLoadingHomeData] = useState(true); // 홈 데이터 로딩 상태
-  
+
   const [stories, setStories] = useState([]);
   const [favorites, setFavorites] = useState([]);
   const [bookFavorites, setBookFavorites] = useState([]);
@@ -112,40 +113,40 @@ const App = () => {
   const [showWritingCompleteModal, setShowWritingCompleteModal] = useState(null); // { book } | null
   const [ratings, setRatings] = useState([]);
   const [comments, setComments] = useState([]);
-  const [readHistory, setReadHistory] = useState([]); 
-  const [dailyStats, setDailyStats] = useState([]); 
+  const [readHistory, setReadHistory] = useState([]);
+  const [dailyStats, setDailyStats] = useState([]);
   const [unlockedStories, setUnlockedStories] = useState([]);
   const [seriesVotes, setSeriesVotes] = useState([]);
 
   const [selectedGenre, setSelectedGenre] = useState(null);
-  const [selectedSubGenre, setSelectedSubGenre] = useState(null); 
+  const [selectedSubGenre, setSelectedSubGenre] = useState(null);
   const [currentStory, setCurrentStory] = useState(null);
   const [error, setError] = useState(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [scrollProgress, setScrollProgress] = useState(0);
   const [tempNickname, setTempNickname] = useState("");
-  const [language, setLanguage] = useState('ko'); 
+  const [language, setLanguage] = useState('ko');
   const [fontSize, setFontSize] = useState('text-base');
   const [readerLang, setReaderLang] = useState('ko');
   const [translatedContent, setTranslatedContent] = useState({});
   const [isTranslating, setIsTranslating] = useState(false);
-  
+
   // ⭐️ 댓글 관련 상태
   const [commentInput, setCommentInput] = useState("");
   const [replyTo, setReplyTo] = useState(null);
   const [editingCommentId, setEditingCommentId] = useState(null);
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
-  
+
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
   const [reportText, setReportText] = useState("");
   const [reportStatus, setReportStatus] = useState(null);
   const [isRecommendModalOpen, setIsRecommendModalOpen] = useState(false);
-  const [recommendStep, setRecommendStep] = useState('main'); 
+  const [recommendStep, setRecommendStep] = useState('main');
   const [recommendedData, setRecommendedData] = useState(null);
   const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
   const [isUnlockModalOpen, setIsUnlockModalOpen] = useState(false);
   const [unlockTargetStory, setUnlockTargetStory] = useState(null);
-  const [libraryTab, setLibraryTab] = useState('created'); 
+  const [libraryTab, setLibraryTab] = useState('created');
   const [showAttendanceModal, setShowAttendanceModal] = useState(false);
   const [lastAttendanceInk, setLastAttendanceInk] = useState(1);
   const [canFinishRead, setCanFinishRead] = useState(false);
@@ -156,17 +157,17 @@ const App = () => {
   const [showLevelUpModal, setShowLevelUpModal] = useState(false);
   const [newLevel, setNewLevel] = useState(null);
   const [pendingBookData, setPendingBookData] = useState(null); // 수정 1: 추가 집필 확인 대기 중인 책 데이터
-  
+
   // 인앱 브라우저 감지 상태
   const [showInAppBrowserWarning, setShowInAppBrowserWarning] = useState(false);
   const [detectedInAppBrowser, setDetectedInAppBrowser] = useState(null);
   const [detectedDevice, setDetectedDevice] = useState(null); // 'ios' | 'android' | 'unknown'
   const allowExitRef = useRef(false);
-  
+
   const readingStartTime = useRef(null);
-  const t = (T && T[language]) ? T[language] : T['ko']; 
+  const t = (T && T[language]) ? T[language] : T['ko'];
   const isNoticeAdmin = user?.email === 'banlan21@gmail.com';
-  
+
   // 레벨 정보 계산 (XP 누적 기준)
   const userXp = userProfile?.xp ?? 0;
   const levelInfo = userProfile ? {
@@ -192,10 +193,10 @@ const App = () => {
   // 인앱 브라우저 감지 함수
   const detectInAppBrowser = () => {
     if (typeof navigator === 'undefined') return null;
-    
+
     const userAgent = navigator.userAgent || navigator.vendor || window.opera;
     const ua = userAgent.toLowerCase();
-    
+
     // 디바이스 감지
     let device = 'unknown';
     if (/iphone|ipad|ipod/.test(ua)) {
@@ -203,10 +204,10 @@ const App = () => {
     } else if (/android/.test(ua)) {
       device = 'android';
     }
-    
+
     // 인앱 브라우저 감지
     let inAppBrowser = null;
-    
+
     if (ua.includes('kakaotalk') || ua.includes('kakaostory')) {
       inAppBrowser = '카카오톡';
     } else if (ua.includes('instagram')) {
@@ -230,7 +231,7 @@ const App = () => {
         inAppBrowser = '인앱 브라우저';
       }
     }
-    
+
     return {
       isInApp: !!inAppBrowser,
       browserName: inAppBrowser,
@@ -251,6 +252,9 @@ const App = () => {
       setDetectedDevice(detection.device);
       setShowInAppBrowserWarning(true);
     }
+
+    // AdMob 초기화
+    initializeAdMob();
   }, []); // 최초 1회만 실행
 
   // 1. 로그인 (Google 로그인 필수)
@@ -354,12 +358,12 @@ const App = () => {
   useEffect(() => {
     if (!user) return;
     const profileRef = doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'info');
-    
+
     // 먼저 문서가 존재하는지 확인 (getDoc으로 확실히 체크)
     const initProfile = async () => {
       try {
         const profileSnap = await getDoc(profileRef);
-        
+
         // 문서가 없으면 신규 유저로 간주하고 초기 데이터 생성
         if (!profileSnap.exists()) {
           console.log('신규 유저 감지, 프로필 문서 생성:', user.uid);
@@ -385,27 +389,27 @@ const App = () => {
             createdAt: serverTimestamp(),
             updatedAt: serverTimestamp()
           };
-          
+
           // setDoc으로 문서 생성 (merge 옵션 없이 새로 생성)
           await setDoc(profileRef, initialProfileData);
           console.log('✅ 프로필 문서 생성 완료');
-          
+
           // 초기 데이터로 상태 설정
           setUserProfile(initialProfileData);
           setTempNickname('');
           setLanguage('ko');
           setFontSize('text-base');
-          
+
           // 로그인 후 프로필 설정 화면으로 이동 (신규 유저)
           console.log('📍 프로필 설정 화면으로 이동 (신규 유저)');
           // view를 명시적으로 설정 (login 화면에서 이동)
           setView('profile_setup');
           return;
         }
-        
+
         // 문서가 이미 존재하는 경우 - 기존 로직 실행
         const data = profileSnap.data();
-        
+
         // 레벨링 시스템 필드 초기화 (필드가 없으면 기본값 설정)
         const needsUpdate = {};
         if (data.ink === undefined || data.ink === null) {
@@ -429,7 +433,7 @@ const App = () => {
         if (data.lastNicknameChangeDate === undefined) {
           needsUpdate.lastNicknameChangeDate = null; // Part 2: 닉네임 변경 날짜 필드 추가
         }
-        
+
         if (Object.keys(needsUpdate).length > 0) {
           try {
             await updateDoc(profileRef, needsUpdate);
@@ -439,7 +443,7 @@ const App = () => {
             console.error('프로필 초기화 오류:', err);
           }
         }
-        
+
         setUserProfile(data);
         setTempNickname(data.nickname || '');
         if (data.language) setLanguage(data.language);
@@ -447,7 +451,7 @@ const App = () => {
 
         const today = getTodayString();
         if (data.lastAttendanceDate !== today) checkAttendance(profileRef, today);
-        
+
         // 화면 전환 로직: 닉네임 여부와 현재 view 상태에 따라 결정 (긴급 버그 수정)
         if (!data.nickname || data.nickname.trim() === '') {
           // 닉네임이 없으면 프로필 설정 화면으로 이동
@@ -465,10 +469,10 @@ const App = () => {
         setError('프로필을 불러오는데 실패했습니다.');
       }
     };
-    
+
     // 초기 프로필 체크 실행
     initProfile();
-    
+
     // 실시간 동기화를 위한 onSnapshot 리스너 (긴급 버그 수정)
     const unsubscribe = onSnapshot(profileRef, (docSnap) => {
       if (docSnap.exists()) {
@@ -478,17 +482,17 @@ const App = () => {
           nickname: data.nickname || '(없음)',
           currentView: view
         });
-        
+
         setUserProfile(data);
         if (data.nickname) {
           setTempNickname(data.nickname);
         }
         if (data.language) setLanguage(data.language);
         if (data.fontSize) setFontSize(data.fontSize);
-        
+
         const today = getTodayString();
         if (data.lastAttendanceDate !== today) checkAttendance(profileRef, today);
-        
+
         // 닉네임 상태에 따른 화면 전환 (실시간 업데이트)
         if (!data.nickname || data.nickname.trim() === '') {
           // 닉네임이 없으면 프로필 설정 화면으로
@@ -514,7 +518,7 @@ const App = () => {
       console.error("❌ Profile snapshot error:", err);
       setError('프로필을 불러오는데 실패했습니다. 페이지를 새로고침해주세요.');
     });
-    
+
     return () => unsubscribe();
   }, [user]);
 
@@ -562,82 +566,82 @@ const App = () => {
       await updateDoc(profileRef, { lastAttendanceDate: today, ink: nextInk });
       setLastAttendanceInk(attendanceInk);
       setShowAttendanceModal(true);
-    } catch (e) {}
+    } catch (e) { }
   };
 
   // Step 1: 생성된 책 목록 가져오기 (서재용: 모든 유저의 책)
   // 실시간 동기화: onSnapshot을 사용하여 DB 변경 시 자동 업데이트
   useEffect(() => {
     if (!user) return;
-    
+
     // Books collection 실시간 리스너 (로그 최소화)
     const booksRef = collection(db, 'artifacts', appId, 'books');
     const unsubBooks = onSnapshot(
-      booksRef, 
+      booksRef,
       (snap) => {
-        const booksData = snap.docs.map(d => ({ 
-          id: d.id, 
-          ...d.data() 
+        const booksData = snap.docs.map(d => ({
+          id: d.id,
+          ...d.data()
         }));
-        
+
         // 로그 최소화: 처음 한 번만 또는 변경 시에만
         // console.log(`📚 Books fetched: ${booksData.length}개 책을 불러왔습니다.`);
-        
+
         // 서재는 모든 책을 표시, 보관함에서는 필터링하여 사용
         setBooks(booksData);
         latestBooksRef.current = booksData;
-      
-      const todayDateKey = getTodayDateKey();
-      const today = startOfDay(new Date());
-      const weekStart = startOfWeek(today, { weekStartsOn: 1 });
-      const weekEnd = endOfWeek(today, { weekStartsOn: 1 });
-      
-      // 오늘 생성된 책들 (dateKey로 필터링 - 단순화)
-      const todayBooksList = booksData.filter(book => {
-        // dateKey가 있으면 dateKey로 비교, 없으면 createdAt으로 비교 (하위 호환)
-        if (book.dateKey) {
-          return book.dateKey === todayDateKey;
-        }
-        // 오래된 데이터를 위한 fallback
-        const createdAt = book.createdAt?.toDate?.() || (book.createdAt?.seconds ? new Date(book.createdAt.seconds * 1000) : null);
-        return createdAt && createdAt >= today;
-      }).sort((a, b) => {
-        const dateA = a.createdAt?.toDate?.() || (a.createdAt?.seconds ? new Date(a.createdAt.seconds * 1000) : new Date(0));
-        const dateB = b.createdAt?.toDate?.() || (b.createdAt?.seconds ? new Date(b.createdAt.seconds * 1000) : new Date(0));
-        return dateB - dateA;
+
+        const todayDateKey = getTodayDateKey();
+        const today = startOfDay(new Date());
+        const weekStart = startOfWeek(today, { weekStartsOn: 1 });
+        const weekEnd = endOfWeek(today, { weekStartsOn: 1 });
+
+        // 오늘 생성된 책들 (dateKey로 필터링 - 단순화)
+        const todayBooksList = booksData.filter(book => {
+          // dateKey가 있으면 dateKey로 비교, 없으면 createdAt으로 비교 (하위 호환)
+          if (book.dateKey) {
+            return book.dateKey === todayDateKey;
+          }
+          // 오래된 데이터를 위한 fallback
+          const createdAt = book.createdAt?.toDate?.() || (book.createdAt?.seconds ? new Date(book.createdAt.seconds * 1000) : null);
+          return createdAt && createdAt >= today;
+        }).sort((a, b) => {
+          const dateA = a.createdAt?.toDate?.() || (a.createdAt?.seconds ? new Date(a.createdAt.seconds * 1000) : new Date(0));
+          const dateB = b.createdAt?.toDate?.() || (b.createdAt?.seconds ? new Date(b.createdAt.seconds * 1000) : new Date(0));
+          return dateB - dateA;
+        });
+        setTodayBooks(todayBooksList);
+
+        // 주간 베스트셀러 (월~일, 조회+좋아요+즐겨찾기+완독 합계 기준 TOP 3)
+        const weeklyBooks = booksData.filter(book => {
+          const createdAt = book.createdAt?.toDate?.() || (book.createdAt?.seconds ? new Date(book.createdAt.seconds * 1000) : null);
+          return createdAt && createdAt >= weekStart && createdAt <= weekEnd;
+        }).map(book => ({
+          ...book,
+          score: (book.views || 0) + (book.likes || 0) + (book.favorites || 0) + (book.completions || 0)
+        })).sort((a, b) => b.score - a.score).slice(0, 3);
+        setWeeklyBestBooks(weeklyBooks);
+
+        const dssRef = doc(db, 'artifacts', appId, 'public', 'data', 'daily_series_slot', todayDateKey);
+        getDoc(dssRef).then((dssSnap) => {
+          const dssData = dssSnap.exists() ? dssSnap.data() : null;
+          const newSlotStatus = computeSlotStatus(booksData, todayDateKey, dssData);
+          console.log('[슬롯 상태] 최종 슬롯 상태:', Object.keys(newSlotStatus).map(key => ({
+            slot: key,
+            status: newSlotStatus[key] ? `마감됨 (${newSlotStatus[key].authorName})` : '사용 가능'
+          })));
+          setSlotStatus(newSlotStatus);
+        }).catch((e) => {
+          console.warn('[슬롯] daily_series_slot 조회 실패', e);
+          setSlotStatus(computeSlotStatus(booksData, todayDateKey, null));
+        });
+        setIsLoadingHomeData(false);
+      },
+      (err) => {
+        console.error("❌ Books fetch error:", err);
+        setError('책 목록을 불러오는데 실패했습니다.');
       });
-      setTodayBooks(todayBooksList);
-      
-      // 주간 베스트셀러 (월~일, 조회+좋아요+즐겨찾기+완독 합계 기준 TOP 3)
-      const weeklyBooks = booksData.filter(book => {
-        const createdAt = book.createdAt?.toDate?.() || (book.createdAt?.seconds ? new Date(book.createdAt.seconds * 1000) : null);
-        return createdAt && createdAt >= weekStart && createdAt <= weekEnd;
-      }).map(book => ({
-        ...book,
-        score: (book.views || 0) + (book.likes || 0) + (book.favorites || 0) + (book.completions || 0)
-      })).sort((a, b) => b.score - a.score).slice(0, 3);
-      setWeeklyBestBooks(weeklyBooks);
-      
-      const dssRef = doc(db, 'artifacts', appId, 'public', 'data', 'daily_series_slot', todayDateKey);
-      getDoc(dssRef).then((dssSnap) => {
-        const dssData = dssSnap.exists() ? dssSnap.data() : null;
-        const newSlotStatus = computeSlotStatus(booksData, todayDateKey, dssData);
-        console.log('[슬롯 상태] 최종 슬롯 상태:', Object.keys(newSlotStatus).map(key => ({
-          slot: key,
-          status: newSlotStatus[key] ? `마감됨 (${newSlotStatus[key].authorName})` : '사용 가능'
-        })));
-        setSlotStatus(newSlotStatus);
-      }).catch((e) => {
-        console.warn('[슬롯] daily_series_slot 조회 실패', e);
-        setSlotStatus(computeSlotStatus(booksData, todayDateKey, null));
-      });
-      setIsLoadingHomeData(false);
-    }, 
-    (err) => {
-      console.error("❌ Books fetch error:", err);
-      setError('책 목록을 불러오는데 실패했습니다.');
-    });
-    
+
     return () => {
       console.log("📖 Books collection 리스너 해제");
       unsubBooks();
@@ -718,7 +722,7 @@ const App = () => {
   // Step 5: 슬롯 키 생성 헬퍼 (시리즈는 통합 1슬롯)
   const getSlotKey = (category, isSeries, subCategory) => {
     const normalizedCategory = String(category || '').trim().toLowerCase();
-    
+
     if (isSeries || normalizedCategory === 'series') return 'series';
     if (normalizedCategory === 'webnovel' || normalizedCategory === 'novel') return normalizedCategory;
     if (normalizedCategory === 'self-improvement') return 'self-help';
@@ -739,7 +743,7 @@ const App = () => {
       const profileRefForCheck = doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'info');
       const profileSnapForCheck = await getDoc(profileRefForCheck);
       const todayDateKey = getTodayDateKey(); // YYYY-MM-DD 형식
-      
+
       let lastBookCreatedDate = null;
       let dailyWriteCount = 0;
       if (profileSnapForCheck.exists()) {
@@ -747,54 +751,54 @@ const App = () => {
         lastBookCreatedDate = profileData.lastBookCreatedDate; // 날짜 문자열 (YYYY-MM-DD)
         dailyWriteCount = Number(profileData.dailyWriteCount || 0);
       }
-      
+
       // 날짜가 바뀌면 일일 카운트 초기화
       if (lastBookCreatedDate !== todayDateKey) {
         dailyWriteCount = 0;
       }
-      
+
       // 하루 최대 집필 제한
       if (dailyWriteCount >= DAILY_WRITE_LIMIT) {
         setError('하루에 최대 2회까지만 집필할 수 있어요.');
         setPendingBookData(null);
         return;
       }
-      
+
       // 무료 집필 1회 이후에는 잉크 확인 모달 표시 (사전 확인을 건너뛴 경우에만)
       if (!skipDailyCheck && !useInk && dailyWriteCount >= DAILY_FREE_WRITES) {
         setPendingBookData(bookData);
         setShowInkConfirmModal(true); // 추가 집필 확인 모달 재사용
         return;
       }
-      
+
       // 잉크를 사용하는 경우 잉크 확인 (레벨에 따라 할인)
       if (useInk && !skipInkDeduct) {
         const currentInk = userProfile?.ink || 0;
         const requiredInk = getExtraWriteInkCost(getLevelFromXp(userProfile?.xp ?? 0));
-        
+
         if (currentInk < requiredInk) {
           setError('잉크가 부족합니다! 💧 잉크를 충전해주세요.');
           setPendingBookData(null);
           return;
         }
-        
+
         // 잉크 차감
         await deductInk(requiredInk);
         console.log(`✅ 추가 집필: 잉크 ${requiredInk} 차감`);
       }
-      
+
       console.log(`${useInk ? '💰 유료' : '🆓 무료'} 집필 시작`);
-      
+
       // Step 5: 동시성 제어 - 생성 직전 최종 확인 (단순화된 버전: dateKey 사용)
       const slotKey = getSlotKey(bookData.category, bookData.isSeries || false, bookData.subCategory);
-      
+
       console.log('[동시성 제어] 슬롯 체크 시작:', {
         category: bookData.category,
         isSeries: bookData.isSeries,
         slotKey: slotKey,
         dateKey: todayDateKey
       });
-      
+
       // dateKey로 오늘 생성된 책 조회 (단순 문자열 비교)
       const booksRef = collection(db, 'artifacts', appId, 'books');
       try {
@@ -802,19 +806,19 @@ const App = () => {
           booksRef,
           where('dateKey', '==', todayDateKey)
         );
-        
+
         const snapshot = await getDocs(q);
         const todayBooks = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-        
+
         console.log('[동시성 제어] 오늘 생성된 책 개수:', todayBooks.length);
-        
+
         // 해당 슬롯 확인 (7개 슬롯 체제에 맞게 - 시리즈 분리)
         const existingBook = todayBooks.find(book => {
           const bookCategory = String(book.category || '').trim().toLowerCase();
           const bookIsSeries = book.isSeries === true;
           const bookSubCategory = String(book.subCategory || '').trim().toLowerCase();
           const bookSlotKey = getSlotKey(bookCategory, bookIsSeries, bookSubCategory);
-          
+
           const isMatch = bookSlotKey === slotKey;
           if (isMatch) {
             console.log('[동시성 제어] 중복 슬롯 발견:', {
@@ -826,10 +830,10 @@ const App = () => {
               targetSlotKey: slotKey
             });
           }
-          
+
           return isMatch;
         });
-        
+
         if (existingBook) {
           const existingAuthor = existingBook.authorName || '익명';
           const errorMsg = `아쉽지만 간발의 차로 다른 작가님이 먼저 집필하셨어요! (By. ${existingAuthor}) 서재에서 읽어보세요.`;
@@ -848,7 +852,7 @@ const App = () => {
             throw new Error('SLOT_ALREADY_TAKEN');
           }
         }
-        
+
         console.log('[동시성 제어] 슬롯 사용 가능, 생성 진행');
       } catch (queryErr) {
         // SLOT_ALREADY_TAKEN은 그대로 전파
@@ -859,9 +863,9 @@ const App = () => {
         setError('시스템 오류가 발생했습니다. 잠시 후 다시 시도해주세요.');
         throw queryErr;
       }
-      
+
       const authorName = userProfile?.nickname || '익명';
-      
+
       // 수정 2: 시리즈 데이터 구조화
       const isSeries = bookData.isSeries || false;
       const bookDocumentData = {
@@ -894,7 +898,7 @@ const App = () => {
       if (bookData.settingSheet) {
         bookDocumentData.settingSheet = bookData.settingSheet;
       }
-      
+
       // 수정 2: 시리즈인 경우 추가 필드 설정
       if (isSeries) {
         bookDocumentData.seriesId = crypto.randomUUID(); // UUID 생성
@@ -918,14 +922,23 @@ const App = () => {
         // 단편과 달리 content는 빈 문자열로 (episodes 배열 사용)
         bookDocumentData.content = '';
       }
-      
+
+      // Firestore 저장 전 undefined 값 제거 (필수)
+      const sanitizeData = (data) => {
+        return JSON.parse(JSON.stringify(data, (key, value) => {
+          return value === undefined ? null : value;
+        }));
+      };
+
+      const cleanBookData = sanitizeData(bookDocumentData);
+
       // 새 스키마에 맞게 책 저장
-      const bookRef = await addDoc(collection(db, 'artifacts', appId, 'books'), bookDocumentData);
+      const bookRef = await addDoc(collection(db, 'artifacts', appId, 'books'), cleanBookData);
       const savedBook = {
         id: bookRef.id,
         ...bookDocumentData
       };
-      
+
       // 저장 성공 로그
       console.log("✅ Document written with ID: ", bookRef.id);
       console.log("📚 책 저장 완료:", {
@@ -939,8 +952,8 @@ const App = () => {
       // 유저 통계 업데이트: bookCount 증가 + 집필 보상 (1회 무료 시 레벨별 보상, 2회 유료 시 0)
       const profileRef = doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'info');
       try {
-        const rewardInk = useInk ? 0 : getFreeWriteRewardInk(userProfile?.level);
-        
+        const rewardInk = 0; // 집필 보상 제거 (무료/유료 모두 잉크 보상 없음)
+
         // 수정 1: 집필 시에는 잉크만 보상하고, 경험치는 주지 않음 (잉크 소비 시에만 경험치 획득)
         // 수정 1: lastBookCreatedDate를 오늘 날짜 문자열로 저장
         const nextInk = Math.min(INK_MAX, (userProfile?.ink || 0) + rewardInk);
@@ -951,19 +964,19 @@ const App = () => {
           dailyWriteCount: nextDailyWriteCount,
           lastBookCreatedDate: todayDateKey // 수정 1: 하루 2회 제한용 날짜 문자열 (YYYY-MM-DD)
         };
-        
+
         await updateDoc(profileRef, updateData);
-        
-        // 집필 완료 알림 (1회 무료 시 +5, 2회 유료 시 0)
-        console.log(`✅ 집필 완료! ${rewardInk > 0 ? `잉크 +${rewardInk}` : '2회차 집필'} (경험치는 잉크 소비 시에만 획득)`);
+
+        // 집필 완료 알림
+        console.log(`✅ 집필 완료! ${useInk ? '잉크 사용' : '무료 집필'} (경험치는 잉크 소비 시에만 획득)`);
       } catch (profileErr) {
         // 프로필 문서가 없거나 필드가 없을 경우 초기화
         console.warn('프로필 업데이트 오류, 초기화 시도:', profileErr);
         try {
           const profileSnap = await getDoc(profileRef);
           if (profileSnap.exists()) {
-            const rewardInk = useInk ? 0 : getFreeWriteRewardInk(profileSnap.data().level);
-            
+            const rewardInk = 0; // 집필 보상 제거
+
             // 수정 1: 집필 시에는 잉크만 보상하고 경험치는 주지 않음
             // 수정 1: lastBookCreatedDate를 오늘 날짜 문자열로 저장
             const todayDateKey = getTodayDateKey();
@@ -976,13 +989,13 @@ const App = () => {
               dailyWriteCount: nextDailyWriteCount,
               lastBookCreatedDate: todayDateKey // 수정 1: 하루 2회 제한용 날짜 문자열
             };
-            
+
             await updateDoc(profileRef, updateData);
           } else {
             // 프로필이 없으면 생성
             const todayDateKey = getTodayDateKey();
-            await setDoc(profileRef, { 
-              bookCount: 1, 
+            await setDoc(profileRef, {
+              bookCount: 1,
               ink: INITIAL_INK,
               level: 1,
               xp: 0,
@@ -1003,6 +1016,10 @@ const App = () => {
       return savedBook;
     } catch (err) {
       console.error('책 저장 오류:', err);
+      // 상세 에러 로그 출력 (어떤 필드가 문제인지 확인용)
+      if (err.code === 'invalid-argument') {
+        console.error('❌ 유효하지 않은 데이터가 포함되어 있습니다. bookData:', bookDocumentData);
+      }
       if (err.message === 'SLOT_ALREADY_TAKEN') {
         // 에러 메시지는 이미 setError로 설정됨
       } else {
@@ -1024,21 +1041,21 @@ const App = () => {
       const leveledUp = newLevel > oldLevel;
       const levelUpBonus = leveledUp ? getLevelUpInkBonus() : 0;
       const inkDelta = -amount + levelUpBonus;
-      
+
       const updateData = {
         ink: increment(inkDelta),
         xp: newXp,
         total_ink_spent: increment(amount),
         level: newLevel
       };
-      
+
       await updateDoc(profileRef, updateData);
-      
+
       if (leveledUp) {
         setNewLevel(newLevel);
         setShowLevelUpModal(true);
       }
-      
+
       return true;
     } catch (err) {
       console.error('잉크 차감 오류:', err);
@@ -1058,7 +1075,7 @@ const App = () => {
       await updateDoc(profileRef, {
         ink: nextInk
       });
-      
+
       console.log(`✅ 잉크 +${amount} 충전 완료`);
       return true;
     } catch (err) {
@@ -1085,7 +1102,7 @@ const App = () => {
       if (book.authorId !== user?.uid) {
         try {
           await updateDoc(doc(db, 'artifacts', appId, 'books', book.id), { views: increment(1) });
-        } catch (e) {}
+        } catch (e) { }
       }
       return;
     }
@@ -1099,41 +1116,70 @@ const App = () => {
     }
   };
 
-  // 잉크 확인 모달에서 확인 버튼 클릭 (수정 3: 잉크 소비 시 경험치 획득)
-  const confirmOpenBook = async () => {
+  // 책 열기 (잉크 차감 후) - 광고 보상일 경우 isAdReward=true
+  const confirmOpenBook = async (isAdReward = false) => {
     if (!pendingBook) return;
-
     const requiredInk = getReadInkCost(getLevelFromXp(userProfile?.xp ?? 0));
-    const currentInk = userProfile?.ink || 0;
-    if (currentInk < requiredInk) {
-      setError('잉크가 부족합니다! 💧 잉크를 충전해주세요.');
-      return;
-    }
 
-    // 수정 3: 잉크 소비 시에만 경험치 획득 (레벨에 따라 비용 상이)
-    const success = await deductInk(requiredInk);
-    if (success) {
-      // 다른 사람이 쓴 책을 읽는 경우에만 조회수 증가
-      if (pendingBook.authorId !== user?.uid) {
-        try {
-          await updateDoc(doc(db, 'artifacts', appId, 'books', pendingBook.id), {
-            views: increment(1)
-          });
-        } catch (viewErr) {
-          console.error('조회수 증가 실패:', viewErr);
-        }
+    // 잉크 차감 (광고 보상이 아닐 때만)
+    if (!isAdReward) {
+      // 이미 버튼에서 체크했지만 한 번 더 확인
+      if ((userProfile?.ink || 0) < requiredInk) {
+        setError('잉크가 부족합니다! 💧 잉크를 충전해주세요.');
+        return;
       }
-      setSelectedBook(pendingBook);
-      setView('book_detail');
-      setShowInkConfirmModal(false);
-      setPendingBook(null);
-      setError(null);
+
+      const success = await deductInk(requiredInk);
+      if (!success) {
+        setError('잉크 차감에 실패했습니다. 다시 시도해주세요.');
+        return; // 실패 시 중단
+      }
       console.log(`✅ 책 열기 완료: 잉크 -${requiredInk}, 경험치 +${requiredInk}`);
     } else {
-      setError('잉크 차감에 실패했습니다. 다시 시도해주세요.');
+      console.log("📺 광고 시청 보상: 잉크 차감 없이 책 열기");
     }
+
+    // 공통 로직: 책 잠금 해제 및 조회수 증가
+    // 1. 읽은 책 목록에 추가 (또는 업데이트)
+    const unlockedRef = doc(db, 'artifacts', appId, 'users', user.uid, 'unlocked_stories', pendingBook.id);
+    await setDoc(unlockedRef, {
+      unlockedAt: new Date().toISOString()
+    }, { merge: true });
+
+    // 2. 책 조회수 증가 (본인 책 제외)
+    if (pendingBook.authorId !== user?.uid) {
+      try {
+        await updateDoc(doc(db, 'artifacts', appId, 'books', pendingBook.id), {
+          views: increment(1)
+        });
+      } catch (viewErr) {
+        console.error('조회수 증가 실패:', viewErr);
+      }
+    }
+
+    // 3. UI 업데이트
+    setPendingBook(null);
+    setShowInkConfirmModal(false);
+    setError(null);
+
+    // 뷰 이동
+    setSelectedBook(pendingBook);
+    setView('book_detail');
   };
-  
+
+  // 광고 보고 책 읽기 핸들러
+  const handleWatchAdForRead = async () => {
+    showRewardVideoAd(
+      async () => {
+        // 성공 시 잉크 차감 없이 책 열기
+        await confirmOpenBook(true);
+      },
+      (errMsg) => {
+        setError(errMsg);
+      }
+    );
+  };
+
   // 수정 1: 추가 집필 확인 모달에서 확인 버튼 클릭 (handleBookGenerated의 useInk 파라미터로 처리)
 
   // Step 1: 서재에서 책 클릭 시 읽기 화면으로 이동 (간단 버전)
@@ -1171,12 +1217,12 @@ const App = () => {
     const unlockedRef = collection(db, 'artifacts', appId, 'users', user.uid, 'unlocked_stories');
     const unsubUnlocked = onSnapshot(unlockedRef, (snap) => setUnlockedStories(snap.docs.map(d => d.id)));
     const readHistoryRef = collection(db, 'artifacts', appId, 'users', user.uid, 'read_history');
-    const unsubRead = onSnapshot(readHistoryRef, (snap) => setReadHistory(snap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a,b) => b.readAt.localeCompare(a.readAt))));
+    const unsubRead = onSnapshot(readHistoryRef, (snap) => setReadHistory(snap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => b.readAt.localeCompare(a.readAt))));
     const statsRef = collection(db, 'artifacts', appId, 'users', user.uid, 'daily_stats');
     const unsubStats = onSnapshot(statsRef, (snap) => {
-        const stats = snap.docs.map(d => d.data());
-        stats.sort((a, b) => b.date.localeCompare(a.date));
-        setDailyStats(stats.slice(0, 7).reverse());
+      const stats = snap.docs.map(d => d.data());
+      stats.sort((a, b) => b.date.localeCompare(a.date));
+      setDailyStats(stats.slice(0, 7).reverse());
     });
     return () => { unsubFav(); unsubBookFav(); unsubStories(); unsubRatings(); unsubVotes(); unsubUnlocked(); unsubRead(); unsubStats(); };
   }, [user]);
@@ -1187,7 +1233,7 @@ const App = () => {
     const commentsRef = collection(db, 'artifacts', appId, 'public', 'data', 'comments');
     const unsubComments = onSnapshot(commentsRef, (snap) => {
       const rawComments = snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(c => c.storyId === currentStory.id);
-      
+
       // 대댓글이 부모 밑으로 오게 정렬
       const sorted = [];
       const parents = rawComments.filter(c => !c.parentId).sort((a, b) => (a.createdAt?.seconds || 0) - (b.createdAt?.seconds || 0));
@@ -1196,7 +1242,7 @@ const App = () => {
         const children = rawComments.filter(c => c.parentId === p.id).sort((a, b) => (a.createdAt?.seconds || 0) - (b.createdAt?.seconds || 0));
         sorted.push(...children);
       });
-      
+
       setComments(sorted);
     });
     return () => unsubComments();
@@ -1226,7 +1272,7 @@ const App = () => {
 
   useEffect(() => {
     if (view === 'reader') {
-      setReaderLang('ko'); setTranslatedContent({}); setIsTranslating(false); 
+      setReaderLang('ko'); setTranslatedContent({}); setIsTranslating(false);
       setEditingCommentId(null); setCommentInput(""); setReplyTo(null); // 댓글 상태 초기화
       setError(null); setIsReportModalOpen(false);
     }
@@ -1234,7 +1280,7 @@ const App = () => {
 
   // 함수 정의
   const handleGenreClick = (genre) => {
-    if (genre.hasSubGenre) { setSelectedGenre(genre); setView('genre_select'); } 
+    if (genre.hasSubGenre) { setSelectedGenre(genre); setView('genre_select'); }
     else { setSelectedGenre(genre); setSelectedSubGenre(null); setView('list'); }
     setError(null);
   };
@@ -1249,7 +1295,7 @@ const App = () => {
     }
   };
 
-  const getStoryStats = (sid) => { const r=ratings.filter(x=>x.storyId===sid); return {count:r.length, avg:r.length>0?(r.reduce((a,b)=>a+b.stars,0)/r.length).toFixed(1):"0.0"}; };
+  const getStoryStats = (sid) => { const r = ratings.filter(x => x.storyId === sid); return { count: r.length, avg: r.length > 0 ? (r.reduce((a, b) => a + b.stars, 0) / r.length).toFixed(1) : "0.0" }; };
   const getFavoriteCount = (storyId) => favorites.filter(f => f.storyId === storyId).length;
   const isFavorited = (storyId) => favorites.some(f => f.storyId === storyId && f.userId === user?.uid);
 
@@ -1269,28 +1315,28 @@ const App = () => {
       setError('로그인이 필요합니다.');
       return;
     }
-    
+
     try {
       const profileRef = doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'info');
-      
+
       // 현재 프로필 가져오기 (닉네임 변경 가능 여부 확인용)
       const profileSnap = await getDoc(profileRef);
       const currentProfile = profileSnap.exists() ? profileSnap.data() : null;
-      
+
       const newNickname = tempNickname.trim();
       const isNicknameChanged = currentProfile?.nickname && currentProfile.nickname !== newNickname;
-      
+
       // Part 2: 닉네임 변경 제한 로직 (최초 1회는 자유, 이후 한 달에 한 번)
       if (isNicknameChanged && currentProfile?.lastNicknameChangeDate) {
-        const lastChangeDate = currentProfile.lastNicknameChangeDate?.toDate?.() 
-          || (currentProfile.lastNicknameChangeDate?.seconds 
-            ? new Date(currentProfile.lastNicknameChangeDate.seconds * 1000) 
+        const lastChangeDate = currentProfile.lastNicknameChangeDate?.toDate?.()
+          || (currentProfile.lastNicknameChangeDate?.seconds
+            ? new Date(currentProfile.lastNicknameChangeDate.seconds * 1000)
             : null);
-        
+
         if (lastChangeDate) {
           const now = new Date();
           const daysSinceLastChange = Math.floor((now - lastChangeDate) / (1000 * 60 * 60 * 24));
-          
+
           if (daysSinceLastChange < 30) {
             const remainingDays = 30 - daysSinceLastChange;
             setError(`닉네임은 한 달에 한 번만 변경 가능합니다. (${remainingDays}일 후 변경 가능)`);
@@ -1298,34 +1344,34 @@ const App = () => {
           }
         }
       }
-      
+
       // 닉네임 유효성 검사 (한글/영어/공백 포함 최대 6글자)
       if (newNickname.length > 6) {
         setError('닉네임은 최대 6글자까지 입력 가능합니다.');
         return;
       }
-      
+
       // 유효성 검사: 한글, 영어, 숫자, 공백만 허용
       const nicknamePattern = /^[가-힣a-zA-Z0-9\s]+$/;
       if (!nicknamePattern.test(newNickname)) {
         setError('닉네임은 한글, 영어, 숫자, 공백만 사용할 수 있습니다.');
         return;
       }
-      
+
       // 수정 4: 프로필 저장 메시지 분기 처리 (3가지 케이스)
       // Case A: 최초 설정 (lastNicknameChangeDate가 없고, 기존 닉네임도 없음)
       const isFirstTimeUser = !currentProfile?.lastNicknameChangeDate && !currentProfile?.nickname;
       // Case B: 단순 저장 (닉네임 변경 없이 옵션만 변경)
       const isOnlySettingsChange = !isNicknameChanged && currentProfile?.nickname === newNickname;
       // Case C: 닉네임 변경 (기존 유저가 닉네임 변경)
-      
+
       // 프로필 데이터 준비
       const updateData = {
         language: language,
         fontSize: fontSize,
         updatedAt: serverTimestamp()
       };
-      
+
       // 닉네임이 변경된 경우에만 닉네임과 변경 날짜 업데이트
       if (!currentProfile?.nickname || isNicknameChanged) {
         updateData.nickname = newNickname;
@@ -1334,29 +1380,29 @@ const App = () => {
           updateData.lastNicknameChangeDate = serverTimestamp();
         }
       }
-      
+
       // Part 1: setDoc with merge 옵션 사용 (문서가 없으면 생성, 있으면 업데이트)
       await setDoc(profileRef, updateData, { merge: true });
-      
-      console.log('✅ 프로필 저장 완료:', { 
-        ...updateData, 
-        isFirstTimeUser, 
-        isOnlySettingsChange, 
-        isNicknameChanged 
+
+      console.log('✅ 프로필 저장 완료:', {
+        ...updateData,
+        isFirstTimeUser,
+        isOnlySettingsChange,
+        isNicknameChanged
       });
-      
+
       // 로컬 상태 즉시 업데이트
-      setUserProfile((prev) => ({ 
-        ...prev, 
+      setUserProfile((prev) => ({
+        ...prev,
         ...updateData,
         nickname: newNickname
       }));
-      
+
       // 프로필 설정 화면이면 홈으로 이동
       if (view === 'profile_setup') {
         setView('home');
       }
-      
+
       // 수정 4: 프로필 저장 메시지 분기 처리 (3가지 케이스)
       if (isFirstTimeUser) {
         // Case A: 최초 설정 - 환영 모달 표시
@@ -1373,7 +1419,7 @@ const App = () => {
       setError("저장에 실패했습니다. 다시 시도해주세요.");
     }
   };
-   
+
   // Google 로그인 핸들러 (긴급 버그 수정)
   const handleGoogleLogin = async (e) => {
     // 페이지 새로고침 방지 (form 태그 안에 있을 수 있으므로)
@@ -1381,11 +1427,11 @@ const App = () => {
       e.preventDefault();
       e.stopPropagation();
     }
-    
+
     try {
       console.log('🔐 Google 로그인 시도...');
       setError(null); // 에러 메시지 초기화
-      
+
       if (Capacitor.isNativePlatform()) {
         const nativeResult = await FirebaseAuthentication.signInWithGoogle();
         const idToken = nativeResult?.credential?.idToken;
@@ -1405,22 +1451,22 @@ const App = () => {
       // Web: Google 로그인 팝업 열기
       const provider = new GoogleAuthProvider();
       const result = await signInWithPopup(auth, provider);
-      
+
       console.log('✅ Google 로그인 성공:', {
         uid: result.user.uid,
         email: result.user.email,
         displayName: result.user.displayName
       });
-      
+
       // onAuthStateChanged가 자동으로 트리거되므로 여기서 별도 처리 불필요
       // 화면 전환은 프로필 useEffect에서 처리됨
-      
+
     } catch (error) {
       console.error('❌ Google 로그인 실패:', error);
-      
+
       // 사용자에게 알림 (alert)
       let errorMessage = "로그인에 실패했습니다.";
-      
+
       if (error.code === 'auth/popup-closed-by-user') {
         errorMessage = "로그인 팝업이 닫혔습니다. 다시 시도해주세요.";
       } else if (error.code === 'auth/popup-blocked') {
@@ -1432,7 +1478,7 @@ const App = () => {
       } else if (error.message) {
         errorMessage = error.message;
       }
-      
+
       // 상태 업데이트와 alert 동시에 표시
       setError(errorMessage);
       alert(`로그인 오류\n\n${errorMessage}\n\n에러 코드: ${error.code || 'unknown'}`);
@@ -1445,7 +1491,7 @@ const App = () => {
       }
       await signOut(auth);
       setView('profile_setup');
-    } catch (e) {}
+    } catch (e) { }
   };
 
   const formatNoticeDate = (createdAt) => {
@@ -1486,7 +1532,7 @@ const App = () => {
       setIsSavingNotice(false);
     }
   };
-  
+
   // 수정 2: 개발용 원클릭 리셋 함수 (유저 데이터 초기화)
   const handleDevReset = async () => {
     if (!user) {
@@ -1523,51 +1569,51 @@ const App = () => {
         lastBookCreatedDate: null,
         updatedAt: serverTimestamp()
       });
-      
+
       console.log('✅ 유저 정보 초기화 완료');
 
       // 3. 페이지 새로고침
       alert('리셋이 완료되었습니다. 페이지를 새로고침합니다.');
       window.location.reload();
-      
+
     } catch (error) {
       console.error('❌ 리셋 실패:', error);
       alert(`리셋에 실패했습니다: ${error.message}`);
     }
   };
-  
+
   // Part 2: 계정 탈퇴 함수 (재확인 후 실행)
   const handleDeleteAccount = async () => {
     if (!user) {
       setError('로그인이 필요합니다.');
       return;
     }
-    
+
     try {
       // Firestore에서 유저 데이터 삭제
       const profileRef = doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'info');
-      
+
       // 프로필 문서가 존재하는지 확인 후 삭제
       const profileSnap = await getDoc(profileRef);
       if (profileSnap.exists()) {
         await deleteDoc(profileRef);
         console.log('✅ 프로필 문서 삭제 완료');
       }
-      
+
       // 관련 컬렉션들도 삭제 (unlocked_stories, read_history, daily_stats 등)
       // 주의: 모든 하위 컬렉션을 삭제하려면 Cloud Function이 필요할 수 있음
       // 여기서는 프로필만 삭제하고, 나머지는 수동 정리 또는 Cloud Function으로 처리
-      
+
       // Firebase Auth에서 계정 삭제 (현재 로그인한 유저)
       const currentUser = auth.currentUser;
       if (currentUser && currentUser.uid === user.uid) {
         await deleteUser(currentUser);
         console.log('✅ Firebase Auth 계정 삭제 완료');
       }
-      
+
       // 로그아웃 처리
       await signOut(auth);
-      
+
       console.log('✅ 계정 탈퇴 완료');
       setView('login');
       setUser(null);
@@ -1584,11 +1630,11 @@ const App = () => {
       }
     }
   };
-  const earnPoints = async (amount) => { try { await updateDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'info'), { points: increment(amount) }); } catch (e) {} };
-  const earnExp = async (amount) => { try { await updateDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'info'), { exp: increment(amount) }); } catch (e) {} };
+  const earnPoints = async (amount) => { try { await updateDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'info'), { points: increment(amount) }); } catch (e) { } };
+  const earnExp = async (amount) => { try { await updateDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'info'), { exp: increment(amount) }); } catch (e) { } };
   const updateDailyStats = async (minutes) => { const today = getTodayString(); await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'daily_stats', today), { date: today, minutes: increment(minutes) }, { merge: true }); };
   const handleStoryClick = async (story) => { if (story.authorId === user.uid || unlockedStories.includes(story.id)) { setCurrentStory(story); setView('reader'); } else { setUnlockTargetStory(story); setIsUnlockModalOpen(true); } };
-  
+
   const processUnlock = async (method) => {
     if (!user || !unlockTargetStory) return;
     const todayStr = getTodayString();
@@ -1606,32 +1652,32 @@ const App = () => {
     } catch (e) { setError("Unlock error"); }
   };
 
-  const handleMoodRecommendation = (mood) => { 
-      let g, s, r; 
-      if(mood==='healing'){g='essay';s='empathy';r=t.rec_reason_healing;}
-      else if(mood==='bored'){g='fiction';s='twist';r=t.rec_reason_bored;}
-      else if(mood==='growth'){g='improvement';s='mindset';r=t.rec_reason_growth;}
-      else {g='humanities';s='philosophy';r=t.rec_reason_thinking;}
-      setRecommendedData({genreId:g, subGenreId:s, reason:r}); setRecommendStep('result');
+  const handleMoodRecommendation = (mood) => {
+    let g, s, r;
+    if (mood === 'healing') { g = 'essay'; s = 'empathy'; r = t.rec_reason_healing; }
+    else if (mood === 'bored') { g = 'fiction'; s = 'twist'; r = t.rec_reason_bored; }
+    else if (mood === 'growth') { g = 'improvement'; s = 'mindset'; r = t.rec_reason_growth; }
+    else { g = 'humanities'; s = 'philosophy'; r = t.rec_reason_thinking; }
+    setRecommendedData({ genreId: g, subGenreId: s, reason: r }); setRecommendStep('result');
   };
-  const handleSeasonRecommendation = () => { setRecommendedData({genreId:'fiction', subGenreId:'daily', reason:t.rec_reason_season}); setRecommendStep('result'); };
-  const applyRecommendation = () => { const g=genres.find(x=>x.id===recommendedData.genreId); setSelectedGenre(g); setSelectedSubGenre(g.subGenres.find(x=>x.id===recommendedData.subGenreId)); setView('list'); setIsRecommendModalOpen(false); setRecommendStep('main'); };
-  
+  const handleSeasonRecommendation = () => { setRecommendedData({ genreId: 'fiction', subGenreId: 'daily', reason: t.rec_reason_season }); setRecommendStep('result'); };
+  const applyRecommendation = () => { const g = genres.find(x => x.id === recommendedData.genreId); setSelectedGenre(g); setSelectedSubGenre(g.subGenres.find(x => x.id === recommendedData.subGenreId)); setView('list'); setIsRecommendModalOpen(false); setRecommendStep('main'); };
+
   const filteredStories = stories.filter(s => {
     if (s.genreId !== selectedGenre?.id) return false;
     if (selectedSubGenre && s.subGenre !== selectedSubGenre.id) return false;
-    if (!selectedSubGenre && s.subGenre) return false; 
+    if (!selectedSubGenre && s.subGenre) return false;
     return true;
-  }).sort((a,b) => b.date.localeCompare(a.date));
+  }).sort((a, b) => b.date.localeCompare(a.date));
   const hasTodayStory = filteredStories.some(s => s.date === getTodayString());
   const dailyCount = (userProfile?.lastGeneratedDate === getTodayString()) ? (userProfile?.dailyGenerationCount || 0) : 0;
   const isSeriesLimitReached = (userProfile?.lastSeriesGeneratedDate === getTodayString());
-  const myFavoritesList = favorites.filter(f => f.userId === user?.uid).sort((a,b) => (b.createdAt?.seconds||0) - (a.createdAt?.seconds||0));
-  const popularStories = stories.filter(s => { const d=new Date(); d.setDate(d.getDate()-7); return new Date(s.createdAt||new Date()) >= d; }).map(s=>({...s, favCount:favorites.filter(f=>f.storyId===s.id).length})).sort((a,b)=>b.favCount-a.favCount).slice(0,5);
-  const topCreators = Object.values(stories.reduce((acc,s)=>{ const d=new Date(); d.setDate(d.getDate()-7); if(new Date(s.createdAt||new Date())>=d){ if(!acc[s.authorId])acc[s.authorId]={nickname:s.authorNickname, count:0, id:s.authorId}; acc[s.authorId].count+=1; } return acc; }, {})).sort((a,b)=>b.count-a.count).slice(0,10);
+  const myFavoritesList = favorites.filter(f => f.userId === user?.uid).sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+  const popularStories = stories.filter(s => { const d = new Date(); d.setDate(d.getDate() - 7); return new Date(s.createdAt || new Date()) >= d; }).map(s => ({ ...s, favCount: favorites.filter(f => f.storyId === s.id).length })).sort((a, b) => b.favCount - a.favCount).slice(0, 5);
+  const topCreators = Object.values(stories.reduce((acc, s) => { const d = new Date(); d.setDate(d.getDate() - 7); if (new Date(s.createdAt || new Date()) >= d) { if (!acc[s.authorId]) acc[s.authorId] = { nickname: s.authorNickname, count: 0, id: s.authorId }; acc[s.authorId].count += 1; } return acc; }, {})).sort((a, b) => b.count - a.count).slice(0, 10);
 
-  const toggleFavorite = async (s) => { const fid=`${user.uid}_${s.id}`; if(favorites.find(f=>f.id===fid)) await deleteDoc(doc(db,'artifacts',appId,'public','data','favorites',fid)); else await setDoc(doc(db,'artifacts',appId,'public','data','favorites',fid),{userId:user.uid, storyId:s.id, storyTitle:s.title, storyDate:s.date, genreId:s.genreId, authorNickname:s.authorNickname, createdAt:serverTimestamp()}); };
-  
+  const toggleFavorite = async (s) => { const fid = `${user.uid}_${s.id}`; if (favorites.find(f => f.id === fid)) await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'favorites', fid)); else await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'favorites', fid), { userId: user.uid, storyId: s.id, storyTitle: s.title, storyDate: s.date, genreId: s.genreId, authorNickname: s.authorNickname, createdAt: serverTimestamp() }); };
+
   // ⭐️ 평점과 댓글 보상 체크 함수 (중복 방지 강화 + 실행 중 플래그 추가)
   const rewardCheckInProgress = new Set(); // 실행 중인 보상 체크 추적
   const checkAndGiveReward = async (storyId) => {
@@ -1640,30 +1686,30 @@ const App = () => {
       console.log("보상 체크가 이미 진행 중입니다:", storyId);
       return false;
     }
-    
+
     rewardCheckInProgress.add(storyId);
-    
+
     try {
       // 이미 포인트를 받았는지 확인 (먼저 체크)
       const rewardRef = doc(db, 'artifacts', appId, 'users', user.uid, 'story_rewards', storyId);
       const rewardSnap = await getDoc(rewardRef);
-      
+
       // 이미 보상을 받았다면 중단 (중복 방지)
       if (rewardSnap.exists()) {
         console.log("이미 보상을 받은 소설입니다:", storyId);
         return false;
       }
-      
+
       // Firestore에서 직접 평점 확인
       const ratingRef = doc(db, 'artifacts', appId, 'public', 'data', 'ratings', `${user.uid}_${storyId}`);
       const ratingSnap = await getDoc(ratingRef);
       const hasRating = ratingSnap.exists();
-      
+
       if (!hasRating) {
         console.log("평점이 없어 보상을 지급할 수 없습니다:", storyId);
         return false;
       }
-      
+
       // Firestore에서 직접 댓글(부모 댓글만) 확인 - 최신 상태로 확인
       const commentsRef = collection(db, 'artifacts', appId, 'public', 'data', 'comments');
       const commentsQuery = query(
@@ -1672,21 +1718,21 @@ const App = () => {
         where('userId', '==', user.uid)
       );
       const commentsSnap = await getDocs(commentsQuery);
-      
+
       console.log("댓글 검색 결과:", commentsSnap.docs.length, "개");
-      
+
       const hasComment = commentsSnap.docs.some(doc => {
         const data = doc.data();
         const isParent = !data.parentId;
         console.log("댓글 체크:", doc.id, "parentId:", data.parentId, "isParent:", isParent);
         return isParent; // 부모 댓글만 (대댓글 제외)
       });
-      
+
       if (!hasComment) {
         console.log("부모 댓글이 없어 보상을 지급할 수 없습니다:", storyId);
         return false;
       }
-      
+
       // 보상 기록을 먼저 저장하여 중복 방지 (트랜잭션처럼 동작)
       // 이미 저장 여부를 다시 확인 (동시 실행 시 race condition 방지)
       const rewardSnap2 = await getDoc(rewardRef);
@@ -1694,18 +1740,18 @@ const App = () => {
         console.log("보상이 이미 지급되었습니다 (중복 체크):", storyId);
         return false;
       }
-      
+
       // 보상 기록 저장
       await setDoc(rewardRef, {
         storyId: storyId,
         rewardedAt: serverTimestamp()
       });
-      
+
       // 포인트 지급
       await earnPoints(1);
       console.log("✅ 포인트 지급 완료: 평점 + 댓글 보상 -", storyId);
       return true;
-      
+
     } catch (err) {
       console.error("❌ Reward check error:", err);
       return false;
@@ -1714,18 +1760,18 @@ const App = () => {
       rewardCheckInProgress.delete(storyId);
     }
   };
-  
-  const submitRating = async (stars) => { 
+
+  const submitRating = async (stars) => {
     try {
-      await setDoc(doc(db,'artifacts',appId,'public','data','ratings',`${user.uid}_${currentStory.id}`),{
-        storyId:currentStory.id, 
-        userId:user.uid, 
-        stars, 
-        updatedAt:serverTimestamp()
+      await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'ratings', `${user.uid}_${currentStory.id}`), {
+        storyId: currentStory.id,
+        userId: user.uid,
+        stars,
+        updatedAt: serverTimestamp()
       });
-      
+
       console.log("평점 저장 성공:", stars);
-      
+
       // 평점 등록 후, 댓글이 이미 있으면 보상 체크
       // 약간의 지연을 주어 상태가 업데이트될 시간을 확보
       setTimeout(async () => {
@@ -1740,29 +1786,29 @@ const App = () => {
       setError("평점 등록에 실패했습니다.");
     }
   };
-  
+
   // ⭐️ [중요] 수정된 댓글 로직 (튕김 방지 + 포인트 지급 + 수정 기능 복구)
-  const submitComment = async (e) => { 
+  const submitComment = async (e) => {
     // ⭐️ 이벤트 기본 동작 방지 (페이지 새로고침 차단)
     if (e) {
       e.preventDefault();
       e.stopPropagation();
     }
-    
+
     // 중복 제출 방지
     if (isSubmittingComment) {
       console.log("이미 댓글 제출 중입니다.");
       return;
     }
-    
-    if(!commentInput.trim()) {
+
+    if (!commentInput.trim()) {
       setError("댓글을 입력해주세요.");
       return;
     }
-    
+
     // 평점 확인 (생성된 소설도 평가 가능하도록)
-    const userRating = ratings.find(r=>r.userId===user.uid&&r.storyId===currentStory.id);
-    if(!userRating) {
+    const userRating = ratings.find(r => r.userId === user.uid && r.storyId === currentStory.id);
+    if (!userRating) {
       setError(t.rating_required || "별점을 먼저 평가해주세요.");
       return;
     }
@@ -1771,134 +1817,134 @@ const App = () => {
     setError(null); // 에러 메시지 초기화
 
     try {
-        if(editingCommentId) {
-            // 수정 기능
-            await updateDoc(doc(db,'artifacts',appId,'public','data','comments',editingCommentId),{
-              text:commentInput.trim(), 
-              updatedAt:serverTimestamp()
-            }); 
-            setEditingCommentId(null);
-            setCommentInput(""); 
-            setReplyTo(null);
-        } else {
-            // 댓글 텍스트 저장
-            const commentText = commentInput.trim();
-            
-            // 대댓글(parentId가 있는 경우)은 포인트 지급 안 함
-            const isParentComment = !replyTo?.id;
-            
-            // 1. 댓글 저장 시도
-            console.log("댓글 저장 시작:", { storyId: currentStory.id, userId: user.uid, text: commentText.substring(0, 20) + "..." });
-            
-            let commentRef;
-            let commentSaved = false;
-            
-            try {
-              commentRef = await addDoc(collection(db,'artifacts',appId,'public','data','comments'), {
-                  storyId: currentStory.id, 
-                  userId: user.uid, 
-                  nickname: userProfile?.nickname || "익명", 
-                  text: commentText, 
-                  parentId: replyTo?.id || null, 
-                  createdAt: serverTimestamp()
-              });
+      if (editingCommentId) {
+        // 수정 기능
+        await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'comments', editingCommentId), {
+          text: commentInput.trim(),
+          updatedAt: serverTimestamp()
+        });
+        setEditingCommentId(null);
+        setCommentInput("");
+        setReplyTo(null);
+      } else {
+        // 댓글 텍스트 저장
+        const commentText = commentInput.trim();
 
-              // 댓글 저장 성공 확인
-              if (!commentRef || !commentRef.id) {
-                throw new Error("댓글 저장 실패: ID 없음");
-              }
+        // 대댓글(parentId가 있는 경우)은 포인트 지급 안 함
+        const isParentComment = !replyTo?.id;
 
-              console.log("댓글 ID 생성됨:", commentRef.id);
+        // 1. 댓글 저장 시도
+        console.log("댓글 저장 시작:", { storyId: currentStory.id, userId: user.uid, text: commentText.substring(0, 20) + "..." });
 
-              // 댓글이 실제로 저장되었는지 확인 (필수 체크) - 최대 3번 시도
-              let saved = false;
-              for (let i = 0; i < 3; i++) {
-                await new Promise(resolve => setTimeout(resolve, 200 * (i + 1))); // 점진적 대기
-                
-                const savedCommentRef = doc(db, 'artifacts', appId, 'public', 'data', 'comments', commentRef.id);
-                const savedCommentSnap = await getDoc(savedCommentRef);
-                
-                if (savedCommentSnap.exists()) {
-                  saved = true;
-                  commentSaved = true;
-                  console.log("✅ 댓글 저장 확인 완료:", commentRef.id);
-                  break;
-                }
-              }
-              
-              if (!saved) {
-                throw new Error("댓글 저장 실패: DB에 저장되지 않음 (확인 실패)");
-              }
+        let commentRef;
+        let commentSaved = false;
 
-              // 3. 입력창 초기화 (댓글 저장이 확실히 확인된 후)
-              setCommentInput(""); 
-              setReplyTo(null);
-              
-              // 2. 부모 댓글을 작성했고, 평점도 있으면 보상 체크
-              // 댓글 저장이 완전히 완료된 후에만 보상 체크
-              if (isParentComment && commentSaved) {
-                  console.log("보상 체크 시작 (부모 댓글)");
-                  // 약간의 지연을 두고 보상 체크 (댓글이 완전히 저장된 후)
-                  setTimeout(async () => {
-                      try {
-                          const rewardResult = await checkAndGiveReward(currentStory.id);
-                          if (rewardResult) {
-                            console.log("✅ 보상 지급 성공");
-                          } else {
-                            console.log("보상 지급 조건 미충족 또는 이미 지급됨");
-                          }
-                      } catch (rewardErr) {
-                          console.error("❌ 보상 지급 오류:", rewardErr);
-                          // 보상 오류는 댓글 저장에는 영향을 주지 않음
-                      }
-                  }, 800);
-              } else {
-                console.log("보상 체크 스킵:", { isParentComment, commentSaved });
-              }
-              
-            } catch (saveErr) {
-              console.error("❌ 댓글 저장 실패:", saveErr);
-              commentSaved = false;
-              throw saveErr; // 에러를 다시 throw하여 catch 블록에서 처리
+        try {
+          commentRef = await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'comments'), {
+            storyId: currentStory.id,
+            userId: user.uid,
+            nickname: userProfile?.nickname || "익명",
+            text: commentText,
+            parentId: replyTo?.id || null,
+            createdAt: serverTimestamp()
+          });
+
+          // 댓글 저장 성공 확인
+          if (!commentRef || !commentRef.id) {
+            throw new Error("댓글 저장 실패: ID 없음");
+          }
+
+          console.log("댓글 ID 생성됨:", commentRef.id);
+
+          // 댓글이 실제로 저장되었는지 확인 (필수 체크) - 최대 3번 시도
+          let saved = false;
+          for (let i = 0; i < 3; i++) {
+            await new Promise(resolve => setTimeout(resolve, 200 * (i + 1))); // 점진적 대기
+
+            const savedCommentRef = doc(db, 'artifacts', appId, 'public', 'data', 'comments', commentRef.id);
+            const savedCommentSnap = await getDoc(savedCommentRef);
+
+            if (savedCommentSnap.exists()) {
+              saved = true;
+              commentSaved = true;
+              console.log("✅ 댓글 저장 확인 완료:", commentRef.id);
+              break;
             }
+          }
+
+          if (!saved) {
+            throw new Error("댓글 저장 실패: DB에 저장되지 않음 (확인 실패)");
+          }
+
+          // 3. 입력창 초기화 (댓글 저장이 확실히 확인된 후)
+          setCommentInput("");
+          setReplyTo(null);
+
+          // 2. 부모 댓글을 작성했고, 평점도 있으면 보상 체크
+          // 댓글 저장이 완전히 완료된 후에만 보상 체크
+          if (isParentComment && commentSaved) {
+            console.log("보상 체크 시작 (부모 댓글)");
+            // 약간의 지연을 두고 보상 체크 (댓글이 완전히 저장된 후)
+            setTimeout(async () => {
+              try {
+                const rewardResult = await checkAndGiveReward(currentStory.id);
+                if (rewardResult) {
+                  console.log("✅ 보상 지급 성공");
+                } else {
+                  console.log("보상 지급 조건 미충족 또는 이미 지급됨");
+                }
+              } catch (rewardErr) {
+                console.error("❌ 보상 지급 오류:", rewardErr);
+                // 보상 오류는 댓글 저장에는 영향을 주지 않음
+              }
+            }, 800);
+          } else {
+            console.log("보상 체크 스킵:", { isParentComment, commentSaved });
+          }
+
+        } catch (saveErr) {
+          console.error("❌ 댓글 저장 실패:", saveErr);
+          commentSaved = false;
+          throw saveErr; // 에러를 다시 throw하여 catch 블록에서 처리
         }
-    } catch(err) {
-        console.error("Comment Error:", err);
-        setError("댓글 등록에 실패했습니다. 다시 시도해주세요.");
-        // 에러 발생 시에도 제출 상태 해제
+      }
+    } catch (err) {
+      console.error("Comment Error:", err);
+      setError("댓글 등록에 실패했습니다. 다시 시도해주세요.");
+      // 에러 발생 시에도 제출 상태 해제
     } finally {
-        setIsSubmittingComment(false);
+      setIsSubmittingComment(false);
     }
   };
 
   // ⭐️ [복구] 수정 버튼 누르면 입력창에 글 채워넣기
-  const startEditComment = (c) => { 
-      setEditingCommentId(c.id); 
-      setCommentInput(c.text); // <-- 이 부분이 핵심 (입력창 채우기)
-      setReplyTo(null); 
+  const startEditComment = (c) => {
+    setEditingCommentId(c.id);
+    setCommentInput(c.text); // <-- 이 부분이 핵심 (입력창 채우기)
+    setReplyTo(null);
   };
 
-  const handleShare = async () => { const d={title:currentStory.title, text:currentStory.title, url:`https://odok.app/story/${currentStory.id}`}; if(navigator.share) await navigator.share(d); else alert("Link copied"); };
-  const handleReportSubmit = async () => { if(!reportText.trim())return; setReportStatus('loading'); try{const res=await httpsCallable(functions,'analyzeReportAI')({title:currentStory.title, body:currentStory.body, reportText}); if(res.data.status==='accepted'){await updateDoc(doc(db,'artifacts',appId,'public','data','stories',currentStory.id),{body:res.data.fixedBody}); await earnPoints(2);} await setDoc(doc(db,'artifacts',appId,'public','data','reports',`${user.uid}_${currentStory.id}`),{userId:user.uid, storyId:currentStory.id, text:reportText, status:res.data.status, createdAt:serverTimestamp()}); setReportStatus(res.data.status);}catch(e){setReportStatus('error');} };
-  const translateStory = async (targetLang) => { if(targetLang==='ko'){setReaderLang('ko');return;} if(translatedContent[targetLang]){setReaderLang(targetLang);return;} setIsTranslating(true); try{const res=await httpsCallable(functions,'translateStoryAI')({title:currentStory.title, body:currentStory.body, targetLang}); setTranslatedContent(p=>({...p,[targetLang]:res.data})); setReaderLang(targetLang);}catch(e){setError(t.translate_error);}finally{setIsTranslating(false);} };
+  const handleShare = async () => { const d = { title: currentStory.title, text: currentStory.title, url: `https://odok.app/story/${currentStory.id}` }; if (navigator.share) await navigator.share(d); else alert("Link copied"); };
+  const handleReportSubmit = async () => { if (!reportText.trim()) return; setReportStatus('loading'); try { const res = await httpsCallable(functions, 'analyzeReportAI')({ title: currentStory.title, body: currentStory.body, reportText }); if (res.data.status === 'accepted') { await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'stories', currentStory.id), { body: res.data.fixedBody }); await earnPoints(2); } await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'reports', `${user.uid}_${currentStory.id}`), { userId: user.uid, storyId: currentStory.id, text: reportText, status: res.data.status, createdAt: serverTimestamp() }); setReportStatus(res.data.status); } catch (e) { setReportStatus('error'); } };
+  const translateStory = async (targetLang) => { if (targetLang === 'ko') { setReaderLang('ko'); return; } if (translatedContent[targetLang]) { setReaderLang(targetLang); return; } setIsTranslating(true); try { const res = await httpsCallable(functions, 'translateStoryAI')({ title: currentStory.title, body: currentStory.body, targetLang }); setTranslatedContent(p => ({ ...p, [targetLang]: res.data })); setReaderLang(targetLang); } catch (e) { setError(t.translate_error); } finally { setIsTranslating(false); } };
   const submitSeriesVote = async (voteType) => { await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'series_votes', `${user.uid}_${currentStory.id}`), { storyId: currentStory.id, userId: user.uid, vote: voteType, createdAt: serverTimestamp() }); };
   // 수정 3: finishReading 함수 - 경험치는 잉크 소비 시에만 획득하므로 제거
-  const finishReading = async () => { 
-    if (!canFinishRead) return alert(t.read_more_time); 
-    const historyRef = doc(db, 'artifacts', appId, 'users', user.uid, 'read_history', currentStory.id); 
-    if ((await getDoc(historyRef)).exists()) return alert(t.read_already); 
-    await setDoc(historyRef, { 
-      storyId: currentStory.id, 
-      storyTitle: currentStory.title, 
-      genreId: currentStory.genreId, 
-      authorNickname: currentStory.authorNickname, 
-      storyDate: currentStory.date, 
-      readAt: new Date().toISOString() 
-    }); 
+  const finishReading = async () => {
+    if (!canFinishRead) return alert(t.read_more_time);
+    const historyRef = doc(db, 'artifacts', appId, 'users', user.uid, 'read_history', currentStory.id);
+    if ((await getDoc(historyRef)).exists()) return alert(t.read_already);
+    await setDoc(historyRef, {
+      storyId: currentStory.id,
+      storyTitle: currentStory.title,
+      genreId: currentStory.genreId,
+      authorNickname: currentStory.authorNickname,
+      storyDate: currentStory.date,
+      readAt: new Date().toISOString()
+    });
     // 수정 3: 경험치는 잉크 소비 시에만 획득하므로 여기서는 경험치 지급 안 함
-    alert(t.finish_reading_desc); 
+    alert(t.finish_reading_desc);
   };
-  
+
   const generateTodayStory = async () => {
     if (!user || !userProfile?.nickname) return;
     const todayStr = getTodayString();
@@ -1910,43 +1956,43 @@ const App = () => {
 
     setIsGenerating(true); setError(null);
     let prevCtx = "", ep = 1, sTitle = "", isFinal = false;
-    
+
     // 시리즈 소설인 경우
     if (selectedGenre.id === 'fiction' && selectedSubGenre?.id === 'series') {
-        const sList = stories.filter(s => s.genreId === 'fiction' && s.subGenre === 'series').sort((a,b) => b.createdAt.localeCompare(a.createdAt));
-        if (sList[0] && !sList[0].isFinal) {
-            ep = (sList[0].episode || 1) + 1; sTitle = sList[0].seriesTitle || sList[0].title;
-            const vs = seriesVotes.filter(v => v.storyId === sList[0].id);
-            if (vs.filter(v => v.vote === 'end').length > vs.filter(v => v.vote === 'continue').length) isFinal = true;
-            prevCtx = `이전 요약: ${sList[0].body.substring(0,200)}... 제목:${sTitle} ${ep}화. ${isFinal?"완결내세요":""}`;
-        }
+      const sList = stories.filter(s => s.genreId === 'fiction' && s.subGenre === 'series').sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+      if (sList[0] && !sList[0].isFinal) {
+        ep = (sList[0].episode || 1) + 1; sTitle = sList[0].seriesTitle || sList[0].title;
+        const vs = seriesVotes.filter(v => v.storyId === sList[0].id);
+        if (vs.filter(v => v.vote === 'end').length > vs.filter(v => v.vote === 'continue').length) isFinal = true;
+        prevCtx = `이전 요약: ${sList[0].body.substring(0, 200)}... 제목:${sTitle} ${ep}화. ${isFinal ? "완결내세요" : ""}`;
+      }
     } else {
-        // 일반 소설은 생성 시 완성된 것으로 처리 (서재에 바로 표시되도록)
-        isFinal = true;
+      // 일반 소설은 생성 시 완성된 것으로 처리 (서재에 바로 표시되도록)
+      isFinal = true;
     }
-    
+
     const subName = selectedSubGenre ? selectedSubGenre.name : selectedGenre.nameKey;
-    const systemPrompt = `당신은 작가입니다. 제목 10자 이내. ${selectedGenre.nameKey} - ${subName}. ${selectedSubGenre?.prompt}. ${prevCtx}. 형식 JSON { "title": "${ep>1?sTitle:'제목'}", "body": "내용" }`;
-    
+    const systemPrompt = `당신은 작가입니다. 제목 10자 이내. ${selectedGenre.nameKey} - ${subName}. ${selectedSubGenre?.prompt}. ${prevCtx}. 형식 JSON { "title": "${ep > 1 ? sTitle : '제목'}", "body": "내용" }`;
+
     try {
-        const res = await httpsCallable(functions, 'generateStoryAI')({ systemPrompt, userPrompt: "써줘" });
-        const newRef = await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'stories'), {
-            genreId: selectedGenre.id, subGenre: selectedSubGenre?.id, subGenreName: subName, date: todayStr, title: res.data.title, seriesTitle: ep>1?sTitle:res.data.title, body: res.data.body, authorNickname: userProfile.nickname, authorId: user.uid, language: 'ko', episode: ep, isFinal, createdAt: new Date().toISOString()
-        });
-        await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'unlocked_stories', newRef.id), { unlockedAt: new Date().toISOString() });
-        // 수정 3: 경험치는 잉크 소비 시에만 획득하므로, 집필 시 경험치 지급 제거
-        const upData = { points: increment(cnt===0?1:-2), lastGeneratedDate: todayStr, dailyGenerationCount: cnt+1 };
-        if(selectedSubGenre?.id === 'series') upData.lastSeriesGeneratedDate = todayStr;
-        await updateDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'info'), upData);
-        setIsGenerating(false);
-    } catch(e) { setError(t.gen_fail); setIsGenerating(false); }
+      const res = await httpsCallable(functions, 'generateStoryAI')({ systemPrompt, userPrompt: "써줘" });
+      const newRef = await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'stories'), {
+        genreId: selectedGenre.id, subGenre: selectedSubGenre?.id, subGenreName: subName, date: todayStr, title: res.data.title, seriesTitle: ep > 1 ? sTitle : res.data.title, body: res.data.body, authorNickname: userProfile.nickname, authorId: user.uid, language: 'ko', episode: ep, isFinal, createdAt: new Date().toISOString()
+      });
+      await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'unlocked_stories', newRef.id), { unlockedAt: new Date().toISOString() });
+      // 수정 3: 경험치는 잉크 소비 시에만 획득하므로, 집필 시 경험치 지급 제거
+      const upData = { points: increment(cnt === 0 ? 1 : -2), lastGeneratedDate: todayStr, dailyGenerationCount: cnt + 1 };
+      if (selectedSubGenre?.id === 'series') upData.lastSeriesGeneratedDate = todayStr;
+      await updateDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'info'), upData);
+      setIsGenerating(false);
+    } catch (e) { setError(t.gen_fail); setIsGenerating(false); }
   };
 
   return (
     <div className="bg-gray-100 min-h-screen flex justify-center items-center">
       <style>{`@import url('https://fonts.googleapis.com/css2?family=Jua&display=swap'); .font-jua { font-family: 'Jua', sans-serif; } .scrollbar-hide::-webkit-scrollbar { display: none; }`}</style>
       <div className="w-full max-w-md bg-slate-50 h-[100dvh] flex flex-col shadow-2xl relative overflow-hidden text-slate-900 font-sans selection:bg-orange-200">
-        
+
         {/* 인앱 브라우저 경고 오버레이 (최상위 z-index) */}
         {showInAppBrowserWarning && (
           <div className="fixed inset-0 z-[9999] bg-black/90 backdrop-blur-sm flex items-center justify-center p-6">
@@ -1957,19 +2003,19 @@ const App = () => {
                   <Globe className="w-10 h-10 text-orange-500" />
                 </div>
               </div>
-              
+
               {/* 제목 */}
               <div className="text-center space-y-2">
                 <h2 className="text-2xl font-black text-slate-800">
                   외부 브라우저가 필요합니다
                 </h2>
                 <p className="text-sm text-slate-600 leading-relaxed">
-                  구글 로그인을 위해<br/>
+                  구글 로그인을 위해<br />
                   <span className="font-bold text-orange-600">{detectedInAppBrowser}</span>에서 나와
-                  <br/>외부 브라우저로 접속해주세요.
+                  <br />외부 브라우저로 접속해주세요.
                 </p>
               </div>
-              
+
               {/* 가이드 */}
               <div className="bg-slate-50 rounded-2xl p-5 space-y-4">
                 {detectedDevice === 'android' ? (
@@ -2020,22 +2066,22 @@ const App = () => {
                       브라우저의 메뉴에서
                     </p>
                     <p className="text-xs text-slate-600">
-                      '외부 브라우저로 열기' 또는<br/>
+                      '외부 브라우저로 열기' 또는<br />
                       'Safari로 열기' 옵션을 선택해주세요.
                     </p>
                   </div>
                 )}
               </div>
-              
+
               {/* 안내 문구 */}
               <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
                 <p className="text-xs text-blue-700 text-center leading-relaxed">
-                  💡 <span className="font-bold">왜 외부 브라우저가 필요할까요?</span><br/>
-                  인앱 브라우저는 구글 보안 정책상<br/>
+                  💡 <span className="font-bold">왜 외부 브라우저가 필요할까요?</span><br />
+                  인앱 브라우저는 구글 보안 정책상<br />
                   로그인을 차단합니다.
                 </p>
               </div>
-              
+
               {/* 안내: 오버레이는 외부 브라우저로 이동할 때까지 표시됨 */}
               <div className="text-center">
                 <p className="text-xs text-slate-400">
@@ -2045,7 +2091,7 @@ const App = () => {
             </div>
           </div>
         )}
-        
+
         {/* 상단바 */}
         <header className="flex-none bg-white/90 backdrop-blur-md border-b border-slate-100 z-40 px-4 h-14 flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -2068,7 +2114,7 @@ const App = () => {
             ) : view !== 'home' && view !== 'profile_setup' ? (
               <button onClick={() => {
                 if (view === 'reader') setView('list');
-                else if (view === 'list') { if(selectedGenre?.hasSubGenre) setView('genre_select'); else setView('library_main'); }
+                else if (view === 'list') { if (selectedGenre?.hasSubGenre) setView('genre_select'); else setView('library_main'); }
                 else if (view === 'genre_select') setView('library_main');
                 else if (view === 'notice_list') setView('home');
                 else setView('home');
@@ -2099,7 +2145,7 @@ const App = () => {
 
         {/* 메인 컨텐츠 */}
         <main id="main-content" className="flex-1 overflow-y-auto scrollbar-hide pb-20 relative">
-          
+
           {/* 각종 모달들 */}
           {isHelpModalOpen && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-6">
@@ -2152,8 +2198,8 @@ const App = () => {
               </div>
             </div>
           )}
-          {isUnlockModalOpen && <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60"><div className="bg-white p-6 rounded-2xl w-full max-w-sm"><h3 className="font-bold mb-3">{t.unlock_title}</h3><div className="space-y-2"><button onClick={()=>processUnlock('free')} className="w-full bg-orange-500 text-white py-3 rounded-xl font-bold">{t.unlock_btn_free}</button><button onClick={()=>processUnlock('point')} className="w-full bg-slate-800 text-white py-3 rounded-xl font-bold">{t.unlock_btn_paid}</button><button onClick={()=>setIsUnlockModalOpen(false)} className="w-full bg-slate-100 py-3 rounded-xl font-bold">{t.cancel}</button></div></div></div>}
-          {showAttendanceModal && <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60"><div className="bg-white p-8 rounded-2xl text-center"><h3 className="text-xl font-black mb-1">{t.attendance_check}</h3><p className="text-slate-500 font-bold mb-4">+{lastAttendanceInk} 잉크 지급됨</p><button onClick={()=>setShowAttendanceModal(false)} className="bg-slate-900 text-white px-8 py-2 rounded-xl font-bold">OK</button></div></div>}
+          {isUnlockModalOpen && <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60"><div className="bg-white p-6 rounded-2xl w-full max-w-sm"><h3 className="font-bold mb-3">{t.unlock_title}</h3><div className="space-y-2"><button onClick={() => processUnlock('free')} className="w-full bg-orange-500 text-white py-3 rounded-xl font-bold">{t.unlock_btn_free}</button><button onClick={() => processUnlock('point')} className="w-full bg-slate-800 text-white py-3 rounded-xl font-bold">{t.unlock_btn_paid}</button><button onClick={() => setIsUnlockModalOpen(false)} className="w-full bg-slate-100 py-3 rounded-xl font-bold">{t.cancel}</button></div></div></div>}
+          {showAttendanceModal && <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60"><div className="bg-white p-8 rounded-2xl text-center"><h3 className="text-xl font-black mb-1">{t.attendance_check}</h3><p className="text-slate-500 font-bold mb-4">+{lastAttendanceInk} 잉크 지급됨</p><button onClick={() => setShowAttendanceModal(false)} className="bg-slate-900 text-white px-8 py-2 rounded-xl font-bold">OK</button></div></div>}
           {selectedNotice && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-6">
               <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl space-y-4 animate-in fade-in zoom-in-95 duration-200">
@@ -2259,7 +2305,7 @@ const App = () => {
               </div>
             </div>
           )}
-          
+
           {/* 수정 1: 책 읽기용 잉크 확인 모달 */}
           {showInkConfirmModal && pendingBook && !pendingBookData && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-6">
@@ -2281,29 +2327,44 @@ const App = () => {
                     </p>
                   </div>
                 </div>
-                <div className="space-y-2 pt-2">
+                <div className="space-y-3 pt-2">
                   <button
-                    onClick={confirmOpenBook}
-                    disabled={(userProfile?.ink || 0) < getReadInkCost(getLevelFromXp(userProfile?.xp ?? 0))}
-                    className="w-full bg-blue-500 text-white py-3 rounded-xl font-black hover:bg-blue-600 transition-colors flex items-center justify-center gap-2 disabled:bg-slate-200 disabled:text-slate-400"
+                    onClick={handleWatchAdForRead}
+                    className="w-full bg-blue-500 text-white py-3 rounded-xl font-black hover:bg-blue-600 transition-colors flex items-center justify-center gap-2"
                   >
-                    <Droplets className="w-4 h-4" />
-                    읽기
+                    <Video className="w-5 h-5" />
+                    광고 보고 무료로 읽기
                   </button>
+
+                  <div className="relative flex items-center">
+                    <div className="flex-grow border-t border-slate-200"></div>
+                    <span className="flex-shrink-0 mx-4 text-xs text-slate-400 font-bold">또는</span>
+                    <div className="flex-grow border-t border-slate-200"></div>
+                  </div>
+
+                  <button
+                    onClick={() => confirmOpenBook(false)}
+                    disabled={(userProfile?.ink || 0) < getReadInkCost(getLevelFromXp(userProfile?.xp ?? 0))}
+                    className="w-full bg-slate-100 text-slate-700 py-3 rounded-xl font-bold hover:bg-slate-200 transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+                  >
+                    <Droplets className="w-4 h-4 text-slate-500" />
+                    내 잉크 {getReadInkCost(getLevelFromXp(userProfile?.xp ?? 0))}개 쓰고 읽기
+                  </button>
+
                   <button
                     onClick={() => {
                       setShowInkConfirmModal(false);
                       setPendingBook(null);
                     }}
-                    className="w-full bg-slate-100 text-slate-600 py-3 rounded-xl font-bold hover:bg-slate-200 transition-colors"
+                    className="w-full text-slate-400 py-2 text-xs font-bold hover:text-slate-600 underline"
                   >
-                    취소
+                    닫기
                   </button>
                 </div>
               </div>
             </div>
           )}
-          
+
           {/* 수정 1: 추가 집필 확인 모달 */}
           {showInkConfirmModal && pendingBookData && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-6">
@@ -2391,17 +2452,17 @@ const App = () => {
               </div>
             </div>
           )}
-          
+
           {/* 👇 저장 성공 모달 */}
           {showSaveSuccessModal && (
-              <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-black/60 backdrop-blur-sm">
-                  <div className="bg-white rounded-2xl p-8 w-full max-w-xs shadow-xl text-center space-y-4 animate-in fade-in zoom-in-95 duration-200">
-                      <div className="w-16 h-16 bg-green-100 text-green-500 rounded-full flex items-center justify-center mx-auto mb-2"><CheckCircle className="w-8 h-8" /></div>
-                      <h3 className="text-xl font-black text-slate-800">환영합니다!</h3>
-                      <p className="text-slate-500 font-bold whitespace-pre-line">{tempNickname}님,{'\n'}이제 오독오독을 시작해보세요.</p>
-                      <button onClick={() => { setShowSaveSuccessModal(false); setView('home'); }} className="bg-slate-900 text-white px-8 py-3 rounded-xl font-bold mt-2 w-full">시작하기</button>
-                  </div>
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-black/60 backdrop-blur-sm">
+              <div className="bg-white rounded-2xl p-8 w-full max-w-xs shadow-xl text-center space-y-4 animate-in fade-in zoom-in-95 duration-200">
+                <div className="w-16 h-16 bg-green-100 text-green-500 rounded-full flex items-center justify-center mx-auto mb-2"><CheckCircle className="w-8 h-8" /></div>
+                <h3 className="text-xl font-black text-slate-800">환영합니다!</h3>
+                <p className="text-slate-500 font-bold whitespace-pre-line">{tempNickname}님,{'\n'}이제 오독오독을 시작해보세요.</p>
+                <button onClick={() => { setShowSaveSuccessModal(false); setView('home'); }} className="bg-slate-900 text-white px-8 py-3 rounded-xl font-bold mt-2 w-full">시작하기</button>
               </div>
+            </div>
           )}
 
           {/* 화면 라우팅 */}
@@ -2439,22 +2500,22 @@ const App = () => {
                 </div>
               </div>
             )}
-            
+
             {/* Step 2: 프로필 설정 페이지 (로그인 O but 닉네임 X) */}
             {user && (!userProfile || !userProfile.nickname) && (
-              <ProfileView 
-                user={user} 
-                userProfile={userProfile} 
-                t={t} 
-                levelInfo={levelInfo} 
-                tempNickname={tempNickname} 
-                setTempNickname={setTempNickname} 
-                language={language} 
-                setLanguage={setLanguage} 
-                fontSize={fontSize} 
-                setFontSize={setFontSize} 
-                handleGoogleLogin={handleGoogleLogin} 
-                saveProfile={saveProfile} 
+              <ProfileView
+                user={user}
+                userProfile={userProfile}
+                t={t}
+                levelInfo={levelInfo}
+                tempNickname={tempNickname}
+                setTempNickname={setTempNickname}
+                language={language}
+                setLanguage={setLanguage}
+                fontSize={fontSize}
+                setFontSize={setFontSize}
+                handleGoogleLogin={handleGoogleLogin}
+                saveProfile={saveProfile}
                 handleLogout={handleLogout}
                 addInk={addInk}
                 handleDeleteAccount={handleDeleteAccount}
@@ -2463,170 +2524,170 @@ const App = () => {
                 appId={appId}
               />
             )}
-            
+
             {/* Step 3: 메인 레이아웃 (로그인 O and 닉네임 O) */}
             {user && userProfile && userProfile.nickname && (
               <>
-            {view === 'home' && (
-              <HomeView 
-                userProfile={userProfile} 
-                t={t} 
-                levelInfo={levelInfo} 
-                notices={notices} 
-                setView={setView} 
-                todayBooks={todayBooks}
-                weeklyBestBooks={weeklyBestBooks}
-                topWriters={topWriters}
-                isLoadingHomeData={isLoadingHomeData}
-                handleBookClick={handleBookClick}
-              />
-            )}
-            {view === 'notice_list' && (
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <h2 className="text-xl font-black text-slate-800">공지사항</h2>
-                  <span className="text-xs text-slate-400">{notices.length}건</span>
-                </div>
-                {notices.length === 0 ? (
-                  <div className="p-6 bg-white rounded-2xl border border-slate-100 text-center text-sm text-slate-500">
-                    아직 등록된 공지사항이 없습니다.
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    {notices.map((notice) => (
+                {view === 'home' && (
+                  <HomeView
+                    userProfile={userProfile}
+                    t={t}
+                    levelInfo={levelInfo}
+                    notices={notices}
+                    setView={setView}
+                    todayBooks={todayBooks}
+                    weeklyBestBooks={weeklyBestBooks}
+                    topWriters={topWriters}
+                    isLoadingHomeData={isLoadingHomeData}
+                    handleBookClick={handleBookClick}
+                  />
+                )}
+                {view === 'notice_list' && (
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <h2 className="text-xl font-black text-slate-800">공지사항</h2>
+                      <span className="text-xs text-slate-400">{notices.length}건</span>
+                    </div>
+                    {notices.length === 0 ? (
+                      <div className="p-6 bg-white rounded-2xl border border-slate-100 text-center text-sm text-slate-500">
+                        아직 등록된 공지사항이 없습니다.
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        {notices.map((notice) => (
+                          <button
+                            key={notice.id}
+                            onClick={() => setSelectedNotice(notice)}
+                            className="w-full text-left p-4 bg-white rounded-2xl border border-slate-100 shadow-sm hover:border-orange-200 hover:bg-orange-50 transition-colors"
+                          >
+                            <div className="flex items-center justify-between gap-3">
+                              <div className="font-bold text-slate-800 line-clamp-1">{notice.title}</div>
+                              <div className="text-[10px] text-slate-400">
+                                {formatNoticeDate(notice.createdAt)}
+                              </div>
+                            </div>
+                            <div className="text-xs text-slate-500 line-clamp-2 mt-1">
+                              {notice.content}
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                    {user && (
+                      <div className="pt-2">
+                        <button
+                          onClick={handleDevReset}
+                          className="w-full px-3 py-2 bg-red-500 text-white text-xs font-black rounded-lg hover:bg-red-600 transition-colors"
+                          title="개발용: 유저 데이터 초기화"
+                        >
+                          DEV RESET
+                        </button>
+                      </div>
+                    )}
+                    {isNoticeAdmin && (
                       <button
-                        key={notice.id}
-                        onClick={() => setSelectedNotice(notice)}
-                        className="w-full text-left p-4 bg-white rounded-2xl border border-slate-100 shadow-sm hover:border-orange-200 hover:bg-orange-50 transition-colors"
+                        onClick={openNoticeEditor}
+                        className="fixed bottom-24 right-5 w-14 h-14 rounded-full bg-orange-500 text-white shadow-lg flex items-center justify-center font-black hover:bg-orange-600 active:scale-95"
+                        aria-label="공지사항 작성"
                       >
-                        <div className="flex items-center justify-between gap-3">
-                          <div className="font-bold text-slate-800 line-clamp-1">{notice.title}</div>
-                          <div className="text-[10px] text-slate-400">
-                            {formatNoticeDate(notice.createdAt)}
-                          </div>
-                        </div>
-                        <div className="text-xs text-slate-500 line-clamp-2 mt-1">
-                          {notice.content}
-                        </div>
+                        글쓰기
                       </button>
-                    ))}
+                    )}
                   </div>
                 )}
-                {user && (
-                  <div className="pt-2">
-                    <button
-                      onClick={handleDevReset}
-                      className="w-full px-3 py-2 bg-red-500 text-white text-xs font-black rounded-lg hover:bg-red-600 transition-colors"
-                      title="개발용: 유저 데이터 초기화"
-                    >
-                      DEV RESET
-                    </button>
+                {view === 'library_main' && <LibraryMainView t={t} setIsRecommendModalOpen={setIsRecommendModalOpen} genres={genres} handleGenreClick={handleGenreClick} />}
+                {view === 'genre_select' && selectedGenre && <GenreSelectView t={t} selectedGenre={selectedGenre} handleSubGenreClick={handleSubGenreClick} stories={stories} />}
+                {view === 'list' && <StoryListView t={t} user={user} selectedGenre={selectedGenre} selectedSubGenre={selectedSubGenre} filteredStories={filteredStories} hasTodayStory={hasTodayStory} dailyCount={dailyCount} isSeriesLimitReached={isSeriesLimitReached} generateTodayStory={generateTodayStory} isGenerating={isGenerating} error={error} handleStoryClick={handleStoryClick} unlockedStories={unlockedStories} getStoryStats={getStoryStats} getFavoriteCount={getFavoriteCount} />}
+                {/* Step 1: 새로 생성한 책 읽기 (간단 버전) */}
+                {view === 'reader' && currentBook && !currentStory && (
+                  <ReaderView
+                    book={currentBook}
+                    onBack={() => {
+                      setCurrentBook(null);
+                      setView('library');
+                    }}
+                    fontSize={fontSize}
+                  />
+                )}
+                {/* 기존 책 읽기 (기존 ReaderView) */}
+                {view === 'reader' && currentStory && !currentBook && <ReaderView t={t} user={user} currentStory={currentStory} readerLang={readerLang} isTranslating={isTranslating} displayTitle={displayTitle} displayBody={displayBody} fontSize={fontSize} translateStory={translateStory} toggleFavorite={toggleFavorite} isFavorited={isFavorited} handleShare={handleShare} setIsReportModalOpen={setIsReportModalOpen} currentStoryStats={currentStoryStats} getFavoriteCount={getFavoriteCount} canFinishRead={canFinishRead} finishReading={finishReading} submitSeriesVote={submitSeriesVote} myVote={myVote} voteCounts={voteCounts} getTodayString={getTodayString} ratings={ratings} submitRating={submitRating} comments={comments} commentInput={commentInput} setCommentInput={setCommentInput} editingCommentId={editingCommentId} replyTo={replyTo} setReplyTo={setReplyTo} setEditingCommentId={setEditingCommentId} submitComment={submitComment} startEditComment={startEditComment} error={error} isSubmittingComment={isSubmittingComment} />}
+                {/* Step 1: 집필 화면 */}
+                {(view === 'write' || isWritingInProgress) && (
+                  <div className={view === 'write' ? '' : 'hidden'}>
+                    <WriteView
+                      user={user}
+                      userProfile={userProfile}
+                      onBookGenerated={handleBookGenerated}
+                      slotStatus={slotStatus}
+                      setView={setView}
+                      setSelectedBook={setSelectedBook}
+                      error={error}
+                      setError={setError}
+                      deductInk={deductInk}
+                      onGeneratingChange={setIsWritingInProgress}
+                      onGenerationComplete={() => { }}
+                    />
                   </div>
                 )}
-                {isNoticeAdmin && (
-                  <button
-                    onClick={openNoticeEditor}
-                    className="fixed bottom-24 right-5 w-14 h-14 rounded-full bg-orange-500 text-white shadow-lg flex items-center justify-center font-black hover:bg-orange-600 active:scale-95"
-                    aria-label="공지사항 작성"
-                  >
-                    글쓰기
-                  </button>
+                {/* Step 1: 서재 화면 */}
+                {view === 'library' && (
+                  <LibraryView
+                    books={books}
+                    onBookClick={handleBookClick}
+                    filter={libraryFilter}
+                    onFilterChange={setLibraryFilter}
+                  />
                 )}
-              </div>
-            )}
-            {view === 'library_main' && <LibraryMainView t={t} setIsRecommendModalOpen={setIsRecommendModalOpen} genres={genres} handleGenreClick={handleGenreClick} />}
-            {view === 'genre_select' && selectedGenre && <GenreSelectView t={t} selectedGenre={selectedGenre} handleSubGenreClick={handleSubGenreClick} stories={stories} />}
-            {view === 'list' && <StoryListView t={t} user={user} selectedGenre={selectedGenre} selectedSubGenre={selectedSubGenre} filteredStories={filteredStories} hasTodayStory={hasTodayStory} dailyCount={dailyCount} isSeriesLimitReached={isSeriesLimitReached} generateTodayStory={generateTodayStory} isGenerating={isGenerating} error={error} handleStoryClick={handleStoryClick} unlockedStories={unlockedStories} getStoryStats={getStoryStats} getFavoriteCount={getFavoriteCount} />}
-            {/* Step 1: 새로 생성한 책 읽기 (간단 버전) */}
-            {view === 'reader' && currentBook && !currentStory && (
-              <ReaderView 
-                book={currentBook}
-                onBack={() => {
-                  setCurrentBook(null);
-                  setView('library');
-                }}
-                fontSize={fontSize}
-              />
-            )}
-            {/* 기존 책 읽기 (기존 ReaderView) */}
-            {view === 'reader' && currentStory && !currentBook && <ReaderView t={t} user={user} currentStory={currentStory} readerLang={readerLang} isTranslating={isTranslating} displayTitle={displayTitle} displayBody={displayBody} fontSize={fontSize} translateStory={translateStory} toggleFavorite={toggleFavorite} isFavorited={isFavorited} handleShare={handleShare} setIsReportModalOpen={setIsReportModalOpen} currentStoryStats={currentStoryStats} getFavoriteCount={getFavoriteCount} canFinishRead={canFinishRead} finishReading={finishReading} submitSeriesVote={submitSeriesVote} myVote={myVote} voteCounts={voteCounts} getTodayString={getTodayString} ratings={ratings} submitRating={submitRating} comments={comments} commentInput={commentInput} setCommentInput={setCommentInput} editingCommentId={editingCommentId} replyTo={replyTo} setReplyTo={setReplyTo} setEditingCommentId={setEditingCommentId} submitComment={submitComment} startEditComment={startEditComment} error={error} isSubmittingComment={isSubmittingComment} />}
-            {/* Step 1: 집필 화면 */}
-            {(view === 'write' || isWritingInProgress) && (
-              <div className={view === 'write' ? '' : 'hidden'}>
-                <WriteView
-                  user={user}
-                  userProfile={userProfile}
-                  onBookGenerated={handleBookGenerated}
-                  slotStatus={slotStatus}
-                  setView={setView}
-                  setSelectedBook={setSelectedBook}
-                  error={error}
-                  setError={setError}
-                  deductInk={deductInk}
-                  onGeneratingChange={setIsWritingInProgress}
-                  onGenerationComplete={() => {}}
-                />
-              </div>
-            )}
-            {/* Step 1: 서재 화면 */}
-            {view === 'library' && (
-              <LibraryView 
-                books={books}
-                onBookClick={handleBookClick}
-                filter={libraryFilter}
-                onFilterChange={setLibraryFilter}
-              />
-            )}
-            {/* 보관함 화면 */}
-            {view === 'archive' && (
-              <ArchiveView 
-                books={books}
-                user={user}
-                favoriteBookIds={bookFavorites.map(f => f.bookId)}
-                onBookClick={handleBookClick}
-              />
-            )}
-            {/* 책 상세 화면 */}
-            {view === 'book_detail' && selectedBook && (
-              <BookDetail 
-                book={selectedBook}
-                onBookUpdate={setSelectedBook}
-                user={user}
-                userProfile={userProfile}
-                appId={appId}
-                fontSize={fontSize}
-                slotStatus={slotStatus}
-                deductInk={deductInk}
-                onClose={() => {
-                  const isMyBook = selectedBook.authorId === user?.uid;
-                  setSelectedBook(null);
-                  setView(isMyBook ? 'archive' : 'library');
-                }}
-              />
-            )}
-            {/* 프로필 화면 (설정 완료 후) */}
-            {view === 'profile' && (
-              <ProfileView 
-                user={user} 
-                userProfile={userProfile} 
-                t={t} 
-                levelInfo={levelInfo} 
-                tempNickname={tempNickname} 
-                setTempNickname={setTempNickname} 
-                language={language} 
-                setLanguage={setLanguage} 
-                fontSize={fontSize} 
-                setFontSize={setFontSize} 
-                handleGoogleLogin={handleGoogleLogin} 
-                saveProfile={saveProfile} 
-                handleLogout={handleLogout}
-                addInk={addInk}
-                handleDeleteAccount={handleDeleteAccount}
-                error={error}
-                setError={setError}
-                appId={appId}
-              />
-            )}
+                {/* 보관함 화면 */}
+                {view === 'archive' && (
+                  <ArchiveView
+                    books={books}
+                    user={user}
+                    favoriteBookIds={bookFavorites.map(f => f.bookId)}
+                    onBookClick={handleBookClick}
+                  />
+                )}
+                {/* 책 상세 화면 */}
+                {view === 'book_detail' && selectedBook && (
+                  <BookDetail
+                    book={selectedBook}
+                    onBookUpdate={setSelectedBook}
+                    user={user}
+                    userProfile={userProfile}
+                    appId={appId}
+                    fontSize={fontSize}
+                    slotStatus={slotStatus}
+                    deductInk={deductInk}
+                    onClose={() => {
+                      const isMyBook = selectedBook.authorId === user?.uid;
+                      setSelectedBook(null);
+                      setView(isMyBook ? 'archive' : 'library');
+                    }}
+                  />
+                )}
+                {/* 프로필 화면 (설정 완료 후) */}
+                {view === 'profile' && (
+                  <ProfileView
+                    user={user}
+                    userProfile={userProfile}
+                    t={t}
+                    levelInfo={levelInfo}
+                    tempNickname={tempNickname}
+                    setTempNickname={setTempNickname}
+                    language={language}
+                    setLanguage={setLanguage}
+                    fontSize={fontSize}
+                    setFontSize={setFontSize}
+                    handleGoogleLogin={handleGoogleLogin}
+                    saveProfile={saveProfile}
+                    handleLogout={handleLogout}
+                    addInk={addInk}
+                    handleDeleteAccount={handleDeleteAccount}
+                    error={error}
+                    setError={setError}
+                    appId={appId}
+                  />
+                )}
               </>
             )}
           </div>
@@ -2667,12 +2728,12 @@ const App = () => {
         {user && userProfile && userProfile.nickname && view !== 'reader' && view !== 'book_detail' && (
           <nav className="flex-none h-16 bg-white border-t border-slate-100 flex items-center px-1 pb-2 pt-1 z-40">
             {/* 홈 */}
-            <button 
+            <button
               onClick={() => {
                 setSelectedGenre(null);
                 setSelectedSubGenre(null);
                 setView('home');
-              }} 
+              }}
               className={`flex flex-col items-center justify-center flex-1 h-full space-y-0.5 transition-colors ${view === 'home' ? 'text-orange-600' : 'text-slate-400 hover:text-orange-600'}`}
             >
               <Home className={`w-6 h-6 ${view === 'home' ? 'fill-orange-100' : ''}`} />
@@ -2680,12 +2741,12 @@ const App = () => {
             </button>
 
             {/* 서재 */}
-            <button 
+            <button
               onClick={() => {
                 setSelectedGenre(null);
                 setSelectedSubGenre(null);
                 setView('library');
-              }} 
+              }}
               className={`flex flex-col items-center justify-center flex-1 h-full space-y-0.5 transition-colors ${view === 'library' ? 'text-orange-600' : 'text-slate-400 hover:text-slate-600'}`}
             >
               <Library className={`w-6 h-6 ${view === 'library' ? 'fill-orange-100' : ''}`} />
@@ -2693,12 +2754,12 @@ const App = () => {
             </button>
 
             {/* 집필 (중앙 강조) */}
-            <button 
+            <button
               onClick={() => {
                 setSelectedGenre(null);
                 setSelectedSubGenre(null);
                 setView('write');
-              }} 
+              }}
               className={`flex flex-col items-center justify-center flex-1 h-full space-y-0.5 transition-colors relative ${view === 'write' ? 'text-orange-600' : 'text-slate-400 hover:text-orange-600'}`}
             >
               <div className={`w-12 h-12 rounded-full flex items-center justify-center transition-all ${view === 'write' ? 'bg-orange-500 text-white shadow-lg shadow-orange-200' : 'bg-slate-100 text-slate-400'}`}>
@@ -2708,12 +2769,12 @@ const App = () => {
             </button>
 
             {/* 보관함 */}
-            <button 
+            <button
               onClick={() => {
                 setSelectedGenre(null);
                 setSelectedSubGenre(null);
                 setView('archive');
-              }} 
+              }}
               className={`flex flex-col items-center justify-center flex-1 h-full space-y-0.5 transition-colors ${view === 'archive' ? 'text-orange-600' : 'text-slate-400 hover:text-slate-600'}`}
             >
               <Bookmark className={`w-6 h-6 ${view === 'archive' ? 'fill-orange-100' : ''}`} />
@@ -2721,12 +2782,12 @@ const App = () => {
             </button>
 
             {/* 프로필 */}
-            <button 
+            <button
               onClick={() => {
                 setSelectedGenre(null);
                 setSelectedSubGenre(null);
                 setView('profile');
-              }} 
+              }}
               className={`flex flex-col items-center justify-center flex-1 h-full space-y-0.5 transition-colors ${view === 'profile' ? 'text-orange-600' : 'text-slate-400 hover:text-slate-600'}`}
             >
               <User className={`w-6 h-6 ${view === 'profile' ? 'fill-orange-100' : ''}`} />

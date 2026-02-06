@@ -2,8 +2,9 @@
 // Part 2: 프로필 페이지 전면 리뉴얼 - Single View (100vh), 컴팩트한 레이아웃
 import React, { useState } from 'react';
 import imageCompression from 'browser-image-compression';
-import { LogOut, Trophy, Droplets, Save, Trash2, AlertTriangle, X, Camera } from 'lucide-react';
+import { LogOut, Trophy, Droplets, Save, Trash2, AlertTriangle, X, Camera, Video } from 'lucide-react';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { showRewardVideoAd } from '../utils/admobService';
 import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { db, storage } from '../firebase';
 
@@ -38,20 +39,30 @@ const ProfileView = ({
   const handleChargeInk = async () => {
     if (isCharging) return;
     setIsCharging(true);
-    
-    try {
-      // 광고 보고 잉크 충전 (테스트용)
-      const success = await addInk(10);
-      if (success) {
-        setShowChargeSuccess(true);
-        setTimeout(() => setShowChargeSuccess(false), 2000);
+
+    // 광고 시청 요청
+    showRewardVideoAd(
+      async () => {
+        // 성공 시 잉크 충전 로직 실행
+        try {
+          const success = await addInk(10);
+          if (success) {
+            setShowChargeSuccess(true);
+            setTimeout(() => setShowChargeSuccess(false), 2000);
+          }
+        } catch (err) {
+          console.error('잉크 충전 오류:', err);
+          if (setError) setError('잉크 충전에 실패했습니다.');
+        } finally {
+          setIsCharging(false);
+        }
+      },
+      (errorMsg) => {
+        // 실패 시 에러 처리
+        setIsCharging(false);
+        if (setError) setError(errorMsg);
       }
-    } catch (err) {
-      console.error('잉크 충전 오류:', err);
-      if (setError) setError('잉크 충전에 실패했습니다.');
-    } finally {
-      setIsCharging(false);
-    }
+    );
   };
 
   // 닉네임 변경 가능 여부 확인
@@ -59,14 +70,14 @@ const ProfileView = ({
     if (!userProfile) return true; // 프로필이 없으면 최초 설정으로 간주
     if (!userProfile.nickname) return true; // 닉네임이 없으면 최초 설정
     if (!userProfile.lastNicknameChangeDate) return true; // 변경 기록이 없으면 최초 1회
-    
-    const lastChangeDate = userProfile.lastNicknameChangeDate?.toDate?.() 
-      || (userProfile.lastNicknameChangeDate?.seconds 
-        ? new Date(userProfile.lastNicknameChangeDate.seconds * 1000) 
+
+    const lastChangeDate = userProfile.lastNicknameChangeDate?.toDate?.()
+      || (userProfile.lastNicknameChangeDate?.seconds
+        ? new Date(userProfile.lastNicknameChangeDate.seconds * 1000)
         : null);
-    
+
     if (!lastChangeDate) return true;
-    
+
     const now = new Date();
     const daysSinceLastChange = Math.floor((now - lastChangeDate) / (1000 * 60 * 60 * 24));
     return daysSinceLastChange >= 30;
@@ -74,18 +85,18 @@ const ProfileView = ({
 
   const getNicknameChangeInfo = () => {
     if (!userProfile?.lastNicknameChangeDate) return null;
-    
-    const lastChangeDate = userProfile.lastNicknameChangeDate?.toDate?.() 
-      || (userProfile.lastNicknameChangeDate?.seconds 
-        ? new Date(userProfile.lastNicknameChangeDate.seconds * 1000) 
+
+    const lastChangeDate = userProfile.lastNicknameChangeDate?.toDate?.()
+      || (userProfile.lastNicknameChangeDate?.seconds
+        ? new Date(userProfile.lastNicknameChangeDate.seconds * 1000)
         : null);
-    
+
     if (!lastChangeDate) return null;
-    
+
     const now = new Date();
     const daysSinceLastChange = Math.floor((now - lastChangeDate) / (1000 * 60 * 60 * 24));
     const remainingDays = Math.max(0, 30 - daysSinceLastChange);
-    
+
     return { daysSinceLastChange, remainingDays };
   };
 
@@ -129,7 +140,7 @@ const ProfileView = ({
       {/* Part 2: Single View - 스크롤 없이 한 화면에 모든 정보 배치 (모바일에서는 스크롤 가능) */}
       <div className="flex-1 overflow-y-auto scrollbar-hide">
         <div className="px-5 py-4 space-y-3 pb-6">
-          
+
           {/* 1. 상단 정보: 레벨 & 경험치 바 */}
           {userProfile && (
             <div className="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm">
@@ -153,7 +164,7 @@ const ProfileView = ({
                     <div className="text-xs font-bold text-orange-500">{levelInfo.progress}%</div>
                   </div>
                   <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden mb-1">
-                    <div 
+                    <div
                       className="h-full bg-gradient-to-r from-orange-400 to-orange-600 rounded-full transition-all duration-500"
                       style={{ width: `${levelInfo.progress}%` }}
                     />
@@ -177,11 +188,10 @@ const ProfileView = ({
                       <Camera className="w-6 h-6 text-slate-400" />
                     )}
                   </div>
-                  <label className={`text-[10px] font-bold px-2 py-1 rounded-full border transition-colors cursor-pointer ${
-                    isUploadingImage
+                  <label className={`text-[10px] font-bold px-2 py-1 rounded-full border transition-colors cursor-pointer ${isUploadingImage
                       ? 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed'
                       : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
-                  }`}>
+                    }`}>
                     {isUploadingImage ? '업로드 중...' : '사진 변경'}
                     <input
                       type="file"
@@ -216,11 +226,10 @@ const ProfileView = ({
               <button
                 onClick={handleChargeInk}
                 disabled={isCharging}
-                className={`w-full py-2.5 rounded-xl font-black text-sm transition-all flex items-center justify-center gap-2 ${
-                  isCharging
+                className={`w-full py-2.5 rounded-xl font-black text-sm transition-all flex items-center justify-center gap-2 ${isCharging
                     ? 'bg-slate-300 text-slate-500 cursor-not-allowed'
                     : 'bg-blue-500 text-white hover:bg-blue-600 active:scale-95'
-                }`}
+                  }`}
               >
                 {isCharging ? (
                   <span className="animate-pulse">충전 중...</span>
@@ -231,7 +240,7 @@ const ProfileView = ({
                   </>
                 ) : (
                   <>
-                    <Droplets className="w-4 h-4" />
+                    <Video className="w-5 h-5" />
                     <span>광고 보고 잉크 얻기 (+10)</span>
                   </>
                 )}
@@ -243,13 +252,13 @@ const ProfileView = ({
           <div className="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm">
             <label className="text-xs font-bold text-slate-500 mb-2 block">닉네임</label>
             <div className="space-y-2">
-              <input 
-                type="text" 
-                maxLength={6} 
+              <input
+                type="text"
+                maxLength={6}
                 placeholder={t?.nickname_placeholder || "닉네임 입력 (최대 6글자)"}
-                value={tempNickname} 
-                onChange={(e) => setTempNickname(e.target.value)} 
-                className="w-full bg-slate-50 border-2 border-slate-200 rounded-xl py-2.5 px-4 text-sm font-bold focus:border-orange-500 focus:bg-white outline-none transition-colors" 
+                value={tempNickname}
+                onChange={(e) => setTempNickname(e.target.value)}
+                className="w-full bg-slate-50 border-2 border-slate-200 rounded-xl py-2.5 px-4 text-sm font-bold focus:border-orange-500 focus:bg-white outline-none transition-colors"
               />
               {!canChange && nicknameChangeInfo && (
                 <p className="text-[10px] text-orange-600 font-bold">
@@ -280,11 +289,10 @@ const ProfileView = ({
                 <button
                   key={lang.code}
                   onClick={() => setLanguage(lang.code)}
-                  className={`py-2.5 rounded-xl text-xs font-bold transition-all ${
-                    language === lang.code
+                  className={`py-2.5 rounded-xl text-xs font-bold transition-all ${language === lang.code
                       ? 'bg-orange-500 text-white shadow-md'
                       : 'bg-slate-100 text-slate-600 hover:bg-slate-200 active:scale-95'
-                  }`}
+                    }`}
                 >
                   {lang.label}
                 </button>
@@ -305,11 +313,10 @@ const ProfileView = ({
                 <button
                   key={fs.size}
                   onClick={() => setFontSize(fs.size)}
-                  className={`py-2 rounded-xl text-[10px] font-bold transition-all ${
-                    fontSize === fs.size
+                  className={`py-2 rounded-xl text-[10px] font-bold transition-all ${fontSize === fs.size
                       ? 'bg-slate-800 text-white shadow-md'
                       : 'bg-slate-100 text-slate-600 hover:bg-slate-200 active:scale-95'
-                  }`}
+                    }`}
                 >
                   {fs.label}
                 </button>
@@ -320,16 +327,15 @@ const ProfileView = ({
           {/* 6. 계정 관리 */}
           <div className="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm space-y-2">
             <label className="text-xs font-bold text-slate-500 mb-2 block">계정 관리</label>
-            
+
             {/* 저장 버튼 */}
             <button
               onClick={saveProfile}
               disabled={!tempNickname.trim()}
-              className={`w-full py-3 rounded-xl font-black text-sm transition-all flex items-center justify-center gap-2 ${
-                !tempNickname.trim()
+              className={`w-full py-3 rounded-xl font-black text-sm transition-all flex items-center justify-center gap-2 ${!tempNickname.trim()
                   ? 'bg-slate-300 text-slate-500 cursor-not-allowed'
                   : 'bg-slate-900 text-white hover:bg-slate-800 active:scale-95'
-              }`}
+                }`}
             >
               <Save className="w-4 h-4" />
               저장
@@ -384,7 +390,7 @@ const ProfileView = ({
               </div>
               <h3 className="text-lg font-black text-slate-800">계정 탈퇴</h3>
               <p className="text-sm text-slate-600 leading-relaxed">
-                정말로 계정을 탈퇴하시겠습니까?<br/>
+                정말로 계정을 탈퇴하시겠습니까?<br />
                 모든 데이터가 삭제되며 복구할 수 없습니다.
               </p>
             </div>
@@ -410,7 +416,7 @@ const ProfileView = ({
           </div>
         </div>
       )}
-      
+
       {/* 수정 3: 앱 버전 표시 (화면 맨 아래) */}
       <div className="text-center py-4">
         <p className="text-xs text-gray-400">

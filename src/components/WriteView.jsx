@@ -3,9 +3,10 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Capacitor } from '@capacitor/core';
 import { KeepAwake } from '@capacitor-community/keep-awake';
 import { LocalNotifications } from '@capacitor/local-notifications';
-import { PenTool, RefreshCw, Book, Edit2, Lock, Droplets } from 'lucide-react';
+import { PenTool, RefreshCw, Book, Edit2, Lock, Droplets, Video, Check, X } from 'lucide-react';
 import { generateBook } from '../utils/aiService';
 import { getExtraWriteInkCost, isKeywordRefreshFree, getLevelFromXp } from '../utils/levelUtils';
+import { showRewardVideoAd } from '../utils/admobService';
 
 // 비문학 키워드 은행
 const ESSAY_KEYWORDS = [
@@ -140,6 +141,7 @@ const WriteView = ({ user, userProfile, onBookGenerated, slotStatus, setView, se
   const [loadingMessageIndex, setLoadingMessageIndex] = useState(0);
   const [currentLoadingMessage, setCurrentLoadingMessage] = useState('');
   const [currentLoadingMessages, setCurrentLoadingMessages] = useState([]);
+  const [isAdWatched, setIsAdWatched] = useState(false); // 광고 시청 완료 상태 추가
 
   useEffect(() => {
     if (!Capacitor.isNativePlatform()) return;
@@ -157,7 +159,7 @@ const WriteView = ({ user, userProfile, onBookGenerated, slotStatus, setView, se
 
     toggleWakeLock();
     return () => {
-      KeepAwake.allowSleep().catch(() => {});
+      KeepAwake.allowSleep().catch(() => { });
     };
   }, [isGenerating]);
 
@@ -176,7 +178,7 @@ const WriteView = ({ user, userProfile, onBookGenerated, slotStatus, setView, se
     "독자에게 더 잘 전달되도록 윤문 중...",
     "마무리 문장을 정돈하고 있어요..."
   ];
-  
+
   const getTodayKey = () => {
     const now = new Date();
     const year = now.getFullYear();
@@ -326,7 +328,7 @@ const WriteView = ({ user, userProfile, onBookGenerated, slotStatus, setView, se
   const isSlotAvailable = (categoryId, subCategoryId = null) => {
     return getSlotStatus(categoryId, subCategoryId) === null;
   };
-  
+
   const isSeriesCategoryAvailable = () => isSlotAvailable('series');
 
   // 카테고리 선택 핸들러
@@ -453,13 +455,48 @@ const WriteView = ({ user, userProfile, onBookGenerated, slotStatus, setView, se
     const type = pendingPaidWriteType;
     closePaidWriteConfirm();
     if (type === 'nonfiction') {
-      await startNonfictionGenerate(true);
+      await startNonfictionGenerate(true); // forcePaid = true
     } else if (type === 'novel') {
-      await startNovelGenerate(true);
+      await startNovelGenerate(true); // forcePaid = true
     }
   };
 
-  const startNonfictionGenerate = async (forcePaid = false) => {
+  // 광고 시청 후 상태 변화 감지하여 로직 실행 (Closure 문제 해결)
+  useEffect(() => {
+    if (isAdWatched && pendingPaidWriteType) {
+      console.log('useEffect 감지: 광고 시청 완료, 집필 시작');
+      const type = pendingPaidWriteType;
+
+      const proceed = async () => {
+        if (type === 'nonfiction') {
+          await startNonfictionGenerate(true, true);
+        } else if (type === 'novel') {
+          await startNovelGenerate(true, true);
+        }
+        setIsAdWatched(false); // 리셋
+        // setPendingPaidWriteType(null); // 타입 초기화는 로직 실행 후나 모달 닫을 때 (여기선 닫힘)
+      };
+
+      proceed();
+    }
+  }, [isAdWatched, pendingPaidWriteType]);
+
+  const handleWatchAdForWrite = async () => {
+    showRewardVideoAd(
+      async () => {
+        // 광고 시청 보상: 무료 집필 (잉크 차감 없이 진행)
+        console.log('🎉 광고 시청 완료! 무료 집필 플래그 설정');
+        closePaidWriteConfirm();
+        setIsAdWatched(true); // 상태 업데이트로 트리거
+      },
+      (errorMsg) => {
+        setLocalError(errorMsg);
+        if (setError) setError(errorMsg);
+      }
+    );
+  };
+
+  const startNonfictionGenerate = async (forcePaid = false, isAdReward = false) => {
     if (!selectedCategory || selectedCategory.isNovel || !selectedTopic || !bookTitle.trim() || !selectedTone || isGenerating) {
       return;
     }
@@ -471,12 +508,12 @@ const WriteView = ({ user, userProfile, onBookGenerated, slotStatus, setView, se
       return;
     }
 
-    if (requiresPaidWrite && !forcePaid) {
+    if (requiresPaidWrite && !forcePaid && !isAdReward) {
       openPaidWriteConfirm('nonfiction');
       return;
     }
 
-    if (requiresPaidWrite && forcePaid) {
+    if (requiresPaidWrite && forcePaid && !isAdReward) {
       const extraCost = getExtraWriteInkCost(getLevelFromXp(userProfile?.xp ?? 0));
       const currentInk = userProfile?.ink || 0;
       if (currentInk < extraCost) {
@@ -540,7 +577,7 @@ const WriteView = ({ user, userProfile, onBookGenerated, slotStatus, setView, se
           subCategory: null,
           isSeries: false,
           keywords: selectedTopic
-        }, false, { skipDailyCheck: true, skipNavigate: isGeneratingHidden });
+        }, false, { skipDailyCheck: true, skipNavigate: isGeneratingHidden, skipInkDeduct: isAdReward });
         if (isGeneratingHidden) {
           await sendGenerationCompleteNotification(result.title || bookTitle);
           if (typeof onGenerationComplete === 'function') {
@@ -559,7 +596,7 @@ const WriteView = ({ user, userProfile, onBookGenerated, slotStatus, setView, se
       console.error('❌ [WriteView] 에러 메시지:', err?.message);
       console.error('❌ [WriteView] 에러 코드:', err?.code);
       console.error('❌ [WriteView] 원본 에러:', err?.originalError);
-      
+
       if (err.message !== 'SLOT_ALREADY_TAKEN') {
         // 에러 메시지 추출 (Firebase Functions 에러 구조 고려)
         const errorMsg = err?.message || err?.originalError?.message || '책 생성에 실패했습니다. 다시 시도해주세요.';
@@ -582,7 +619,7 @@ const WriteView = ({ user, userProfile, onBookGenerated, slotStatus, setView, se
     await startNovelGenerate(false);
   };
 
-  const startNovelGenerate = async (forcePaid = false) => {
+  const startNovelGenerate = async (forcePaid = false, isAdReward = false) => {
     if (!selectedCategory || !selectedGenre || !keywords.trim() || !bookTitle.trim() || !selectedMood || isGenerating) {
       return;
     }
@@ -594,12 +631,12 @@ const WriteView = ({ user, userProfile, onBookGenerated, slotStatus, setView, se
       return;
     }
 
-    if (requiresPaidWrite && !forcePaid) {
+    if (requiresPaidWrite && !forcePaid && !isAdReward) {
       openPaidWriteConfirm('novel');
       return;
     }
 
-    if (requiresPaidWrite && forcePaid) {
+    if (requiresPaidWrite && forcePaid && !isAdReward) {
       const extraCost = getExtraWriteInkCost(getLevelFromXp(userProfile?.xp ?? 0));
       const currentInk = userProfile?.ink || 0;
       if (currentInk < extraCost) {
@@ -624,11 +661,11 @@ const WriteView = ({ user, userProfile, onBookGenerated, slotStatus, setView, se
     // 슬롯 확인 (시리즈는 subCategory로 구분)
     let slotCheckCategoryId = selectedCategory.id;
     let slotCheckSubCategoryId = null;
-    
+
     if (selectedCategory.id === 'series' && seriesSubType) {
       slotCheckSubCategoryId = seriesSubType.id; // 'webnovel' 또는 'novel'
     }
-    
+
     if (!isSlotAvailable(slotCheckCategoryId, slotCheckSubCategoryId)) {
       const slotInfo = getSlotStatus(slotCheckCategoryId, slotCheckSubCategoryId);
       const errorMsg = `이미 오늘의 책이 발행되었습니다! (By. ${slotInfo?.authorName || '익명'}) 서재에서 읽어보세요.`;
@@ -663,13 +700,9 @@ const WriteView = ({ user, userProfile, onBookGenerated, slotStatus, setView, se
 
       if (onBookGenerated) {
         const savedBook = await onBookGenerated({
-          ...result,
-          category: selectedCategory.id === 'series' ? 'series' : selectedCategory.id,
-          subCategory: selectedGenre.id,
-          seriesSubType: selectedCategory.id === 'series' ? seriesSubType?.id : null,
           isSeries: selectedCategory.id === 'series',
           keywords: keywords.trim()
-        }, false, { skipDailyCheck: true, skipNavigate: isGeneratingHidden });
+        }, false, { skipDailyCheck: true, skipNavigate: isGeneratingHidden, skipInkDeduct: isAdReward });
         if (isGeneratingHidden) {
           await sendGenerationCompleteNotification(result.title || bookTitle);
           if (typeof onGenerationComplete === 'function') {
@@ -691,7 +724,7 @@ const WriteView = ({ user, userProfile, onBookGenerated, slotStatus, setView, se
       console.error('❌ [WriteView] 에러 메시지:', err?.message);
       console.error('❌ [WriteView] 에러 코드:', err?.code);
       console.error('❌ [WriteView] 원본 에러:', err?.originalError);
-      
+
       if (err.message !== 'SLOT_ALREADY_TAKEN') {
         // 에러 메시지 추출 (Firebase Functions 에러 구조 고려)
         const errorMsg = err?.message || err?.originalError?.message || '책 생성에 실패했습니다. 다시 시도해주세요.';
@@ -768,8 +801,8 @@ const WriteView = ({ user, userProfile, onBookGenerated, slotStatus, setView, se
   );
 
   // 생성 가능 여부 확인
-  const canGenerateNovel = selectedCategory && 
-    selectedGenre && 
+  const canGenerateNovel = selectedCategory &&
+    selectedGenre &&
     (selectedCategory.id !== 'series' || seriesSubType) && // 시리즈는 세부 타입도 선택 필요
     bookTitle.trim().length > 0 &&
     keywords.trim().length > 0 &&
@@ -792,7 +825,7 @@ const WriteView = ({ user, userProfile, onBookGenerated, slotStatus, setView, se
           집필
         </h2>
         <p className="text-sm text-slate-500">
-          원하는 장르를 선택하고 주제를 입력하면<br/>
+          원하는 장르를 선택하고 주제를 입력하면<br />
           AI가 당신만의 책을 만들어줍니다.
         </p>
       </div>
@@ -802,7 +835,7 @@ const WriteView = ({ user, userProfile, onBookGenerated, slotStatus, setView, se
         <h3 className="text-sm font-bold text-slate-500 px-1">카테고리 선택</h3>
         <div className="grid grid-cols-2 gap-3">
           {categories.map((category) => {
-            const isSoldOut = category.id === 'series' 
+            const isSoldOut = category.id === 'series'
               ? !isSeriesCategoryAvailable()
               : getSlotStatus(category.id) !== null;
             const slotInfo = getSlotStatus(category.id);
@@ -812,13 +845,12 @@ const WriteView = ({ user, userProfile, onBookGenerated, slotStatus, setView, se
                 key={category.id}
                 disabled={isSoldOut}
                 onClick={() => handleCategorySelect(category)}
-                className={`p-4 rounded-2xl border-2 shadow-sm transition-all text-center relative ${
-                  isSoldOut
-                    ? 'bg-slate-100 border-slate-300 opacity-60 cursor-not-allowed'
-                    : selectedCategory?.id === category.id
+                className={`p-4 rounded-2xl border-2 shadow-sm transition-all text-center relative ${isSoldOut
+                  ? 'bg-slate-100 border-slate-300 opacity-60 cursor-not-allowed'
+                  : selectedCategory?.id === category.id
                     ? 'border-orange-500 bg-orange-50 active:scale-95'
                     : 'bg-white border-slate-100 hover:border-orange-200 active:scale-95'
-                }`}
+                  }`}
               >
                 {isSoldOut && (
                   <div className="absolute top-2 right-2">
@@ -874,11 +906,10 @@ const WriteView = ({ user, userProfile, onBookGenerated, slotStatus, setView, se
                       handleRefreshKeywords();
                     }}
                     disabled={isRefreshingKeywords || isGenerating || !isSlotAvailable(selectedCategory.id)}
-                    className={`w-8 h-8 rounded-full border flex items-center justify-center transition-colors ${
-                      isRefreshingKeywords || isGenerating || !isSlotAvailable(selectedCategory.id)
-                        ? 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed'
-                        : 'bg-blue-50 text-blue-600 border-blue-200 hover:bg-blue-100'
-                    }`}
+                    className={`w-8 h-8 rounded-full border flex items-center justify-center transition-colors ${isRefreshingKeywords || isGenerating || !isSlotAvailable(selectedCategory.id)
+                      ? 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed'
+                      : 'bg-blue-50 text-blue-600 border-blue-200 hover:bg-blue-100'
+                      }`}
                     title={isKeywordRefreshFree(getLevelFromXp(userProfile?.xp ?? 0)) ? "키워드 새로고침 (무료)" : "키워드 새로고침 (잉크 1)"}
                   >
                     <RefreshCw className={`w-4 h-4 ${isRefreshingKeywords ? 'animate-spin' : ''}`} />
@@ -887,7 +918,7 @@ const WriteView = ({ user, userProfile, onBookGenerated, slotStatus, setView, se
                 <div className="flex flex-wrap gap-2">
                   {nonfictionTopics.map((topicText, index) => {
                     const isSelected = selectedTopic === topicText;
-                    
+
                     return (
                       <button
                         key={index}
@@ -895,13 +926,12 @@ const WriteView = ({ user, userProfile, onBookGenerated, slotStatus, setView, se
                           handleTopicSelect(topicText);
                         }}
                         disabled={isGenerating || !isSlotAvailable(selectedCategory.id)}
-                        className={`px-4 py-3 rounded-full text-sm font-bold transition-all relative ${
-                          isGenerating || !isSlotAvailable(selectedCategory.id)
-                            ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
-                            : isSelected
+                        className={`px-4 py-3 rounded-full text-sm font-bold transition-all relative ${isGenerating || !isSlotAvailable(selectedCategory.id)
+                          ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
+                          : isSelected
                             ? 'bg-orange-500 text-white shadow-md'
                             : 'bg-slate-100 text-slate-600 hover:bg-slate-200 active:scale-95'
-                        }`}
+                          }`}
                       >
                         <span>{topicText}</span>
                         {isGenerating && isSelected && (
@@ -955,11 +985,10 @@ const WriteView = ({ user, userProfile, onBookGenerated, slotStatus, setView, se
                 <button
                   onClick={handleNonfictionGenerate}
                   disabled={isGenerating}
-                  className={`w-full py-4 rounded-2xl font-black text-white shadow-lg transition-all flex items-center justify-center gap-2 ${
-                    !isGenerating
-                      ? 'bg-orange-500 hover:bg-orange-600 active:scale-95'
-                      : 'bg-slate-300 cursor-not-allowed'
-                  }`}
+                  className={`w-full py-4 rounded-2xl font-black text-white shadow-lg transition-all flex items-center justify-center gap-2 ${!isGenerating
+                    ? 'bg-orange-500 hover:bg-orange-600 active:scale-95'
+                    : 'bg-slate-300 cursor-not-allowed'
+                    }`}
                 >
                   {isGenerating ? (
                     <>
@@ -996,11 +1025,10 @@ const WriteView = ({ user, userProfile, onBookGenerated, slotStatus, setView, se
                           setSelectedGenre(null);
                           setSelectedMood('');
                         }}
-                        className={`py-3 rounded-xl font-bold text-sm transition-all ${
-                          seriesSubType?.id === subType.id
-                            ? 'bg-orange-500 text-white'
-                            : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                        }`}
+                        className={`py-3 rounded-xl font-bold text-sm transition-all ${seriesSubType?.id === subType.id
+                          ? 'bg-orange-500 text-white'
+                          : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                          }`}
                       >
                         {subType.name}
                       </button>
@@ -1023,11 +1051,10 @@ const WriteView = ({ user, userProfile, onBookGenerated, slotStatus, setView, se
                           setSelectedGenre(genre);
                           setSelectedMood('');
                         }}
-                        className={`py-2 px-3 rounded-xl font-bold text-sm transition-all ${
-                          selectedGenre?.id === genre.id
-                            ? 'bg-orange-500 text-white'
-                            : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                        }`}
+                        className={`py-2 px-3 rounded-xl font-bold text-sm transition-all ${selectedGenre?.id === genre.id
+                          ? 'bg-orange-500 text-white'
+                          : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                          }`}
                       >
                         {genre.name}
                       </button>
@@ -1127,11 +1154,10 @@ const WriteView = ({ user, userProfile, onBookGenerated, slotStatus, setView, se
                 <button
                   onClick={handleNovelGenerate}
                   disabled={isGenerating}
-                  className={`w-full py-4 rounded-2xl font-black text-white shadow-lg transition-all flex items-center justify-center gap-2 ${
-                    !isGenerating
-                      ? 'bg-orange-500 hover:bg-orange-600 active:scale-95'
-                      : 'bg-slate-300 cursor-not-allowed'
-                  }`}
+                  className={`w-full py-4 rounded-2xl font-black text-white shadow-lg transition-all flex items-center justify-center gap-2 ${!isGenerating
+                    ? 'bg-orange-500 hover:bg-orange-600 active:scale-95'
+                    : 'bg-slate-300 cursor-not-allowed'
+                    }`}
                 >
                   {isGenerating ? (
                     <>
@@ -1172,20 +1198,36 @@ const WriteView = ({ user, userProfile, onBookGenerated, slotStatus, setView, se
                 </p>
               </div>
             </div>
-            <div className="flex gap-3">
+            <div className="flex flex-col gap-2">
               <button
-                onClick={closePaidWriteConfirm}
-                className="flex-1 bg-slate-100 text-slate-600 py-2 rounded-lg text-xs font-bold hover:bg-slate-200 transition-colors"
+                onClick={handleWatchAdForWrite}
+                className="w-full bg-blue-500 text-white py-3 rounded-xl font-black hover:bg-blue-600 transition-colors flex items-center justify-center gap-2"
               >
-                취소
+                <Video className="w-5 h-5" />
+                광고 보고 무료로 0.3초 집필
               </button>
-              <button
-                onClick={confirmPaidWrite}
-                className="flex-1 bg-orange-500 text-white py-2 rounded-lg text-xs font-black hover:bg-orange-600 transition-colors flex items-center justify-center gap-1.5"
-              >
-                <Droplets className="w-4 h-4" />
-                잉크 {getExtraWriteInkCost(getLevelFromXp(userProfile?.xp ?? 0))} 사용하고 집필
-              </button>
+
+              <div className="relative flex items-center py-2">
+                <div className="flex-grow border-t border-slate-200"></div>
+                <span className="flex-shrink-0 mx-4 text-xs text-slate-400 font-bold">또는</span>
+                <div className="flex-grow border-t border-slate-200"></div>
+              </div>
+
+              <div className="flex gap-2">
+                <button
+                  onClick={closePaidWriteConfirm}
+                  className="flex-1 bg-slate-100 text-slate-600 py-3 rounded-xl font-bold hover:bg-slate-200 transition-colors"
+                >
+                  취소(안함)
+                </button>
+                <button
+                  onClick={confirmPaidWrite}
+                  className="flex-[2] bg-orange-100 text-orange-600 border border-orange-200 py-3 rounded-xl font-bold hover:bg-orange-200 transition-colors flex items-center justify-center gap-1.5"
+                >
+                  <Droplets className="w-4 h-4" />
+                  잉크 {getExtraWriteInkCost(getLevelFromXp(userProfile?.xp ?? 0))}개 쓰기
+                </button>
+              </div>
             </div>
           </div>
         </div>
