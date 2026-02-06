@@ -700,6 +700,10 @@ const WriteView = ({ user, userProfile, onBookGenerated, slotStatus, setView, se
 
       if (onBookGenerated) {
         const savedBook = await onBookGenerated({
+          ...result,
+          category: selectedCategory.id === 'series' ? 'series' : selectedCategory.id,
+          subCategory: selectedGenre.id,
+          seriesSubType: selectedCategory.id === 'series' ? seriesSubType?.id : null,
           isSeries: selectedCategory.id === 'series',
           keywords: keywords.trim()
         }, false, { skipDailyCheck: true, skipNavigate: isGeneratingHidden, skipInkDeduct: isAdReward });
