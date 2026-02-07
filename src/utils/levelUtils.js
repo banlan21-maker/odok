@@ -6,6 +6,12 @@
 
 const XP_PER_INK = 10;  // 잉크 1개 소모 = 10 XP
 
+// Constants
+export const INK_MAX = 999;
+export const INITIAL_INK = 10;
+export const DAILY_WRITE_LIMIT = 2;
+export const DAILY_FREE_WRITES = 1;
+
 /** 잉크 1개당 XP */
 export const getXpPerInk = () => XP_PER_INK;
 
@@ -44,11 +50,21 @@ export const getXpToNextLevel = (xp = 0) => {
   const level = getLevelFromXp(xp);
   const tier = getGradeInfo(level);
   if (level >= 99) return 0;
-  const xpInTier = xp - tier.minXp;
+
+  // 현재 레벨의 시작 XP 계산
+  // 이 로직은 불완전할 수 있으므로 단순화:
+  // 단순히 다음 레벨의 절대 XP - 현재 XP
+  // 하지만 구간별 계산이 복잡하므로 여기서는 등급별 max XP를 기준으로 계산하거나
+  // 보다 정밀한 레벨 XP 테이블이 필요함.
+  // 여기서는 근사치로: (현재 레벨+1) 달성에 필요한 총 XP - 현재 XP
+
+  // 등급 내 레벨 당 필요 XP
   const xpPerLevel = (tier.maxXp - tier.minXp) / (tier.maxLevel - tier.minLevel + 1);
-  const currentLevelProgress = (level - tier.minLevel) * xpPerLevel;
-  const nextLevelXp = (level - tier.minLevel + 1) * xpPerLevel;
-  return Math.ceil(nextLevelXp - xpInTier);
+  const levelInTier = level - tier.minLevel;
+  const currentLevelStartXp = tier.minXp + (levelInTier * xpPerLevel);
+  const nextLevelStartXp = currentLevelStartXp + xpPerLevel;
+
+  return Math.max(0, Math.ceil(nextLevelStartXp - xp));
 };
 
 /** 현재 구간 내 진행률 (0~100) */
@@ -56,11 +72,13 @@ export const getLevelProgressPercent = (xp = 0) => {
   const level = getLevelFromXp(xp);
   const tier = getGradeInfo(level);
   if (level >= 99) return 100;
-  const xpInTier = xp - tier.minXp;
+
   const xpPerLevel = (tier.maxXp - tier.minXp) / (tier.maxLevel - tier.minLevel + 1);
-  const currentLevelStart = (level - tier.minLevel) * xpPerLevel;
-  const currentLevelEnd = (level - tier.minLevel + 1) * xpPerLevel;
-  const progress = (xpInTier - currentLevelStart) / (currentLevelEnd - currentLevelStart);
+  const levelInTier = level - tier.minLevel;
+  const currentLevelStartXp = tier.minXp + (levelInTier * xpPerLevel);
+  const nextLevelStartXp = currentLevelStartXp + xpPerLevel;
+
+  const progress = (xp - currentLevelStartXp) / (nextLevelStartXp - currentLevelStartXp);
   return Math.min(100, Math.max(0, Math.floor(progress * 100)));
 };
 
@@ -97,5 +115,5 @@ export const getLevelUpInkBonus = () => 5;
 
 /** 레벨에 해당하는 칭호 (등급명 반환) */
 export const getTitleByLevel = (level = 1) => {
-  return getGradeInfo(level).gradeName;
+  return getGradeInfo(level).gradeName || '작가';
 };

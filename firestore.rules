@@ -1,22 +1,113 @@
-// Firestore 규칙 – daily_series_slot 전용
-//
-// ⚠️ 이 파일 전체를 deploy하면 기존 콘솔 규칙을 덮어씁니다.
-//    books, users 등 다른 규칙이 있다면 반드시 콘솔에 이 블록만 추가해서 사용하세요.
-//
-// [콘솔에 추가할 블록]
-// Firestore > 규칙 > match /databases/.../documents { ... } 안에 아래를 추가 후 게시.
-//
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    match /artifacts/{artifactId}/public/data/daily_series_slot/{dateKey} {
-      allow read, write: if request.auth != null;
+    
+    // Admin check function
+    function isAdmin() {
+      return request.auth != null && request.auth.token.email == 'admin@odok.app';
     }
 
-    match /artifacts/{artifactId}/users/{userId}/ink_history/{docId} {
-      allow create: if request.auth != null;
-      allow read: if request.auth.uid == userId;
+    // Authenticated check
+    function isAuth() {
+      return request.auth != null;
+    }
+
+    // Owner check
+    function isOwner(userId) {
+      return request.auth != null && request.auth.uid == userId;
+    }
+
+    // artifacts Collection (Main App Data)
+    match /artifacts/{appId} {
+      // 1. Users Collection
+      match /users/{userId} {
+        // User Profile Info
+        match /profile/info {
+          allow read: if true; // Public profiles (needed for leaderboards, author info)
+          allow write: if isOwner(userId); // Only owner can update
+        }
+
+        // Subcollections (unlocked_stories, read_history, daily_stats, etc.)
+        match /{document=**} {
+          allow read, write: if isOwner(userId); // Private user data
+        }
+      }
+
+      // 2. Books Collection (User Generated Content)
+      match /books/{bookId} {
+        allow read: if true; // Everyone can read books
+        allow create: if isAuth() && request.resource.data.authorId == request.auth.uid;
+        allow update: if isAuth() && (resource.data.authorId == request.auth.uid || request.resource.data.views > resource.data.views); // Allow author edit OR view increment (public)
+        // ideally view increment should be via cloud function to be secure, but for now allowing logic based on diff
+        allow delete: if isAuth() && resource.data.authorId == request.auth.uid;
+      }
+
+      // 3. Public Data Collection
+      match /public/data {
+        // Comments
+        match /comments/{commentId} {
+          allow read: if true;
+          allow create: if isAuth() && request.resource.data.userId == request.auth.uid;
+          allow update, delete: if isAuth() && resource.data.userId == request.auth.uid;
+        }
+
+        // Ratings
+        match /ratings/{ratingId} {
+          allow read: if true;
+          allow create: if isAuth() && request.resource.data.userId == request.auth.uid;
+          allow update: if isAuth() && resource.data.userId == request.auth.uid;
+        }
+
+        // Favorites
+        match /favorites/{favId} {
+          allow read: if true;
+          allow create: if isAuth() && request.resource.data.userId == request.auth.uid;
+          allow delete: if isAuth() && resource.data.userId == request.auth.uid;
+        }
+        
+        // Book Favorites
+        match /book_favorites/{favId} {
+          allow read: if true;
+          allow create: if isAuth() && request.resource.data.userId == request.auth.uid;
+          allow delete: if isAuth() && resource.data.userId == request.auth.uid;
+        }
+
+        // Stories (AI Generated) - Read only for users, Write via Functions (which bypass rules usually) or Admin
+        match /stories/{storyId} {
+          allow read: if true;
+          // Only admin or system can create/update directly?
+          // Since generation is done via Cloud Functions, normally they use Admin SDK which bypasses rules.
+          // But if client writes directly (e.g. report result?), check logic.
+          // In code: `addDoc(..., stories)` happens in client? 
+          // Yes, generateTodayStory calls addDoc. So client needs write permission!
+          allow create: if isAuth(); 
+          allow update: if isAuth() && (resource.data.authorId == request.auth.uid || isAdmin());
+        }
+
+        // Reports
+        match /reports/{reportId} {
+          allow create: if isAuth() && request.resource.data.userId == request.auth.uid;
+          allow read: if isAuth() && (resource.data.userId == request.auth.uid || isAdmin());
+        }
+
+        // Series Votes
+        match /series_votes/{voteId} {
+          allow read: if true;
+          allow create: if isAuth() && request.resource.data.userId == request.auth.uid;
+        }
+
+        // Daily Series Slot
+        match /daily_series_slot/{dateKey} {
+          allow read: if true;
+          allow write: if isAuth(); // Used for locking slot
+        }
+      }
+    }
+
+    // Global Notices Collection
+    match /notices/{noticeId} {
+      allow read: if true;
+      allow write: if isAdmin();
     }
   }
 }

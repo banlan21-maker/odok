@@ -1,23 +1,23 @@
-import { 
+import {
   BookOpen, Coffee, Lightbulb, Heart, Zap, Smile, Library, PenTool, User, RefreshCw, Brain, MessageCircle, List, Book
 } from 'lucide-react';
 
 // MoonIcon 컴포넌트 (데이터 파일에서 쓰기 위해 이동)
 export const MoonIcon = (props) => (
-    <svg
-        {...props}
-        xmlns="http://www.w3.org/2000/svg"
-        width="24"
-        height="24"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-    >
-        <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z" />
-    </svg>
+  <svg
+    {...props}
+    xmlns="http://www.w3.org/2000/svg"
+    width="24"
+    height="24"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z" />
+  </svg>
 );
 
 // 번역 데이터 (T)
@@ -209,7 +209,7 @@ export const T = {
     empty_library_title: "Empty",
     empty_library_desc: "Tap star to save.",
     empty_read_title: "No finished books",
-    empty_read_desc: "No finished books yet.", 
+    empty_read_desc: "No finished books yet.",
     select_language: "Language",
     font_size: "Font Size",
     fs_small: "Small",
@@ -309,194 +309,66 @@ export const T = {
     google_login_desc: "Save your data permanently.",
     logout: "Log out",
     auth_domain_error: "Google login restricted in preview. (Works in local/deploy)"
-  },
-  ja: {
-    app_name: "オドク\nオドク",
-    my_library: "保存",
-    welcome: "ようこそ、",
-    home_title: "今日の最初の読者に\nなってみませんか？",
-    fiction: "小説",
-    essay: "随筆",
-    improvement: "自己啓発",
-    humanities: "人文教養",
-    subgenre_anthology: "短編集",
-    subgenre_anthology_desc: "毎日新しい物語",
-    subgenre_series: "連載小説",
-    subgenre_series_desc: "続くストーリー",
-    view_series: "見る",
-    generating: "執筆中...",
-    open_library: "作成",
-    point_info_prefix: "作成で",
-    point_info_suffix: "獲得",
-    author: "発行",
-    me: "自分",
-    favorites_count: "人",
-    rating_title: "評価する",
-    rating_info: "評価+コメで+1P",
-    rating_1: "残念",
-    rating_2: "良い",
-    rating_3: "最高",
-    comments_title: "コメント",
-    comment_placeholder: "評価後に作成... (+1P)",
-    comment_placeholder_edit: "修正中...",
-    login_required: "要ログイン",
-    submit: "登録",
-    update: "完了",
-    reply: "返信",
-    edit: "修正",
-    replying_to: "へ返信",
-    cancel: "取消",
-    profile_title: "設定",
-    nickname_placeholder: "名前 (最大6文字)",
-    nickname_desc: "6文字以内",
-    save_profile: "保存",
-    empty_library_title: "空っぽです",
-    empty_library_desc: "星を押して保存",
-    empty_read_title: "完読した本がありません",
-    empty_read_desc: "まだ完読した本がありません。",
-    select_language: "言語",
-    font_size: "文字サイズ",
-    fs_small: "小",
-    fs_medium: "中",
-    fs_large: "大",
-    fs_xlarge: "特大",
-    just_now: "今",
-    minute_read: "分",
-    chars: "字",
-    today_first: "今日の執筆",
-    library_prefix: "",
-    library_suffix: " 書斎",
-    translating: "翻訳中...",
-    translate_error: "失敗",
-    daily_limit_reached: "限度超過",
-    daily_limit_desc: "また明日。",
-    need_points: "2P不足",
-    free_gen_btn: "無料 (+1P)",
-    point_gen_btn: "2P使用",
-    point_cost_info: "追加2P消費",
-    rating_required: "評価してください",
-    report_btn: "申告",
-    report_modal_title: "エラー報告",
-    report_desc: "誤字脱字のみ。\n内容変更は不可。",
-    report_placeholder: "例：誤字あり...",
-    report_submit: "提出",
-    reporting: "審査中...",
-    report_accepted: "修正完了! +2P",
-    report_rejected: "却下",
-    already_reported: "申告済み",
-    tab_home: "ホーム",
-    tab_library: "書斎",
-    tab_bookmarks: "保存",
-    tab_profile: "MY",
-    gen_fail: "生成失敗。後ほど再試行してください。",
-    share_msg: "[オドクオドク]アプリでのみ閲覧可能です。",
-    share_fail: "共有できません。",
-    vote_title: "次回を決定",
-    vote_continue: "連載継続",
-    vote_end: "完結させる",
-    vote_desc: "投票で次の展開が決まります。",
-    voted: "投票済み",
-    series_part: "部",
-    series_final: "完結",
-    series_limit_reached: "参加完了",
-    series_limit_desc: "連載小説への参加は1日1回までです。",
-    notice_title: "お知らせ",
-    notice_empty: "お知らせはありません.",
-    recommend_title: "何を読もうかな？",
-    recommend_desc: "気分や天気に合う文章を探します。",
-    mood_q: "今の気分は？",
-    mood_healing: "疲れ気味 💧",
-    mood_bored: "退屈 🥱",
-    mood_growth: "成長したい 🔥",
-    mood_thinking: "考えたい 🌙",
-    season_recommend: "AI 自動推薦 (季節)",
-    recommend_result: "あなたへのおすすめ",
-    go_to_read: "読みに行く",
-    rec_reason_healing: "疲れたあなたへ、温かい慰めを。",
-    rec_reason_bored: "退屈を吹き飛ばす面白い物語。",
-    rec_reason_growth: "より良い明日へのインスピレーション。",
-    rec_reason_thinking: "深い思索の時間を持ってみましょう。",
-    rec_reason_season: "今の季節にぴったりの文章です。",
-    level: "Lv.",
-    exp: "経験値",
-    tab_fav: "お気に入り",
-    tab_read: "履歴",
-    weekly_stat: "週間読書量",
-    stat_unit: "分",
-    read_list_title: "完読した本",
-    help_title: "使い方ガイド",
-    help_btn: "使い方",
-    help_basics: "基本",
-    help_basics_desc: "1. ジャンルを選択。\n2. 毎日AIが新しい本を生成。\n3. 自分で本を作ることも可能。",
-    help_points: "ポイント＆レベル",
-    help_points_desc: "- 作成: +50 XP\n- 読書: +5 XP/分\n- コメント: +10 XP\n- 出席: +1 P",
-    help_series: "連載",
-    help_series_desc: "連載の行方は投票で決まります。",
-    stories_count: "冊",
-    google_login: "Googleでログイン",
-    google_login_desc: "データを永久に保存します。",
-    logout: "ログアウト",
-    auth_domain_error: "プレビュー環境ではGoogleログインが制限されています。（ローカル/配布環境では正常動作します）"
   }
 };
 
 // 장르 데이터 (genres)
 export const genres = [
-    { 
-      id: 'fiction', 
-      nameKey: 'fiction', 
-      icon: <BookOpen className="w-5 h-5" />, 
-      color: 'bg-blue-100 text-blue-600', 
-      prompt: '일상적이고 따뜻한 단편 소설을 써줘.',
-      hasSubGenre: true,
-      subGenres: [
-        { id: 'daily', name: '일상', icon: <Coffee className="w-5 h-5" />, prompt: '소소하고 따뜻한 일상 속의 이야기를 담백하게 써주세요.' },
-        { id: 'emotion', name: '감정', icon: <Heart className="w-5 h-5" />, prompt: '인물의 섬세한 감정선을 따라가는 깊이 있는 이야기를 써주세요.' },
-        { id: 'twist', name: '반전', icon: <Zap className="w-5 h-5" />, prompt: '평범하게 시작하지만 마지막에 놀라운 반전이 있는 이야기를 써주세요.' },
-        { id: 'healing', name: '힐링', icon: <Smile className="w-5 h-5" />, prompt: '지친 마음을 위로해주는 따뜻하고 몽글몽글한 이야기를 써주세요.' },
-        { id: 'series', name: '시리즈', icon: <Library className="w-5 h-5" />, prompt: '다음 화가 궁금해지는 몰입감 높은 연재 소설을 써주세요. (주제 랜덤)' }
-      ]
-    },
-    { 
-      id: 'essay', 
-      nameKey: 'essay', 
-      icon: <Coffee className="w-5 h-5" />, 
-      color: 'bg-orange-100 text-orange-600', 
-      prompt: '친구에게 말하듯 편안한 에세이를 써줘.',
-      hasSubGenre: true,
-      subGenres: [
-        { id: 'empathy', name: '공감위로', icon: <Heart className="w-5 h-5" />, prompt: '힘든 하루를 보낸 이에게 건네는 따뜻한 위로의 글을 써주세요.' },
-        { id: 'attitude', name: '삶의태도', icon: <PenTool className="w-5 h-5" />, prompt: '삶을 대하는 긍정적이고 성찰적인 태도에 대해 써주세요.' },
-        { id: 'relation', name: '관계', icon: <User className="w-5 h-5" />, prompt: '가족, 친구, 연인 등 사람 사이의 관계에 대한 깊은 통찰을 담아주세요.' },
-        { id: 'alone', name: '혼자만의 시간', icon: <MoonIcon className="w-5 h-5" />, prompt: '고독을 즐기는 법과 혼자 있는 시간의 소중함에 대해 써주세요.' }
-      ]
-    },
-    { 
-      id: 'improvement', 
-      nameKey: 'improvement', 
-      icon: <Lightbulb className="w-5 h-5" />, 
-      color: 'bg-green-100 text-green-600', 
-      prompt: '현실적인 자기계발 조언을 해줘.',
-      hasSubGenre: true,
-      subGenres: [
-        { id: 'habit', name: '습관·루틴', icon: <RefreshCw className="w-5 h-5" />, prompt: '성공적인 삶을 위한 작은 습관과 루틴 형성법에 대해 조언해주세요.' },
-        { id: 'mindset', name: '마인드셋', icon: <Brain className="w-5 h-5" />, prompt: '단단한 멘탈과 긍정적인 사고방식을 갖기 위한 마인드셋을 이야기해주세요.' },
-        { id: 'communication', name: '인간관계·소통', icon: <MessageCircle className="w-5 h-5" />, prompt: '타인과 원활하게 소통하고 좋은 관계를 맺는 대화법과 처세술을 알려주세요.' },
-        { id: 'life', name: '인생정리', icon: <List className="w-5 h-5" />, prompt: '복잡한 인생을 단순하게 정리하고 중요한 것에 집중하는 법을 알려주세요.' }
-      ]
-    },
-    { 
-      id: 'humanities', 
-      nameKey: 'humanities', 
-      icon: <Brain className="w-5 h-5" />, 
-      color: 'bg-purple-100 text-purple-600', 
-      prompt: '쉬운 인문학 이야기를 해줘.',
-      hasSubGenre: true,
-      subGenres: [
-        { id: 'psychology', name: '생활형심리', icon: <Heart className="w-5 h-5" />, prompt: '일상 생활에서 겪는 문제들을 심리학적 관점에서 쉽고 재미있게 풀어주세요.' },
-        { id: 'philosophy', name: '이야기철학', icon: <Book className="w-5 h-5" />, prompt: '어려운 철학 개념을 재미있는 옛날 이야기나 예시를 들어 쉽게 설명해주세요.' },
-        { id: 'human', name: '인간이해', icon: <User className="w-5 h-5" />, prompt: '인간의 본성과 행동 원리에 대한 인문학적 통찰을 쉽게 전달해주세요.' },
-        { id: 'thinking', name: '생각훈련', icon: <Lightbulb className="w-5 h-5" />, prompt: '논리적으로 생각하고 비판적으로 사고하는 힘을 기르는 방법을 알려주세요.' }
-      ]
-    }
+  {
+    id: 'fiction',
+    nameKey: 'fiction',
+    icon: <BookOpen className="w-5 h-5" />,
+    color: 'bg-blue-100 text-blue-600',
+    prompt: '일상적이고 따뜻한 단편 소설을 써줘.',
+    hasSubGenre: true,
+    subGenres: [
+      { id: 'daily', name: '일상', icon: <Coffee className="w-5 h-5" />, prompt: '소소하고 따뜻한 일상 속의 이야기를 담백하게 써주세요.' },
+      { id: 'emotion', name: '감정', icon: <Heart className="w-5 h-5" />, prompt: '인물의 섬세한 감정선을 따라가는 깊이 있는 이야기를 써주세요.' },
+      { id: 'twist', name: '반전', icon: <Zap className="w-5 h-5" />, prompt: '평범하게 시작하지만 마지막에 놀라운 반전이 있는 이야기를 써주세요.' },
+      { id: 'healing', name: '힐링', icon: <Smile className="w-5 h-5" />, prompt: '지친 마음을 위로해주는 따뜻하고 몽글몽글한 이야기를 써주세요.' },
+      { id: 'series', name: '시리즈', icon: <Library className="w-5 h-5" />, prompt: '다음 화가 궁금해지는 몰입감 높은 연재 소설을 써주세요. (주제 랜덤)' }
+    ]
+  },
+  {
+    id: 'essay',
+    nameKey: 'essay',
+    icon: <Coffee className="w-5 h-5" />,
+    color: 'bg-orange-100 text-orange-600',
+    prompt: '친구에게 말하듯 편안한 에세이를 써줘.',
+    hasSubGenre: true,
+    subGenres: [
+      { id: 'empathy', name: '공감위로', icon: <Heart className="w-5 h-5" />, prompt: '힘든 하루를 보낸 이에게 건네는 따뜻한 위로의 글을 써주세요.' },
+      { id: 'attitude', name: '삶의태도', icon: <PenTool className="w-5 h-5" />, prompt: '삶을 대하는 긍정적이고 성찰적인 태도에 대해 써주세요.' },
+      { id: 'relation', name: '관계', icon: <User className="w-5 h-5" />, prompt: '가족, 친구, 연인 등 사람 사이의 관계에 대한 깊은 통찰을 담아주세요.' },
+      { id: 'alone', name: '혼자만의 시간', icon: <MoonIcon className="w-5 h-5" />, prompt: '고독을 즐기는 법과 혼자 있는 시간의 소중함에 대해 써주세요.' }
+    ]
+  },
+  {
+    id: 'improvement',
+    nameKey: 'improvement',
+    icon: <Lightbulb className="w-5 h-5" />,
+    color: 'bg-green-100 text-green-600',
+    prompt: '현실적인 자기계발 조언을 해줘.',
+    hasSubGenre: true,
+    subGenres: [
+      { id: 'habit', name: '습관·루틴', icon: <RefreshCw className="w-5 h-5" />, prompt: '성공적인 삶을 위한 작은 습관과 루틴 형성법에 대해 조언해주세요.' },
+      { id: 'mindset', name: '마인드셋', icon: <Brain className="w-5 h-5" />, prompt: '단단한 멘탈과 긍정적인 사고방식을 갖기 위한 마인드셋을 이야기해주세요.' },
+      { id: 'communication', name: '인간관계·소통', icon: <MessageCircle className="w-5 h-5" />, prompt: '타인과 원활하게 소통하고 좋은 관계를 맺는 대화법과 처세술을 알려주세요.' },
+      { id: 'life', name: '인생정리', icon: <List className="w-5 h-5" />, prompt: '복잡한 인생을 단순하게 정리하고 중요한 것에 집중하는 법을 알려주세요.' }
+    ]
+  },
+  {
+    id: 'humanities',
+    nameKey: 'humanities',
+    icon: <Brain className="w-5 h-5" />,
+    color: 'bg-purple-100 text-purple-600',
+    prompt: '쉬운 인문학 이야기를 해줘.',
+    hasSubGenre: true,
+    subGenres: [
+      { id: 'psychology', name: '생활형심리', icon: <Heart className="w-5 h-5" />, prompt: '일상 생활에서 겪는 문제들을 심리학적 관점에서 쉽고 재미있게 풀어주세요.' },
+      { id: 'philosophy', name: '이야기철학', icon: <Book className="w-5 h-5" />, prompt: '어려운 철학 개념을 재미있는 옛날 이야기나 예시를 들어 쉽게 설명해주세요.' },
+      { id: 'human', name: '인간이해', icon: <User className="w-5 h-5" />, prompt: '인간의 본성과 행동 원리에 대한 인문학적 통찰을 쉽게 전달해주세요.' },
+      { id: 'thinking', name: '생각훈련', icon: <Lightbulb className="w-5 h-5" />, prompt: '논리적으로 생각하고 비판적으로 사고하는 힘을 기르는 방법을 알려주세요.' }
+    ]
+  }
 ];

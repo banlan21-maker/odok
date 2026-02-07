@@ -44,10 +44,12 @@ export const showRewardVideoAd = async (onReward, onError) => {
     try {
         const adId = Capacitor.getPlatform() === 'ios' ? TEST_AD_UNIT_ID_IOS : TEST_AD_UNIT_ID_ANDROID;
 
+        // 기존 리스너 제거 (메모리 누수 방지)
+        await AdMob.removeAllListeners();
+
         // 광고 로드 리스너
         AdMob.addListener(RewardAdPluginEvents.Loaded, (info) => {
             console.log('🎬 광고 로드 완료:', info);
-            // 로드되자마자 보여주기
             AdMob.showRewardVideoAd();
         });
 
@@ -62,7 +64,6 @@ export const showRewardVideoAd = async (onReward, onError) => {
             console.error('❌ 광고 로드 실패:', error);
             if (onError) onError('광고를 불러오는데 실패했습니다.');
         });
-
 
         // 광고 요청
         await AdMob.prepareRewardVideoAd({
