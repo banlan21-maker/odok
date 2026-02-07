@@ -1,8 +1,8 @@
 // src/components/HomeView.jsx
 // Step 3: 홈 탭 구현
 import React, { useState, useEffect } from 'react';
-import { 
-  BookOpen, Crown, Trophy, Star, Megaphone, User, 
+import {
+  BookOpen, Crown, Trophy, Star, Megaphone, User,
   ArrowRight, Medal, Book, Bell, Sparkles, ChevronLeft, ChevronRight, Calendar,
   Eye, Heart, Bookmark, CheckCircle
 } from 'lucide-react';
@@ -29,11 +29,11 @@ const SkeletonListItem = () => (
   </div>
 );
 
-const HomeView = ({ 
-  userProfile, 
-  t, 
-  levelInfo, 
-  notices, 
+const HomeView = ({
+  userProfile,
+  t,
+  levelInfo,
+  notices,
   setView,
   todayBooks,
   weeklyBestBooks,
@@ -47,8 +47,8 @@ const HomeView = ({
     { id: '2', title: '이번 주 집필왕은 누구일까요?', subtitle: '🏆 집필왕 랭킹에 도전하세요!' }
   ];
   const [currentBannerIndex, setCurrentBannerIndex] = useState(0);
-  const banners = notices.length > 0 
-    ? notices.map(n => ({ id: n.id, title: n.title, subtitle: n.content }))
+  const banners = notices.length > 0
+    ? notices.slice(0, 5).map(n => ({ id: n.id, title: n.title, subtitle: n.content }))
     : mockBanners;
 
   // 배너 자동 슬라이드
@@ -68,7 +68,7 @@ const HomeView = ({
 
   return (
     <div className="space-y-8 animate-in slide-in-from-bottom-2 fade-in pb-20">
-      
+
       {/* 1. 상단 헤더 & 환영 메시지 */}
       <div className="space-y-3">
         <div className="flex items-center justify-between">
@@ -103,7 +103,7 @@ const HomeView = ({
       <div className="space-y-2 relative">
         {banners.length > 0 && (
           <>
-            <div 
+            <div
               onClick={handleBannerClick}
               className="w-full bg-gradient-to-r from-orange-500 to-orange-600 text-white p-5 rounded-2xl shadow-lg flex items-center cursor-pointer hover:from-orange-600 hover:to-orange-700 transition-all active:scale-[0.98] relative overflow-hidden"
             >
@@ -155,9 +155,8 @@ const HomeView = ({
                   <button
                     key={index}
                     onClick={() => setCurrentBannerIndex(index)}
-                    className={`h-1.5 rounded-full transition-all ${
-                      index === currentBannerIndex ? 'w-6 bg-orange-500' : 'w-1.5 bg-slate-300'
-                    }`}
+                    className={`h-1.5 rounded-full transition-all ${index === currentBannerIndex ? 'w-6 bg-orange-500' : 'w-1.5 bg-slate-300'
+                      }`}
                   />
                 ))}
               </div>
@@ -194,7 +193,7 @@ const HomeView = ({
             {todayBooks.slice(0, 5).map((book) => {
               const dateString = formatDate(book.createdAt);
               const coverImage = getCoverImageFromBook(book);
-              
+
               return (
                 <button
                   key={book.id}
@@ -202,8 +201,8 @@ const HomeView = ({
                   className="w-full bg-white p-4 rounded-xl border border-slate-100 shadow-sm flex items-center gap-4 hover:bg-orange-50 transition-colors active:scale-[0.98] text-left"
                 >
                   <div className="relative w-16 h-20 rounded-md overflow-hidden shrink-0 bg-slate-100">
-                    <img 
-                      src={coverImage} 
+                    <img
+                      src={coverImage}
                       alt={book.title}
                       className="w-full h-full object-cover"
                       onError={(e) => {
@@ -217,11 +216,10 @@ const HomeView = ({
                     </div>
                     {(book.isSeries || book.category === 'series') && book.episodes && (
                       <div
-                        className={`absolute top-1 right-1 w-8 h-8 rounded-full flex items-center justify-center text-[9px] font-black shadow-md ${
-                          book.status === 'ongoing'
+                        className={`absolute top-1 right-1 w-8 h-8 rounded-full flex items-center justify-center text-[9px] font-black shadow-md ${book.status === 'ongoing'
                             ? 'bg-amber-400 text-amber-900'
                             : 'bg-red-500 text-white'
-                        }`}
+                          }`}
                       >
                         {book.status === 'ongoing' ? '연재중' : '완결'}
                       </div>
@@ -235,12 +233,12 @@ const HomeView = ({
                       <span className="font-bold">{book.authorName || '익명'}</span>
                       <span className="bg-slate-100 px-2 py-0.5 rounded-full font-bold text-slate-600">
                         {book.category === 'webnovel' ? '웹소설' :
-                         book.category === 'novel' ? '소설' :
-                         book.category === 'series' ? '시리즈' :
-                         book.category === 'essay' ? '에세이' :
-                         book.category === 'self-improvement' ? '자기계발' :
-                         book.category === 'self-help' ? '자기계발' :
-                         book.category === 'humanities' ? '인문.철학' : book.category}
+                          book.category === 'novel' ? '소설' :
+                            book.category === 'series' ? '시리즈' :
+                              book.category === 'essay' ? '에세이' :
+                                book.category === 'self-improvement' ? '자기계발' :
+                                  book.category === 'self-help' ? '자기계발' :
+                                    book.category === 'humanities' ? '인문.철학' : book.category}
                       </span>
                       <span className="flex items-center gap-1 text-slate-400">
                         <Calendar className="w-3 h-3" />
@@ -284,32 +282,32 @@ const HomeView = ({
             {weeklyBestBooks.map((book, index) => {
               const rank = index + 1;
               // 1, 2, 3위 메달 강조 (금/은/동)
-              const medalConfig = 
-                rank === 1 ? { 
-                  bg: 'bg-gradient-to-br from-yellow-400 to-yellow-500', 
-                  text: 'text-white', 
+              const medalConfig =
+                rank === 1 ? {
+                  bg: 'bg-gradient-to-br from-yellow-400 to-yellow-500',
+                  text: 'text-white',
                   icon: <Medal className="w-7 h-7 fill-yellow-700 stroke-yellow-800" />,
                   rankDisplay: '🥇'
                 }
-                : rank === 2 ? { 
-                  bg: 'bg-gradient-to-br from-slate-300 to-slate-400', 
-                  text: 'text-white', 
-                  icon: <Medal className="w-7 h-7 fill-slate-500 stroke-slate-600" />,
-                  rankDisplay: '🥈'
-                }
-                : rank === 3 ? { 
-                  bg: 'bg-gradient-to-br from-orange-300 to-orange-400', 
-                  text: 'text-white', 
-                  icon: <Medal className="w-7 h-7 fill-orange-500 stroke-orange-600" />,
-                  rankDisplay: '🥉'
-                }
-                : { 
-                  bg: 'bg-slate-100', 
-                  text: 'text-slate-500', 
-                  icon: null,
-                  rankDisplay: rank
-                };
-              
+                  : rank === 2 ? {
+                    bg: 'bg-gradient-to-br from-slate-300 to-slate-400',
+                    text: 'text-white',
+                    icon: <Medal className="w-7 h-7 fill-slate-500 stroke-slate-600" />,
+                    rankDisplay: '🥈'
+                  }
+                    : rank === 3 ? {
+                      bg: 'bg-gradient-to-br from-orange-300 to-orange-400',
+                      text: 'text-white',
+                      icon: <Medal className="w-7 h-7 fill-orange-500 stroke-orange-600" />,
+                      rankDisplay: '🥉'
+                    }
+                      : {
+                        bg: 'bg-slate-100',
+                        text: 'text-slate-500',
+                        icon: null,
+                        rankDisplay: rank
+                      };
+
               return (
                 <button
                   key={book.id}
@@ -388,7 +386,7 @@ const HomeView = ({
           <div className="flex gap-4 overflow-x-auto scrollbar-hide pb-2 -mx-5 px-5 snap-x snap-mandatory scroll-smooth">
             {topWriters.map((writer, index) => {
               const isTopThree = index < 3;
-              
+
               return (
                 <div key={writer.id} className="w-20 shrink-0 text-center snap-start">
                   <div className={`relative w-20 h-20 rounded-full mx-auto mb-2 flex items-center justify-center overflow-hidden ${isTopThree ? 'bg-gradient-to-br from-orange-400 to-orange-600' : 'bg-slate-100'}`}>

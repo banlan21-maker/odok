@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   BookOpen, Coffee, Lightbulb, ChevronLeft,
   RefreshCw, Book, Calendar, List, ArrowRight, User, PenTool, Save,
@@ -37,6 +37,11 @@ const appId = rawAppId.replace(/\//g, '_');
 const App = () => {
   // Shared State
   const [view, setView] = useState('profile_setup');
+  const viewRef = useRef(view);
+
+  useEffect(() => {
+    viewRef.current = view;
+  }, [view]);
   const [error, setError] = useState(null);
   const [selectedBook, setSelectedBook] = useState(null);
   const [currentBook, setCurrentBook] = useState(null);
@@ -60,7 +65,7 @@ const App = () => {
     handleDevReset, handleDeleteAccount,
     earnPoints,
     levelInfo, remainingDailyWrites
-  } = useUserProfile({ user, setView, setError, viewRef: { current: view } });
+  } = useUserProfile({ user, setView, setError, viewRef });
 
   // 3. Ink System Hook
   const {
@@ -103,7 +108,13 @@ const App = () => {
   const {
     notices,
     selectedNotice, setSelectedNotice,
-    openNoticeEditor
+    isNoticeEditorOpen, setIsNoticeEditorOpen,
+    noticeTitle, setNoticeTitle,
+    noticeContent, setNoticeContent,
+    isSavingNotice,
+    openNoticeEditor,
+    saveNotice,
+    deleteNotice
   } = useNotices({ user, isNoticeAdmin });
 
   // 6. Story Reader Hook
@@ -232,6 +243,42 @@ const App = () => {
               <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl space-y-4">
                 <div className="flex items-center justify-between"><div className="text-lg font-black text-slate-800">공지사항</div><button onClick={() => setSelectedNotice(null)} className="p-1.5 rounded-full bg-slate-100 text-slate-500"><X className="w-4 h-4" /></button></div>
                 <div className="space-y-2"><div className="text-lg font-black text-slate-800">{selectedNotice.title}</div><div className="text-sm text-slate-600 whitespace-pre-line">{selectedNotice.content}</div></div>
+                {isNoticeAdmin && (
+                  <div className="flex gap-2 pt-2 border-t border-slate-100 mt-2">
+                    <button onClick={() => { openNoticeEditor(selectedNotice); setSelectedNotice(null); }} className="flex-1 py-2 bg-slate-100 text-slate-700 rounded-xl font-bold text-xs">수정</button>
+                    <button onClick={() => deleteNotice(selectedNotice.id)} className="flex-1 py-2 bg-red-50 text-red-600 rounded-xl font-bold text-xs">삭제</button>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {isNoticeEditorOpen && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-6">
+              <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl space-y-4">
+                <div className="flex items-center justify-between"><div className="text-lg font-black text-slate-800">공지사항 작성</div><button onClick={() => setIsNoticeEditorOpen(false)} className="p-1.5 rounded-full bg-slate-100 text-slate-500"><X className="w-4 h-4" /></button></div>
+                <div className="space-y-3">
+                  <input
+                    type="text"
+                    value={noticeTitle}
+                    onChange={(e) => setNoticeTitle(e.target.value)}
+                    placeholder="제목"
+                    className="w-full p-3 border border-slate-200 rounded-xl font-bold outline-none focus:border-orange-500"
+                  />
+                  <textarea
+                    value={noticeContent}
+                    onChange={(e) => setNoticeContent(e.target.value)}
+                    placeholder="내용을 입력하세요..."
+                    className="w-full p-3 border border-slate-200 rounded-xl text-sm h-40 resize-none outline-none focus:border-orange-500"
+                  />
+                  <button
+                    onClick={saveNotice}
+                    disabled={isSavingNotice}
+                    className="w-full py-3 bg-orange-500 text-white rounded-xl font-black hover:bg-orange-600 disabled:opacity-50"
+                  >
+                    {isSavingNotice ? '저장 중...' : '작성 완료'}
+                  </button>
+                </div>
               </div>
             </div>
           )}
@@ -300,7 +347,12 @@ const App = () => {
                       <div className="font-bold text-slate-800">{notice.title}</div>
                     </button>
                   ))}
-                  {isNoticeAdmin && <button onClick={openNoticeEditor} className="fixed bottom-24 right-5 w-14 h-14 rounded-full bg-orange-500 text-white shadow-lg flex items-center justify-center font-black">글쓰기</button>}
+                  {isNoticeAdmin && (
+                    <div className="fixed bottom-24 right-5 flex flex-col gap-2">
+                      <button onClick={handleDevReset} className="w-14 h-14 rounded-full bg-slate-800 text-white shadow-lg flex items-center justify-center font-black text-xs">초기화</button>
+                      <button onClick={openNoticeEditor} className="w-14 h-14 rounded-full bg-orange-500 text-white shadow-lg flex items-center justify-center font-black">글쓰기</button>
+                    </div>
+                  )}
                 </div>
               )}
 

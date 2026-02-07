@@ -281,42 +281,39 @@ export const useUserProfile = ({ user, setView, setError, viewRef }) => {
   };
 
   // 개발용 리셋
+  // 개발용 리셋 (집필 횟수 및 슬롯 초기화)
   const handleDevReset = async () => {
     if (!user) {
       alert('로그인이 필요합니다.');
       return;
     }
 
-    const confirmMessage = '⚠️ 개발용 리셋 기능입니다.\n\n다음 작업이 수행됩니다:\n1. 오늘 시리즈 집필 슬롯 초기화\n2. 내 프로필 정보 (닉네임/잉크/레벨 등) 초기화\n3. 페이지 새로고침\n\n※ 기존에 생성된 책과 통계는 그대로 유지됩니다.\n\n계속하시겠습니까?';
+    const confirmMessage = '⚠️ 집필 리셋 기능입니다.\n\n다음 작업이 수행됩니다:\n1. 오늘 시리즈 집필 슬롯 초기화 (잠김 해제)\n2. 내 하루 집필 횟수 초기화 (다시 쓰기 가능)\n\n※ 잉크, 레벨, 닉네임 등은 그대로 유지됩니다.\n\n계속하시겠습니까?';
     if (!window.confirm(confirmMessage)) {
       return;
     }
 
     try {
-      console.log('🔄 개발용 리셋 시작...');
+      console.log('🔄 집필 리셋 시작...');
 
+      // 1. 시리즈 집필 슬롯 초기화
       const dailySeriesRef = collection(db, 'artifacts', appId, 'public', 'data', 'daily_series_slot');
       const dailySeriesSnapshot = await getDocs(dailySeriesRef);
       const dailySeriesDeletePromises = dailySeriesSnapshot.docs.map((slotDoc) => deleteDoc(slotDoc.ref));
       await Promise.all(dailySeriesDeletePromises);
       console.log(`✅ 시리즈 집필 슬롯 ${dailySeriesSnapshot.docs.length}개 초기화 완료`);
 
+      // 2. 내 집필 횟수 초기화
       const profileRef = doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'info');
       await updateDoc(profileRef, {
-        nickname: null,
-        lastNicknameChangeDate: null,
-        ink: INITIAL_INK,
-        level: 1,
-        xp: 0,
-        total_ink_spent: 0,
         dailyWriteCount: 0,
-        lastBookCreatedDate: null,
+        lastBookCreatedDate: null, // 날짜도 초기화하여 확실하게 다시 쓰기 가능하도록
         updatedAt: serverTimestamp()
       });
 
-      console.log('✅ 유저 정보 초기화 완료');
+      console.log('✅ 내 집필 횟수 초기화 완료');
 
-      alert('리셋이 완료되었습니다. 페이지를 새로고침합니다.');
+      alert('집필 리셋이 완료되었습니다. 페이지를 새로고침합니다.');
       window.location.reload();
 
     } catch (error) {
@@ -405,6 +402,7 @@ export const useUserProfile = ({ user, setView, setError, viewRef }) => {
     remainingDailyWrites: userProfile ? Math.max(0, DAILY_WRITE_LIMIT - (userProfile.lastBookCreatedDate === getTodayString() ? (userProfile.dailyWriteCount || 0) : 0)) : 2,
     dailyWriteCount: userProfile && userProfile.lastBookCreatedDate === getTodayString() ? (userProfile.dailyWriteCount || 0) : 0,
     lastBookCreatedDate: userProfile?.lastBookCreatedDate || null,
-    isNoticeAdmin: user?.email === 'admin@odok.app' // 예시: 관리자 이메일 하드코딩 또는 DB 확인
+    isNoticeAdmin: user?.email && (user.email === 'admin@odok.app' || user.email.includes('banlan21')), // 관리자 권한 부여
+    isAdmin: user?.email === 'banlan21@gmail.com',
   };
 };

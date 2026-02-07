@@ -109,7 +109,7 @@ export const useInkSystem = ({ user, userProfile, setView, setError, setSelected
 
     if (!isAdReward) {
       if ((userProfile?.ink || 0) < requiredInk) {
-        setError('잉크가 부족합니다! 💧 잉크를 충전해주세요.');
+        alert("보유 잉크가 없어요\n잉크 충전 또는 광고를 보고 잉크를 모아보세요");
         return;
       }
 

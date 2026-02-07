@@ -3,9 +3,9 @@
  * Functions v2 API 사용
  */
 
-const {onCall, HttpsError} = require("firebase-functions/v2/https");
+const { onCall, HttpsError } = require("firebase-functions/v2/https");
 const logger = require("firebase-functions/logger");
-const {GoogleGenerativeAI} = require("@google/generative-ai");
+const { GoogleGenerativeAI } = require("@google/generative-ai");
 
 // Functions 리전 설정 (서울)
 const REGION = "asia-northeast3";
@@ -196,7 +196,7 @@ function buildNonfictionToneInstruction(category, selectedTone) {
   return `당신은 ${categoryName} 작가입니다. 사용자가 선택한 키워드를 주제로 글을 쓰되, 반드시 '${tone}' 스타일을 유지하여 서술하십시오. 문장의 어미, 단어 선택, 분위기를 이 스타일에 맞춰야 합니다.`;
 }
 
-function buildSystemPrompt({isNovel, category, subCategory, genre, endingStyle, selectedTone, selectedMood}) {
+function buildSystemPrompt({ isNovel, category, subCategory, genre, endingStyle, selectedTone, selectedMood }) {
   if (isNovel) {
     const endingGuide = endingStyle
       ? `결말은 반드시 '${endingStyle}' 형태로 끝내며 그 톤을 유지하라.`
@@ -256,6 +256,7 @@ function buildStepPrompt({
       ? "Show, Don't Tell 방식으로 보여주기 위주로 서술하세요. 대화문과 묘사를 적극 활용하세요."
       : "Persuasive & Insightful 톤으로 논리적 흐름을 유지하고, 독자에게 말을 거는 듯한 어조로 작성하세요.",
     "순수 텍스트로만 작성하세요 (JSON 형식, 코드, 특수 기호 사용 금지).",
+    `[절대 금지] "${currentStep.name}", "## ${currentStep.name}", "### ${currentStep.name}", "**[${currentStep.name}]**" 등의 단계명을 본문에 포함하지 마십시오. 오직 내용만 출력하세요.`,
     "이전 내용을 반복하지 마세요.",
     "한국어로 작성하세요."
   ];
@@ -292,7 +293,7 @@ async function summarizeStepContent(content, systemPrompt, isNovel) {
 
 async function generateStaticContext(systemPrompt, topic, title, genre, isNovel, isSeries = false) {
   if (!isNovel) {
-    return {synopsis: "", characterSheet: "", settingSheet: ""};
+    return { synopsis: "", characterSheet: "", settingSheet: "" };
   }
   const seriesNote = isSeries
     ? " (이 작품은 연재 시리즈이므로, 시놉시스는 전체 서사 골격만 잡고 결말을 드러내지 마라. 1화에서 시작할 이야기의 씨앗과 갈등의 가능성만 제시하라.)"
@@ -371,13 +372,13 @@ async function callGemini(systemPrompt, userPrompt, temperature = 0.75, isNovel 
   try {
     logger.info(`[Gemini API] 모델 사용: ${modelName} (${modelIndex + 1}/${MODEL_FALLBACK_CHAIN.length})`);
     const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-    const model = genAI.getGenerativeModel({model: modelName});
+    const model = genAI.getGenerativeModel({ model: modelName });
 
     const safetySettings = isNovel ? [
-      {category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_ONLY_HIGH"},
-      {category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_ONLY_HIGH"},
-      {category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_ONLY_HIGH"},
-      {category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_ONLY_HIGH"}
+      { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_ONLY_HIGH" },
+      { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_ONLY_HIGH" },
+      { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_ONLY_HIGH" },
+      { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_ONLY_HIGH" }
     ] : undefined;
 
     const generationConfig = {
@@ -390,7 +391,7 @@ async function callGemini(systemPrompt, userPrompt, temperature = 0.75, isNovel 
     }
 
     const result = await model.generateContent({
-      contents: [{role: "user", parts: [{text: userPrompt}]}],
+      contents: [{ role: "user", parts: [{ text: userPrompt }] }],
       systemInstruction: systemPrompt,
       generationConfig: generationConfig,
       safetySettings: safetySettings
@@ -400,8 +401,8 @@ async function callGemini(systemPrompt, userPrompt, temperature = 0.75, isNovel 
     const text = response.text();
 
     logger.info(`[Gemini API] ✅ 성공! 사용 모델: ${modelName} (응답 길이: ${text.length}자)`);
-    
-    return {content: text};
+
+    return { content: text };
   } catch (error) {
     const status = getErrorStatus(error);
     logger.error(`[Gemini API] 호출 실패 (모델: ${modelName}):`, error.message);
@@ -458,7 +459,7 @@ exports.generateBookAI = onCall(
         throw new HttpsError("failed-precondition", "Gemini API 키가 설정되지 않았습니다.");
       }
 
-      const {category, subCategory, genre, keywords, isSeries, previousContext, endingStyle, title, selectedTone, selectedMood} = request.data;
+      const { category, subCategory, genre, keywords, isSeries, previousContext, endingStyle, title, selectedTone, selectedMood } = request.data;
 
       // 소설류 여부 확인
       const isNovel = category === "webnovel" || category === "novel" || category === "series";
@@ -478,23 +479,23 @@ exports.generateBookAI = onCall(
       // 단계 정의 (시리즈 1화는 훅으로 끝나게, 단편/비시리즈는 5단계)
       const steps = isNovel
         ? (isSeries
-            ? [
-                {name: "시작", instruction: "주인공과 배경을 매력적으로 묘사하세요. 독자가 이야기 세계에 빠져들 수 있도록 생생하게 그려내세요. [분량: 전체의 약 40%, 공백 포함 약 1,200자]"},
-                {name: "사건과 훅", instruction: "평온하던 일상을 깨뜨리는 '사건(Inciting Incident)'을 발생시키세요. 주인공에게 모험이나 문제가 다가오는 장면을 보여주세요. [중요] 사건을 해결하지 말고, 주인공이 모험을 떠나거나 문제에 직면하는 순간에서 멈추세요. 마지막 문장은 다음 화가 궁금해서 미치게 만드는 '절단신공(Cliffhanger)'으로 끝내세요. [분량: 전체의 약 60%, 공백 포함 약 1,800자]"}
-              ]
-            : [
-                {name: "발단", instruction: "스토리의 시작과 등장인물을 소개하세요. [분량: 전체의 약 10%, 공백 포함 약 300자]"},
-                {name: "전개", instruction: "사건을 발전시키고 갈등을 구축하세요. [분량: 전체의 약 20%, 공백 포함 약 600자]"},
-                {name: "위기", instruction: "갈등을 심화시키고 긴장감을 높이세요. 중요한 전환 구간이므로 충분히 묘사하세요. [분량: 전체의 약 25%, 공백 포함 약 750자]"},
-                {name: "절정", instruction: "갈등을 최고조로 끌어올리고 전환점을 만드세요. 가장 핵심적인 장면이므로 분량을 넉넉히 할애하세요. [분량: 전체의 약 30%, 공백 포함 약 900자]"},
-                {name: "결말", instruction: "스토리를 해결하고 마무리하세요. [분량: 전체의 약 15%, 공백 포함 약 450자]"}
-              ])
+          ? [
+            { name: "시작", instruction: "주인공과 배경을 매력적으로 묘사하세요. 독자가 이야기 세계에 빠져들 수 있도록 생생하게 그려내세요. [분량: 전체의 약 40%, 공백 포함 약 1,200자]" },
+            { name: "사건과 훅", instruction: "평온하던 일상을 깨뜨리는 '사건(Inciting Incident)'을 발생시키세요. 주인공에게 모험이나 문제가 다가오는 장면을 보여주세요. [중요] 사건을 해결하지 말고, 주인공이 모험을 떠나거나 문제에 직면하는 순간에서 멈추세요. 마지막 문장은 다음 화가 궁금해서 미치게 만드는 '절단신공(Cliffhanger)'으로 끝내세요. [분량: 전체의 약 60%, 공백 포함 약 1,800자]" }
+          ]
+          : [
+            { name: "발단", instruction: "스토리의 시작과 등장인물을 소개하세요. [분량: 전체의 약 10%, 공백 포함 약 300자]" },
+            { name: "전개", instruction: "사건을 발전시키고 갈등을 구축하세요. [분량: 전체의 약 20%, 공백 포함 약 600자]" },
+            { name: "위기", instruction: "갈등을 심화시키고 긴장감을 높이세요. 중요한 전환 구간이므로 충분히 묘사하세요. [분량: 전체의 약 25%, 공백 포함 약 750자]" },
+            { name: "절정", instruction: "갈등을 최고조로 끌어올리고 전환점을 만드세요. 가장 핵심적인 장면이므로 분량을 넉넉히 할애하세요. [분량: 전체의 약 30%, 공백 포함 약 900자]" },
+            { name: "결말", instruction: "스토리를 해결하고 마무리하세요. [분량: 전체의 약 15%, 공백 포함 약 450자]" }
+          ])
         : [
-            {name: "서론", instruction: "주제 제기, 독자의 흥미 유발, 문제 의식 공유. [분량: 전체의 약 25%, 공백 포함 약 500자]"},
-            {name: "본론 1", instruction: "주제에 대한 깊이 있는 통찰, 작가의 경험이나 예시. [분량: 전체의 약 25%, 공백 포함 약 500자]"},
-            {name: "본론 2", instruction: "구체적인 해결책, 철학적 사색, 혹은 반전된 시각 제시. 핵심 논점이므로 충분히 전개하세요. [분량: 전체의 약 30%, 공백 포함 약 600자]"},
-            {name: "결론", instruction: "핵심 메시지 요약, 독자에게 주는 제언, 여운이 남는 마무리. [분량: 전체의 약 20%, 공백 포함 약 400자]"}
-          ];
+          { name: "서론", instruction: "주제 제기, 독자의 흥미 유발, 문제 의식 공유. [분량: 전체의 약 25%, 공백 포함 약 500자]" },
+          { name: "본론 1", instruction: "주제에 대한 깊이 있는 통찰, 작가의 경험이나 예시. [분량: 전체의 약 25%, 공백 포함 약 500자]" },
+          { name: "본론 2", instruction: "구체적인 해결책, 철학적 사색, 혹은 반전된 시각 제시. 핵심 논점이므로 충분히 전개하세요. [분량: 전체의 약 30%, 공백 포함 약 600자]" },
+          { name: "결론", instruction: "핵심 메시지 요약, 독자에게 주는 제언, 여운이 남는 마무리. [분량: 전체의 약 20%, 공백 포함 약 400자]" }
+        ];
 
       let fullContent = "";
       const topic = `${keywords || ""} ${genre || ""}`.trim();
@@ -516,7 +517,7 @@ exports.generateBookAI = onCall(
       for (let i = 0; i < steps.length; i++) {
         const step = steps[i];
         const previousStorySummary = storySummary || "";
-        
+
         try {
           const stepContent = await generateStep({
             systemPrompt,
@@ -583,11 +584,11 @@ exports.generateBookAI = onCall(
         message: error?.message,
         stack: error?.stack
       });
-      
+
       if (error instanceof HttpsError) {
         throw error;
       }
-      
+
       throw new HttpsError("internal", `책 생성 중 오류가 발생했습니다: ${error.message}`);
     }
   }
@@ -643,31 +644,31 @@ exports.generateSeriesEpisode = onCall(
 
       const topic = `${keywords || ""} ${genre || ""}`.trim();
       const requestedTitle = (title || "").toString().trim();
-      
+
       const lastParagraph = extractLastSentences(lastEpisodeContent || "", 10);
       const previousStorySummary = cumulativeSummary || "";
 
       // 시리즈 집필 단계별 지침 (Narrative Arc)
       const step = isFinalize
         ? {
-            name: "완결",
-            instruction: [
-              "지금까지 쌓아온 갈등이 터지는 '절정(Climax)'을 묘사하라.",
-              "악당을 물리치거나, 목표를 달성(또는 실패)하는 결과를 보여라.",
-              "등장인물들의 후일담이나 깨달음을 보여주며 이야기를 완전히 종결(Close)지어라.",
-              "떡밥(Clues)을 모두 회수하고 독자에게 여운을 남겨라."
-            ].join(" ")
-          }
+          name: "완결",
+          instruction: [
+            "지금까지 쌓아온 갈등이 터지는 '절정(Climax)'을 묘사하라.",
+            "악당을 물리치거나, 목표를 달성(또는 실패)하는 결과를 보여라.",
+            "등장인물들의 후일담이나 깨달음을 보여주며 이야기를 완전히 종결(Close)지어라.",
+            "떡밥(Clues)을 모두 회수하고 독자에게 여운을 남겨라."
+          ].join(" ")
+        }
         : {
-            name: "다음 화",
-            instruction: [
-              "[금지] 절대 다시 '자기소개'나 '배경설명'을 하지 마라. 바로 직전 상황에서 이어가라.",
-              "주인공에게 시련, 딜레마, 새로운 적대자를 던져라.",
-              "문제를 쉽게 해결해주지 마라. 상황을 더 꼬이게 만들어라(Complication).",
-              "마지막 문장은 다음 화가 궁금해서 미치게 만드는 '절단신공(Cliffhanger)'으로 끝내라.",
-              "절대 결말을 짓지 마라."
-            ].join(" ")
-          };
+          name: "다음 화",
+          instruction: [
+            "[금지] 절대 다시 '자기소개'나 '배경설명'을 하지 마라. 바로 직전 상황에서 이어가라.",
+            "주인공에게 시련, 딜레마, 새로운 적대자를 던져라.",
+            "문제를 쉽게 해결해주지 마라. 상황을 더 꼬이게 만들어라(Complication).",
+            "마지막 문장은 다음 화가 궁금해서 미치게 만드는 '절단신공(Cliffhanger)'으로 끝내라.",
+            "절대 결말을 짓지 마라."
+          ].join(" ")
+        };
 
       const stepContent = await generateStep({
         systemPrompt,
@@ -703,11 +704,11 @@ exports.generateSeriesEpisode = onCall(
         message: error?.message,
         stack: error?.stack
       });
-      
+
       if (error instanceof HttpsError) {
         throw error;
       }
-      
+
       throw new HttpsError("internal", `시리즈 집필 중 오류가 발생했습니다: ${error.message}`);
     }
   }
