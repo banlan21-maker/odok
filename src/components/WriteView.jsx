@@ -142,6 +142,8 @@ const WriteView = ({ user, userProfile, t, onBookGenerated, slotStatus, setView,
   const [currentLoadingMessage, setCurrentLoadingMessage] = useState('');
   const [currentLoadingMessages, setCurrentLoadingMessages] = useState([]);
   const [isAdWatched, setIsAdWatched] = useState(false); // 광고 시청 완료 상태 추가
+  const [showKeywordRefreshModal, setShowKeywordRefreshModal] = useState(false);
+  const [pendingRefreshAd, setPendingRefreshAd] = useState(false); // 광고 시청 후 리프레시 대기 상태
 
   useEffect(() => {
     if (!Capacitor.isNativePlatform()) return;
@@ -216,7 +218,7 @@ const WriteView = ({ user, userProfile, t, onBookGenerated, slotStatus, setView,
 
   const getDailyKeywords = (categoryId) => {
     const bank = NONFICTION_KEYWORD_BANKS[categoryId] || [];
-    return pickKeywords(bank, 10, `${categoryId}-${getTodayKey()}`);
+    return pickKeywords(bank, 5, `${categoryId}-${getTodayKey()}`);
   };
 
   const getToneOptions = (categoryId) => {
@@ -399,6 +401,34 @@ const WriteView = ({ user, userProfile, t, onBookGenerated, slotStatus, setView,
     if (setError) setError(null);
   };
 
+  const performRefreshKeywords = async (skipInkDeduct = false) => {
+    if (!selectedCategory || selectedCategory.isNovel) return;
+
+    // 무료 리프레시(광고 시청 등)가 아닐 경우 잉크 차감
+    if (!skipInkDeduct) {
+      if (typeof deductInk !== 'function') {
+        setLocalError('잉크 차감 기능을 사용할 수 없습니다.');
+        return;
+      }
+      const success = await deductInk(1);
+      if (!success) {
+        setLocalError('잉크 차감에 실패했습니다. 다시 시도해주세요.');
+        return;
+      }
+    }
+
+    setIsRefreshingKeywords(true);
+    try {
+      const bank = NONFICTION_KEYWORD_BANKS[selectedCategory.id] || [];
+      // 10개 -> 5개로 변경
+      setNonfictionTopics(pickKeywords(bank, 5));
+      setSelectedTopic(null);
+      setBookTitle('');
+    } finally {
+      setIsRefreshingKeywords(false);
+    }
+  };
+
   const handleRefreshKeywords = async () => {
     if (!selectedCategory || selectedCategory.isNovel) return;
     if (!user) {
@@ -409,36 +439,40 @@ const WriteView = ({ user, userProfile, t, onBookGenerated, slotStatus, setView,
 
     const level = userProfile?.level || 1;
     const isFree = isKeywordRefreshFree(level);
-    if (!isFree) {
-      const currentInk = userProfile?.ink || 0;
-      if (currentInk < 1) {
-        setLocalError('잉크가 부족합니다! 💧 잉크를 충전해주세요.');
-        if (setError) setError('잉크가 부족합니다! 💧 잉크를 충전해주세요.');
-        return;
-      }
-      if (typeof deductInk !== 'function') {
-        setLocalError('잉크 차감 기능을 사용할 수 없습니다.');
-        if (setError) setError('잉크 차감 기능을 사용할 수 없습니다.');
-        return;
-      }
-    }
 
-    setIsRefreshingKeywords(true);
-    try {
-      const success = isFree ? true : await deductInk(1);
-      if (!success) {
-        setLocalError('잉크 차감에 실패했습니다. 다시 시도해주세요.');
-        if (setError) setError('잉크 차감에 실패했습니다. 다시 시도해주세요.');
-        return;
-      }
-
-      const bank = NONFICTION_KEYWORD_BANKS[selectedCategory.id] || [];
-      setNonfictionTopics(pickKeywords(bank, 10));
-      setSelectedTopic(null);
-      setBookTitle('');
-    } finally {
-      setIsRefreshingKeywords(false);
+    if (isFree) {
+      // 레벨 혜택으로 무료인 경우 바로 실행
+      await performRefreshKeywords(true);
+    } else {
+      // 유료인 경우 선택 모달 띄우기
+      setShowKeywordRefreshModal(true);
     }
+  };
+
+  const handleAdRefresh = () => {
+    showRewardVideoAd(
+      async () => {
+        // 광고 시청 성공
+        setShowKeywordRefreshModal(false);
+        await performRefreshKeywords(true); // 무료로 실행
+      },
+      (errorMsg) => {
+        setLocalError(errorMsg);
+        if (setError) setError(errorMsg);
+      }
+    );
+  };
+
+  const handleInkRefresh = async () => {
+    const currentInk = userProfile?.ink || 0;
+    if (currentInk < 1) {
+      setLocalError('잉크가 부족합니다! 💧 잉크를 충전해주세요.');
+      if (setError) setError('잉크가 부족합니다! 💧 잉크를 충전해주세요.');
+      setShowKeywordRefreshModal(false);
+      return;
+    }
+    setShowKeywordRefreshModal(false);
+    await performRefreshKeywords(false); // 잉크 차감 실행
   };
 
   const openPaidWriteConfirm = (type) => {
@@ -1261,32 +1295,77 @@ const WriteView = ({ user, userProfile, t, onBookGenerated, slotStatus, setView,
         </div>
       )}
 
+      {/* 키워드 새로고침 선택 모달 */}
+      {
+        showKeywordRefreshModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-6 animate-in fade-in duration-200">
+            <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl space-y-4">
+              <div className="text-center space-y-2">
+                <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-2">
+                  <RefreshCw className="w-8 h-8 text-blue-500 animate-spin-slow" />
+                </div>
+                <h3 className="text-lg font-black text-slate-800">{t?.keyword_refresh_title || "키워드 새로고침"}</h3>
+                <p className="text-sm text-slate-600">
+                  {t?.keyword_refresh_desc || "새로운 키워드 5개를 받아보세요."}
+                </p>
+              </div>
+              <div className="space-y-2 pt-2">
+                <button
+                  onClick={handleAdRefresh}
+                  className="w-full bg-blue-500 text-white py-3 rounded-xl font-bold hover:bg-blue-600 transition-colors flex items-center justify-center gap-2"
+                >
+                  <Video className="w-5 h-5" />
+                  {t?.refresh_ad_btn || "광고 보고 무료로 받기"}
+                </button>
+                <button
+                  onClick={handleInkRefresh}
+                  className="w-full bg-slate-100 text-slate-700 py-3 rounded-xl font-bold hover:bg-slate-200 transition-colors flex items-center justify-center gap-2"
+                >
+                  <Droplets className="w-4 h-4 text-blue-500" />
+                  {t?.refresh_ink_btn || "잉크 1개 사용하기"}
+                </button>
+                <button
+                  onClick={() => setShowKeywordRefreshModal(false)}
+                  className="w-full py-2 text-xs font-bold text-slate-400 hover:text-slate-600"
+                >
+                  {t?.refresh_cancel || "취소"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )
+      }
+
       {/* 에러 메시지 */}
-      {displayError && (
-        <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-center animate-in fade-in">
-          <p className="text-red-600 text-sm font-bold">{displayError}</p>
-          <button
-            onClick={() => {
-              setLocalError(null);
-              if (setError) setError(null);
-            }}
-            className="mt-2 text-xs text-red-400 hover:text-red-600 underline"
-          >
-            닫기
-          </button>
-        </div>
-      )}
+      {
+        displayError && (
+          <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-center animate-in fade-in">
+            <p className="text-red-600 text-sm font-bold">{displayError}</p>
+            <button
+              onClick={() => {
+                setLocalError(null);
+                if (setError) setError(null);
+              }}
+              className="mt-2 text-xs text-red-400 hover:text-red-600 underline"
+            >
+              닫기
+            </button>
+          </div>
+        )
+      }
 
       {/* 안내 메시지 */}
-      {!selectedCategory && (
-        <div className="bg-orange-50 border border-orange-200 rounded-xl p-6 text-center">
-          <Book className="w-12 h-12 text-orange-400 mx-auto mb-3" />
-          <p className="text-slate-600 text-sm font-bold">
-            {t?.select_category_plz || "위에서 카테고리를 선택해주세요"}
-          </p>
-        </div>
-      )}
-    </div>
+      {
+        !selectedCategory && (
+          <div className="bg-orange-50 border border-orange-200 rounded-xl p-6 text-center">
+            <Book className="w-12 h-12 text-orange-400 mx-auto mb-3" />
+            <p className="text-slate-600 text-sm font-bold">
+              {t?.select_category_plz || "위에서 카테고리를 선택해주세요"}
+            </p>
+          </div>
+        )
+      }
+    </div >
   );
 };
 

@@ -296,6 +296,12 @@ export const T = {
     ad_write_free: "광고 보고 무료로 0.3초 집필",
     or: "또는",
     use_ink_btn: "잉크 {cost}개 쓰기",
+    // Keyword Refresh Modal
+    keyword_refresh_title: "키워드 새로고침",
+    keyword_refresh_desc: "새로운 키워드 5개를 받아보세요.",
+    refresh_ad_btn: "광고 보고 무료로 받기",
+    refresh_ink_btn: "잉크 1개 사용하기",
+    refresh_cancel: "취소",
     // Reader View
     view_count: "조회 {count}회",
     like_count_full: "좋아요 {count}회",
@@ -633,6 +639,12 @@ export const T = {
     ad_write_free: "Watch Ad to Write Free",
     or: "OR",
     use_ink_btn: "Use {cost} Ink",
+    // Keyword Refresh Modal
+    keyword_refresh_title: "Refresh Keywords",
+    keyword_refresh_desc: "Get 5 new keywords.",
+    refresh_ad_btn: "Watch Ad for Free",
+    refresh_ink_btn: "Use 1 Ink",
+    refresh_cancel: "Cancel",
     // Reader View
     view_count: "{count} Views",
     like_count_full: "{count} Likes",
