@@ -1,5 +1,3 @@
-// src/components/ProfileView.jsx
-// Part 2: 프로필 페이지 전면 리뉴얼 - Single View (100vh), 컴팩트한 레이아웃
 import React, { useState } from 'react';
 import imageCompression from 'browser-image-compression';
 import { LogOut, Trophy, Droplets, Save, Trash2, AlertTriangle, X, Camera, Video } from 'lucide-react';
@@ -7,9 +5,6 @@ import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { showRewardVideoAd } from '../utils/admobService';
 import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { db, storage } from '../firebase';
-
-// 수정 3: 앱 버전 관리
-const APP_VERSION = "v1.07";
 
 const ProfileView = ({
   user,
@@ -136,10 +131,10 @@ const ProfileView = ({
   };
 
   return (
-    <div className="flex flex-col h-full bg-slate-50 -mx-5">
+    <div className="flex flex-col bg-slate-50 -mx-5 px-5">
       {/* Part 2: Single View - 스크롤 없이 한 화면에 모든 정보 배치 (모바일에서는 스크롤 가능) */}
-      <div className="flex-1 overflow-y-auto scrollbar-hide">
-        <div className="px-5 py-4 space-y-3 pb-6">
+      <div className="">
+        <div className="space-y-3 pb-10 pt-4">
 
           {/* 1. 상단 정보: 레벨 & 경험치 바 */}
           {userProfile && (
@@ -415,13 +410,6 @@ const ProfileView = ({
           </div>
         </div>
       )}
-
-      {/* 수정 3: 앱 버전 표시 (화면 맨 아래) */}
-      <div className="text-center py-4">
-        <p className="text-xs text-gray-400">
-          ver {APP_VERSION}
-        </p>
-      </div>
     </div>
   );
 };

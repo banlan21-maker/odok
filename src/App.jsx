@@ -34,7 +34,10 @@ import BookDetail from './components/BookDetail';
 const rawAppId = typeof __app_id !== 'undefined' ? __app_id : 'odok-app-default';
 const appId = rawAppId.replace(/\//g, '_');
 
+const APP_VERSION = "1.07";
+
 const App = () => {
+
   // Shared State
   const [view, setView] = useState('profile_setup');
   const viewRef = useRef(view);
@@ -230,6 +233,7 @@ const App = () => {
               <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl">
                 <div className="flex justify-between items-center mb-4"><h3 className="font-bold">사용 설명서</h3><button onClick={() => storyReaderHook.setIsHelpModalOpen(false)}><X className="w-4 h-4" /></button></div>
                 <div className="text-sm text-slate-600 space-y-2"><p>1. 잉크를 사용하여 책을 읽거나 집필할 수 있습니다.</p><p>2. 매일 출석하면 잉크를 받습니다.</p><p>3. 하루 2회 집필 가능 (1회 무료).</p></div>
+                <div className="pt-4 mt-2 border-t border-slate-100 text-right text-xs text-slate-400">Ver {APP_VERSION}</div>
               </div>
             </div>
           )}
