@@ -363,7 +363,6 @@ export const T = {
     current_hold: "현재 보유: {ink} 잉크",
     ad_write_free: "광고 보고 무료로 0.3초 집필",
     or: "또는",
-    use_ink_btn: "잉크 {cost}개 쓰기",
   },
   en: {
     app_name: "Odok\nOdok",
@@ -473,7 +472,7 @@ export const T = {
     rec_reason_growth: "Inspiration for a better you.",
     rec_reason_thinking: "Time for deep thoughts.",
     rec_reason_season: "Perfect for this season.",
-    level: "Lv.",
+
     exp: "EXP",
     max_level: "MAX",
     reading_exp: "Reading... (+5 XP)",
@@ -705,8 +704,7 @@ export const T = {
     extra_write_confirm: "Use {cost} Ink to write more?",
     current_hold: "Current: {ink} Ink",
     ad_write_free: "Watch Ad to Write Free",
-    or: "OR",
-    use_ink_btn: "Use {cost} Ink",
+    or: "OR"
   }
 };
 
