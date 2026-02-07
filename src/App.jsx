@@ -164,8 +164,8 @@ const App = () => {
           <div className="fixed inset-0 z-[9999] bg-black/90 backdrop-blur-sm flex items-center justify-center p-6">
             <div className="bg-white rounded-3xl p-8 max-w-sm w-full shadow-2xl space-y-6">
               <div className="text-center space-y-2">
-                <h2 className="text-2xl font-black text-slate-800">외부 브라우저가 필요합니다</h2>
-                <p className="text-sm text-slate-600">구글 로그인을 위해 외부 브라우저로 접속해주세요.</p>
+                <h2 className="text-2xl font-black text-slate-800">{t.in_app_browser_title}</h2>
+                <p className="text-sm text-slate-600">{t.in_app_browser_desc}</p>
               </div>
             </div>
           </div>
@@ -241,12 +241,12 @@ const App = () => {
           {selectedNotice && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-6">
               <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl space-y-4">
-                <div className="flex items-center justify-between"><div className="text-lg font-black text-slate-800">공지사항</div><button onClick={() => setSelectedNotice(null)} className="p-1.5 rounded-full bg-slate-100 text-slate-500"><X className="w-4 h-4" /></button></div>
+                <div className="flex items-center justify-between"><div className="text-lg font-black text-slate-800">{t.notice_title}</div><button onClick={() => setSelectedNotice(null)} className="p-1.5 rounded-full bg-slate-100 text-slate-500"><X className="w-4 h-4" /></button></div>
                 <div className="space-y-2"><div className="text-lg font-black text-slate-800">{selectedNotice.title}</div><div className="text-sm text-slate-600 whitespace-pre-line">{selectedNotice.content}</div></div>
                 {isNoticeAdmin && (
                   <div className="flex gap-2 pt-2 border-t border-slate-100 mt-2">
-                    <button onClick={() => { openNoticeEditor(selectedNotice); setSelectedNotice(null); }} className="flex-1 py-2 bg-slate-100 text-slate-700 rounded-xl font-bold text-xs">수정</button>
-                    <button onClick={() => deleteNotice(selectedNotice.id)} className="flex-1 py-2 bg-red-50 text-red-600 rounded-xl font-bold text-xs">삭제</button>
+                    <button onClick={() => { openNoticeEditor(selectedNotice); setSelectedNotice(null); }} className="flex-1 py-2 bg-slate-100 text-slate-700 rounded-xl font-bold text-xs">{t.edit}</button>
+                    <button onClick={() => deleteNotice(selectedNotice.id)} className="flex-1 py-2 bg-red-50 text-red-600 rounded-xl font-bold text-xs">{t.delete || "삭제"}</button>
                   </div>
                 )}
               </div>
@@ -256,19 +256,19 @@ const App = () => {
           {isNoticeEditorOpen && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-6">
               <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl space-y-4">
-                <div className="flex items-center justify-between"><div className="text-lg font-black text-slate-800">공지사항 작성</div><button onClick={() => setIsNoticeEditorOpen(false)} className="p-1.5 rounded-full bg-slate-100 text-slate-500"><X className="w-4 h-4" /></button></div>
+                <div className="flex items-center justify-between"><div className="text-lg font-black text-slate-800">{t.notice_write_title}</div><button onClick={() => setIsNoticeEditorOpen(false)} className="p-1.5 rounded-full bg-slate-100 text-slate-500"><X className="w-4 h-4" /></button></div>
                 <div className="space-y-3">
                   <input
                     type="text"
                     value={noticeTitle}
                     onChange={(e) => setNoticeTitle(e.target.value)}
-                    placeholder="제목"
+                    placeholder={t.title_placeholder}
                     className="w-full p-3 border border-slate-200 rounded-xl font-bold outline-none focus:border-orange-500"
                   />
                   <textarea
                     value={noticeContent}
                     onChange={(e) => setNoticeContent(e.target.value)}
-                    placeholder="내용을 입력하세요..."
+                    placeholder={t.content_placeholder}
                     className="w-full p-3 border border-slate-200 rounded-xl text-sm h-40 resize-none outline-none focus:border-orange-500"
                   />
                   <button
@@ -276,7 +276,7 @@ const App = () => {
                     disabled={isSavingNotice}
                     className="w-full py-3 bg-orange-500 text-white rounded-xl font-black hover:bg-orange-600 disabled:opacity-50"
                   >
-                    {isSavingNotice ? '저장 중...' : '작성 완료'}
+                    {isSavingNotice ? t.saving : t.write_complete}
                   </button>
                 </div>
               </div>
@@ -286,8 +286,8 @@ const App = () => {
           {showInkConfirmModal && pendingBook && !pendingBookData && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-6">
               <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl space-y-4">
-                <div className="text-center space-y-2"><h3 className="text-lg font-black text-slate-800">잉크를 사용하시겠습니까?</h3><p className="text-sm text-slate-600">잉크 {getReadInkCost(levelInfo.level)}방울을 사용합니다.</p></div>
-                <div className="space-y-3"><button onClick={handleWatchAdForRead} className="w-full bg-blue-500 text-white py-3 rounded-xl font-black flex items-center justify-center gap-2"><Video className="w-5 h-5" />광고 보고 무료로 읽기</button><button onClick={() => confirmOpenBook(false)} className="w-full bg-slate-100 text-slate-700 py-3 rounded-xl font-bold">내 잉크 사용하기</button><button onClick={() => { setShowInkConfirmModal(false); setPendingBook(null); }} className="w-full text-slate-400 py-2 text-xs font-bold underline">닫기</button></div>
+                <div className="text-center space-y-2"><h3 className="text-lg font-black text-slate-800">{t.ink_confirm_title}</h3><p className="text-sm text-slate-600">{(t.ink_confirm_desc || "").replace('{amount}', getReadInkCost(levelInfo.level))}</p></div>
+                <div className="space-y-3"><button onClick={handleWatchAdForRead} className="w-full bg-blue-500 text-white py-3 rounded-xl font-black flex items-center justify-center gap-2"><Video className="w-5 h-5" />{t.watch_ad_read}</button><button onClick={() => confirmOpenBook(false)} className="w-full bg-slate-100 text-slate-700 py-3 rounded-xl font-bold">{t.use_my_ink}</button><button onClick={() => { setShowInkConfirmModal(false); setPendingBook(null); }} className="w-full text-slate-400 py-2 text-xs font-bold underline">{t.close}</button></div>
               </div>
             </div>
           )}
@@ -295,8 +295,8 @@ const App = () => {
           {showInkConfirmModal && pendingBookData && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-6">
               <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl space-y-4">
-                <div className="text-center space-y-2"><h3 className="text-xl font-black text-slate-800">추가 집필</h3><p className="text-sm text-slate-600"><span className="text-orange-500">{getExtraWriteInkCost(levelInfo.level)} 잉크</span>를 사용하여 추가로 집필하시겠습니까?</p></div>
-                <div className="flex gap-3"><button onClick={() => { setShowInkConfirmModal(false); setPendingBookData(null); }} className="flex-1 bg-slate-100 text-slate-600 py-3 rounded-xl font-bold">취소</button><button onClick={async () => { setShowInkConfirmModal(false); const bookData = pendingBookData; setPendingBookData(null); await handleBookGenerated(bookData, true); }} className="flex-1 bg-orange-500 text-white py-3 rounded-xl font-black">집필</button></div>
+                <div className="text-center space-y-2"><h3 className="text-xl font-black text-slate-800">{t.extra_write_title}</h3><p className="text-sm text-slate-600">{(t.extra_write_desc || "").replace('{amount}', getExtraWriteInkCost(levelInfo.level))}</p></div>
+                <div className="flex gap-3"><button onClick={() => { setShowInkConfirmModal(false); setPendingBookData(null); }} className="flex-1 bg-slate-100 text-slate-600 py-3 rounded-xl font-bold">{t.cancel}</button><button onClick={async () => { setShowInkConfirmModal(false); const bookData = pendingBookData; setPendingBookData(null); await handleBookGenerated(bookData, true); }} className="flex-1 bg-orange-500 text-white py-3 rounded-xl font-black">{t.write_btn}</button></div>
               </div>
             </div>
           )}
@@ -304,15 +304,15 @@ const App = () => {
           {showLevelUpModal && newLevel && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-6">
               <div className="bg-gradient-to-br from-orange-100 to-orange-200 rounded-2xl p-8 w-full max-w-sm shadow-xl space-y-4 text-center">
-                <h2 className="text-3xl font-black text-slate-800">축하합니다! 🎉</h2><p className="text-xl font-black text-orange-600">레벨 {newLevel}이 되었습니다!</p><button onClick={() => { setShowLevelUpModal(false); setNewLevel(null); }} className="w-full bg-slate-900 text-white py-3 rounded-xl font-black mt-4">확인</button>
+                <h2 className="text-3xl font-black text-slate-800">{t.level_up_title}</h2><p className="text-xl font-black text-orange-600">{(t.level_up_desc || "").replace('{level}', newLevel)}</p><button onClick={() => { setShowLevelUpModal(false); setNewLevel(null); }} className="w-full bg-slate-900 text-white py-3 rounded-xl font-black mt-4">{t.confirm}</button>
               </div>
             </div>
           )}
 
           {!user && (
             <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-8 animate-in fade-in">
-              <div className="text-center space-y-4"><h1 className="text-3xl font-black text-slate-800 mb-2">오독오독</h1><p className="text-slate-600 font-bold">나만의 책을 만들고 읽는 공간</p></div>
-              <div className="w-full max-w-sm space-y-4"><button onClick={handleGoogleLogin} className="w-full bg-white border-2 border-slate-200 text-slate-700 py-4 rounded-2xl font-black flex items-center justify-center gap-3"><Globe className="w-6 h-6 text-slate-400" />Google로 시작하기</button>{error && <div className="bg-red-50 border border-red-200 rounded-xl p-3 text-center"><p className="text-red-600 text-xs font-bold">{error}</p></div>}</div>
+              <div className="text-center space-y-4"><h1 className="text-3xl font-black text-slate-800 mb-2">오독오독</h1><p className="text-slate-600 font-bold">{t.app_slogan}</p></div>
+              <div className="w-full max-w-sm space-y-4"><button onClick={handleGoogleLogin} className="w-full bg-white border-2 border-slate-200 text-slate-700 py-4 rounded-2xl font-black flex items-center justify-center gap-3"><Globe className="w-6 h-6 text-slate-400" />{t.google_start}</button>{error && <div className="bg-red-50 border border-red-200 rounded-xl p-3 text-center"><p className="text-red-600 text-xs font-bold">{error}</p></div>}</div>
             </div>
           )}
 
@@ -341,7 +341,7 @@ const App = () => {
 
               {view === 'notice_list' && (
                 <div className="space-y-4 p-4">
-                  <div className="flex items-center justify-between"><h2 className="text-xl font-black text-slate-800">공지사항</h2><span className="text-xs text-slate-400">{notices.length}건</span></div>
+                  <div className="flex items-center justify-between"><h2 className="text-xl font-black text-slate-800">{t.notice_title}</h2><span className="text-xs text-slate-400">{(t.items_count || "").replace('{count}', notices.length)}</span></div>
                   {notices.map(notice => (
                     <button key={notice.id} onClick={() => setSelectedNotice(notice)} className="w-full text-left p-4 bg-white rounded-2xl border border-slate-100 shadow-sm mb-2">
                       <div className="font-bold text-slate-800">{notice.title}</div>
@@ -349,8 +349,8 @@ const App = () => {
                   ))}
                   {isNoticeAdmin && (
                     <div className="fixed bottom-24 right-5 flex flex-col gap-2">
-                      <button onClick={handleDevReset} className="w-14 h-14 rounded-full bg-slate-800 text-white shadow-lg flex items-center justify-center font-black text-xs">초기화</button>
-                      <button onClick={openNoticeEditor} className="w-14 h-14 rounded-full bg-orange-500 text-white shadow-lg flex items-center justify-center font-black">글쓰기</button>
+                      <button onClick={handleDevReset} className="w-14 h-14 rounded-full bg-slate-800 text-white shadow-lg flex items-center justify-center font-black text-xs">{t.reset_btn}</button>
+                      <button onClick={openNoticeEditor} className="w-14 h-14 rounded-full bg-orange-500 text-white shadow-lg flex items-center justify-center font-black">{t.notice_write_title}</button>
                     </div>
                   )}
                 </div>
@@ -399,7 +399,7 @@ const App = () => {
               {(view === 'write' || isWritingInProgress) && (
                 <div className={view === 'write' ? '' : 'hidden'}>
                   <WriteView
-                    user={user} userProfile={userProfile} onBookGenerated={handleBookGenerated}
+                    user={user} userProfile={userProfile} t={t} onBookGenerated={handleBookGenerated}
                     slotStatus={slotStatus} setView={setView} setSelectedBook={setSelectedBook}
                     error={error} setError={setError} deductInk={deductInk}
                     onGeneratingChange={setIsWritingInProgress} onGenerationComplete={() => { }}
@@ -407,14 +407,14 @@ const App = () => {
                 </div>
               )}
 
-              {view === 'library' && <LibraryView books={books} onBookClick={handleBookClick} filter={libraryFilter} onFilterChange={setLibraryFilter} />}
+              {view === 'library' && <LibraryView t={t} books={books} onBookClick={handleBookClick} filter={libraryFilter} onFilterChange={setLibraryFilter} />}
 
-              {view === 'archive' && <ArchiveView books={books} user={user} favoriteBookIds={storyReaderHook.bookFavorites.map(f => f.bookId)} onBookClick={handleBookClick} />}
+              {view === 'archive' && <ArchiveView t={t} books={books} user={user} favoriteBookIds={storyReaderHook.bookFavorites.map(f => f.bookId)} onBookClick={handleBookClick} />}
 
               {view === 'book_detail' && selectedBook && (
                 <BookDetail
                   book={selectedBook} onBookUpdate={setSelectedBook} user={user} userProfile={userProfile}
-                  appId={appId} fontSize={fontSize} slotStatus={slotStatus} deductInk={deductInk}
+                  appId={appId} fontSize={fontSize} slotStatus={slotStatus} deductInk={deductInk} t={t}
                   onClose={() => {
                     const isMyBook = selectedBook.authorId === user?.uid;
                     setSelectedBook(null);
@@ -439,13 +439,13 @@ const App = () => {
         {showWritingCompleteModal && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-6">
             <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl space-y-4 text-center">
-              <p className="text-sm font-bold text-slate-700">집필이 완료되었습니다!</p>
+              <p className="text-sm font-bold text-slate-700">{t.writing_complete_title}</p>
               <div className="flex gap-2">
                 <button onClick={() => {
                   const book = books.find(b => b.id === showWritingCompleteModal.book.id) || showWritingCompleteModal.book;
                   setSelectedBook(book); setView('book_detail'); setShowWritingCompleteModal(null);
-                }} className="flex-1 py-3 rounded-xl text-sm font-black bg-orange-500 text-white">생성소설 바로보기</button>
-                <button onClick={() => setShowWritingCompleteModal(null)} className="flex-1 py-3 rounded-xl text-sm font-black bg-slate-100 text-slate-600">머물기</button>
+                }} className="flex-1 py-3 rounded-xl text-sm font-black bg-orange-500 text-white">{t.view_book_now}</button>
+                <button onClick={() => setShowWritingCompleteModal(null)} className="flex-1 py-3 rounded-xl text-sm font-black bg-slate-100 text-slate-600">{t.stay}</button>
               </div>
             </div>
           </div>
@@ -454,19 +454,19 @@ const App = () => {
         {user && userProfile && userProfile.nickname && view !== 'reader' && view !== 'book_detail' && (
           <nav className="flex-none h-16 bg-white border-t border-slate-100 flex items-center px-1 pb-2 pt-1 z-40">
             <button onClick={() => setView('home')} className={`flex flex-col items-center justify-center flex-1 h-full space-y-0.5 transition-colors ${view === 'home' ? 'text-orange-600' : 'text-slate-400'}`}>
-              <Home className={`w-6 h-6 ${view === 'home' ? 'fill-orange-100' : ''}`} /><span className="text-[10px] font-bold">홈</span>
+              <Home className={`w-6 h-6 ${view === 'home' ? 'fill-orange-100' : ''}`} /><span className="text-[10px] font-bold">{t.tab_home}</span>
             </button>
             <button onClick={() => setView('library')} className={`flex flex-col items-center justify-center flex-1 h-full space-y-0.5 transition-colors ${view === 'library' ? 'text-orange-600' : 'text-slate-400'}`}>
-              <Library className={`w-6 h-6 ${view === 'library' ? 'fill-orange-100' : ''}`} /><span className="text-[10px] font-bold">서재</span>
+              <Library className={`w-6 h-6 ${view === 'library' ? 'fill-orange-100' : ''}`} /><span className="text-[10px] font-bold">{t.tab_library}</span>
             </button>
             <button onClick={() => setView('write')} className={`flex flex-col items-center justify-center flex-1 h-full space-y-0.5 transition-colors relative ${view === 'write' ? 'text-orange-600' : 'text-slate-400'}`}>
-              <div className={`w-12 h-12 rounded-full flex items-center justify-center transition-all ${view === 'write' ? 'bg-orange-500 text-white shadow-lg shadow-orange-200' : 'bg-slate-100 text-slate-400'}`}><PenTool className="w-6 h-6" /></div><span className="text-[10px] font-bold mt-0.5">집필</span>
+              <div className={`w-12 h-12 rounded-full flex items-center justify-center transition-all ${view === 'write' ? 'bg-orange-500 text-white shadow-lg shadow-orange-200' : 'bg-slate-100 text-slate-400'}`}><PenTool className="w-6 h-6" /></div><span className="text-[10px] font-bold mt-0.5">{t.tab_write}</span>
             </button>
             <button onClick={() => setView('archive')} className={`flex flex-col items-center justify-center flex-1 h-full space-y-0.5 transition-colors ${view === 'archive' ? 'text-orange-600' : 'text-slate-400'}`}>
-              <Bookmark className={`w-6 h-6 ${view === 'archive' ? 'fill-orange-100' : ''}`} /><span className="text-[10px] font-bold">보관함</span>
+              <Bookmark className={`w-6 h-6 ${view === 'archive' ? 'fill-orange-100' : ''}`} /><span className="text-[10px] font-bold">{t.tab_bookmarks}</span>
             </button>
             <button onClick={() => setView('profile')} className={`flex flex-col items-center justify-center flex-1 h-full space-y-0.5 transition-colors ${view === 'profile' ? 'text-orange-600' : 'text-slate-400'}`}>
-              <User className={`w-6 h-6 ${view === 'profile' ? 'fill-orange-100' : ''}`} /><span className="text-[10px] font-bold">프로필</span>
+              <User className={`w-6 h-6 ${view === 'profile' ? 'fill-orange-100' : ''}`} /><span className="text-[10px] font-bold">{t.tab_profile}</span>
             </button>
           </nav>
         )}

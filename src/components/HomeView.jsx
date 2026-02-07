@@ -74,7 +74,7 @@ const HomeView = ({
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <h1 className="text-lg font-jua font-black text-slate-800 leading-tight whitespace-pre-line">
-              하루 5분!{'\n'}이야기가 맛있어지는 시간
+              {t.home_main_title}
             </h1>
           </div>
           <button
@@ -87,7 +87,7 @@ const HomeView = ({
         <div>
           <span className="text-orange-600 font-bold text-xs bg-orange-50 px-2 py-1 rounded-md mb-2 inline-block">
             <div className="flex items-center gap-2">
-              <span>{userProfile?.nickname || '게스트'}님 환영합니다!</span>
+              <span>{(t.home_welcome || "{name}님 환영합니다!").replace('{name}', userProfile?.nickname || t.guest)}</span>
               {levelInfo && (
                 <span className="bg-orange-100 text-orange-600 text-[10px] px-2 py-0.5 rounded-full font-black flex items-center gap-0.5">
                   {levelInfo.gradeIcon && <span>{levelInfo.gradeIcon}</span>}
@@ -169,7 +169,7 @@ const HomeView = ({
       <div className="space-y-4">
         <div className="flex items-center gap-2 px-1">
           <Sparkles className="w-5 h-5 text-orange-500" />
-          <h3 className="text-xl font-black text-slate-800">따끈따끈한 신작 🔥</h3>
+          <h3 className="text-xl font-black text-slate-800">{t.home_new_books}</h3>
         </div>
 
         {isLoadingHomeData ? (
@@ -182,10 +182,10 @@ const HomeView = ({
           <div className="bg-white rounded-2xl border border-dashed border-slate-200 p-8 text-center">
             <BookOpen className="w-10 h-10 text-slate-300 mx-auto mb-3" />
             <p className="text-slate-400 text-sm font-bold mb-1">
-              오늘의 첫 작가가 되어보세요!
+              {t.home_empty_new}
             </p>
             <p className="text-slate-300 text-xs">
-              집필 탭에서 새로운 책을 만들어보세요
+              {t.home_empty_new_desc}
             </p>
           </div>
         ) : (
@@ -217,11 +217,11 @@ const HomeView = ({
                     {(book.isSeries || book.category === 'series') && book.episodes && (
                       <div
                         className={`absolute top-1 right-1 w-8 h-8 rounded-full flex items-center justify-center text-[9px] font-black shadow-md ${book.status === 'ongoing'
-                            ? 'bg-amber-400 text-amber-900'
-                            : 'bg-red-500 text-white'
+                          ? 'bg-amber-400 text-amber-900'
+                          : 'bg-red-500 text-white'
                           }`}
                       >
-                        {book.status === 'ongoing' ? '연재중' : '완결'}
+                        {book.status === 'ongoing' ? t.ongoing : t.completed}
                       </div>
                     )}
                   </div>
@@ -258,7 +258,7 @@ const HomeView = ({
       <div className="space-y-4">
         <div className="flex items-center gap-2 px-1">
           <Crown className="w-5 h-5 text-yellow-500 fill-yellow-500" />
-          <h3 className="text-xl font-black text-slate-800">주간 베스트셀러 🏆</h3>
+          <h3 className="text-xl font-black text-slate-800">{t.home_weekly_best}</h3>
         </div>
 
         {isLoadingHomeData ? (
@@ -271,10 +271,10 @@ const HomeView = ({
           <div className="bg-white rounded-2xl border border-dashed border-slate-200 p-8 text-center">
             <Trophy className="w-10 h-10 text-slate-300 mx-auto mb-3" />
             <p className="text-slate-400 text-sm font-bold mb-1">
-              아직 집계된 베스트셀러가 없어요
+              {t.home_empty_best}
             </p>
             <p className="text-slate-300 text-xs">
-              첫 번째 주인공이 되어보세요!
+              {t.home_empty_best_desc}
             </p>
           </div>
         ) : (
@@ -322,11 +322,11 @@ const HomeView = ({
                     <div className="flex items-center gap-2 text-xs text-slate-500 flex-wrap">
                       <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-gradient-to-r from-orange-500 to-rose-500 text-white text-[11px] font-black shadow-sm">
                         <Book className="w-3 h-3" />
-                        작가: {book.authorName || '익명'}
+                        {(t.author_by || "작가: {name}").replace('{name}', book.authorName || '익명')}
                       </span>
                       {(book.isSeries || book.category === 'series') && book.episodes && (
                         <span className="text-[10px] font-bold text-orange-600">
-                          {book.episodes.length}화 {book.status === 'ongoing' ? '연재 중' : '완결'}
+                          {book.episodes.length}화 {book.status === 'ongoing' ? t.ongoing : t.completed}
                         </span>
                       )}
                       <span className="flex items-center gap-1 text-slate-400">
@@ -359,7 +359,7 @@ const HomeView = ({
       <div className="space-y-4">
         <div className="flex items-center gap-2 px-1">
           <Trophy className="w-5 h-5 text-blue-500" />
-          <h3 className="text-xl font-black text-slate-800">금주의 집필왕 👑</h3>
+          <h3 className="text-xl font-black text-slate-800">{t.home_top_writers}</h3>
         </div>
 
         {isLoadingHomeData ? (
@@ -376,10 +376,10 @@ const HomeView = ({
           <div className="bg-white rounded-2xl border border-dashed border-slate-200 p-8 text-center">
             <User className="w-10 h-10 text-slate-300 mx-auto mb-3" />
             <p className="text-slate-400 text-sm font-bold mb-1">
-              아직 활동 중인 작가님이 없어요
+              {t.home_empty_writers}
             </p>
             <p className="text-slate-300 text-xs">
-              첫 번째 주인공이 되어보세요!
+              {t.home_empty_best_desc}
             </p>
           </div>
         ) : (

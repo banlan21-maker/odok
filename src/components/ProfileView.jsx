@@ -148,7 +148,7 @@ const ProfileView = ({
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between mb-2">
                     <div>
-                      <span className="text-[10px] text-slate-400 font-bold">LEVEL</span>
+                      <span className="text-[10px] text-slate-400 font-bold">{t?.level || "LEVEL"}</span>
                       <div className="text-xl font-black text-slate-800 leading-none mt-0.5 flex items-center gap-1">
                         Lv.{levelInfo.level}
                         {levelInfo.gradeIcon && <span className="text-lg">{levelInfo.gradeIcon}</span>}
@@ -171,9 +171,9 @@ const ProfileView = ({
                   </div>
                   <div className="flex justify-between items-center text-[10px] text-slate-400">
                     <span>
-                      다음 레벨까지 <span className="text-orange-600 font-black">{levelInfo.remainingExp} XP</span>
+                      {t?.next_level || "다음 레벨까지"} <span className="text-orange-600 font-black">{levelInfo.remainingExp} XP</span>
                     </span>
-                    <span>{levelInfo.currentExp} XP · 다음 {levelInfo.remainingExp} XP</span>
+                    <span>{levelInfo.currentExp} XP · {t?.next || "다음"} {levelInfo.remainingExp} XP</span>
                   </div>
                 </div>
                 <div className="w-24 flex flex-col items-center justify-center gap-2 border-l border-slate-100 pl-4">
@@ -189,10 +189,10 @@ const ProfileView = ({
                     )}
                   </div>
                   <label className={`text-[10px] font-bold px-2 py-1 rounded-full border transition-colors cursor-pointer ${isUploadingImage
-                      ? 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed'
-                      : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+                    ? 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed'
+                    : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
                     }`}>
-                    {isUploadingImage ? '업로드 중...' : '사진 변경'}
+                    {isUploadingImage ? (t?.uploading || '업로드 중...') : (t?.change_photo || '사진 변경')}
                     <input
                       type="file"
                       accept="image/*"
@@ -216,7 +216,7 @@ const ProfileView = ({
             <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-2xl p-4 border-2 border-blue-200 shadow-sm">
               <div className="flex items-center justify-between mb-3">
                 <div>
-                  <span className="text-[10px] text-blue-600 font-bold">보유 잉크</span>
+                  <span className="text-[10px] text-blue-600 font-bold">{t?.current_ink || "보유 잉크"}</span>
                   <div className="text-2xl font-black text-blue-700 leading-none mt-0.5 flex items-center gap-1">
                     <Droplets className="w-6 h-6 fill-blue-500 text-blue-500" />
                     {userProfile.ink || 50}
@@ -227,8 +227,8 @@ const ProfileView = ({
                 onClick={handleChargeInk}
                 disabled={isCharging}
                 className={`w-full py-2.5 rounded-xl font-black text-sm transition-all flex items-center justify-center gap-2 ${isCharging
-                    ? 'bg-slate-300 text-slate-500 cursor-not-allowed'
-                    : 'bg-blue-500 text-white hover:bg-blue-600 active:scale-95'
+                  ? 'bg-slate-300 text-slate-500 cursor-not-allowed'
+                  : 'bg-blue-500 text-white hover:bg-blue-600 active:scale-95'
                   }`}
               >
                 {isCharging ? (
@@ -241,7 +241,7 @@ const ProfileView = ({
                 ) : (
                   <>
                     <Video className="w-5 h-5" />
-                    <span>광고 보고 잉크 얻기 (+10)</span>
+                    <span>{t?.get_ink_ad || "광고 보고 잉크 얻기 (+10)"}</span>
                   </>
                 )}
               </button>
@@ -250,7 +250,7 @@ const ProfileView = ({
 
           {/* 3. 닉네임 변경 (최초 1회 자유, 이후 한 달에 한 번) */}
           <div className="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm">
-            <label className="text-xs font-bold text-slate-500 mb-2 block">닉네임</label>
+            <label className="text-xs font-bold text-slate-500 mb-2 block">{t?.nickname_label || "닉네임"}</label>
             <div className="space-y-2">
               <input
                 type="text"
@@ -267,7 +267,7 @@ const ProfileView = ({
               )}
               {canChange && userProfile?.nickname && (
                 <p className="text-[10px] text-slate-400">
-                  최초 1회는 자유롭게 변경 가능합니다
+                  {t?.nickname_hint || "최초 1회는 자유롭게 변경 가능합니다"}
                 </p>
               )}
               {!userProfile?.nickname && (
@@ -280,7 +280,7 @@ const ProfileView = ({
 
           {/* 4. 환경 설정: 언어 설정 */}
           <div className="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm">
-            <label className="text-xs font-bold text-slate-500 mb-2 block">언어 설정</label>
+            <label className="text-xs font-bold text-slate-500 mb-2 block">{t?.language_label || "언어 설정"}</label>
             <div className="grid grid-cols-2 gap-2">
               {[
                 { code: 'ko', label: '한국어' },
@@ -290,8 +290,8 @@ const ProfileView = ({
                   key={lang.code}
                   onClick={() => setLanguage(lang.code)}
                   className={`py-2.5 rounded-xl text-xs font-bold transition-all ${language === lang.code
-                      ? 'bg-orange-500 text-white shadow-md'
-                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200 active:scale-95'
+                    ? 'bg-orange-500 text-white shadow-md'
+                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200 active:scale-95'
                     }`}
                 >
                   {lang.label}
@@ -302,20 +302,20 @@ const ProfileView = ({
 
           {/* 5. 글자 크기 설정 (4단계) */}
           <div className="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm">
-            <label className="text-xs font-bold text-slate-500 mb-2 block">글자 크기 (본문 용)</label>
+            <label className="text-xs font-bold text-slate-500 mb-2 block">{t?.font_size_label || "글자 크기 (본문 용)"}</label>
             <div className="grid grid-cols-4 gap-2">
               {[
-                { size: 'text-sm', label: '작게' },
-                { size: 'text-base', label: '보통' },
-                { size: 'text-lg', label: '크게' },
-                { size: 'text-xl', label: '더 크게' }
+                { size: 'text-sm', label: t?.font_small || '작게' },
+                { size: 'text-base', label: t?.font_medium || '보통' },
+                { size: 'text-lg', label: t?.font_large || '크게' },
+                { size: 'text-xl', label: t?.font_xlarge || '더 크게' }
               ].map((fs) => (
                 <button
                   key={fs.size}
                   onClick={() => setFontSize(fs.size)}
                   className={`py-2 rounded-xl text-[10px] font-bold transition-all ${fontSize === fs.size
-                      ? 'bg-slate-800 text-white shadow-md'
-                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200 active:scale-95'
+                    ? 'bg-slate-800 text-white shadow-md'
+                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200 active:scale-95'
                     }`}
                 >
                   {fs.label}
@@ -326,19 +326,19 @@ const ProfileView = ({
 
           {/* 6. 계정 관리 */}
           <div className="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm space-y-2">
-            <label className="text-xs font-bold text-slate-500 mb-2 block">계정 관리</label>
+            <label className="text-xs font-bold text-slate-500 mb-2 block">{t?.account_management || "계정 관리"}</label>
 
             {/* 저장 버튼 */}
             <button
               onClick={saveProfile}
               disabled={!tempNickname.trim()}
               className={`w-full py-3 rounded-xl font-black text-sm transition-all flex items-center justify-center gap-2 ${!tempNickname.trim()
-                  ? 'bg-slate-300 text-slate-500 cursor-not-allowed'
-                  : 'bg-slate-900 text-white hover:bg-slate-800 active:scale-95'
+                ? 'bg-slate-300 text-slate-500 cursor-not-allowed'
+                : 'bg-slate-900 text-white hover:bg-slate-800 active:scale-95'
                 }`}
             >
               <Save className="w-4 h-4" />
-              저장
+              {t?.save_btn || "저장"}
             </button>
 
             {/* 로그아웃 버튼 */}
@@ -348,7 +348,7 @@ const ProfileView = ({
                 className="w-full py-2.5 rounded-xl font-bold text-sm text-slate-600 hover:bg-slate-100 transition-colors flex items-center justify-center gap-2 active:scale-95"
               >
                 <LogOut className="w-4 h-4" />
-                로그아웃
+                {t?.logout || "로그아웃"}
               </button>
             )}
 
@@ -359,7 +359,7 @@ const ProfileView = ({
                 className="w-full py-2.5 rounded-xl font-bold text-sm text-red-500 hover:bg-red-50 transition-colors flex items-center justify-center gap-2 active:scale-95"
               >
                 <Trash2 className="w-4 h-4" />
-                계정 탈퇴
+                {t?.delete_account || "계정 탈퇴"}
               </button>
             )}
           </div>
@@ -388,10 +388,9 @@ const ProfileView = ({
               <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-2">
                 <AlertTriangle className="w-8 h-8 text-red-500" />
               </div>
-              <h3 className="text-lg font-black text-slate-800">계정 탈퇴</h3>
+              <h3 className="text-lg font-black text-slate-800">{t?.delete_confirm_title || "계정 탈퇴"}</h3>
               <p className="text-sm text-slate-600 leading-relaxed">
-                정말로 계정을 탈퇴하시겠습니까?<br />
-                모든 데이터가 삭제되며 복구할 수 없습니다.
+                {t?.delete_confirm_desc || "정말로 계정을 탈퇴하시겠습니까?\n모든 데이터가 삭제되며 복구할 수 없습니다."}
               </p>
             </div>
             <div className="space-y-2 pt-2">
@@ -404,13 +403,13 @@ const ProfileView = ({
                 }}
                 className="w-full bg-red-500 text-white py-3 rounded-xl font-black hover:bg-red-600 transition-colors"
               >
-                탈퇴하기
+                {t?.delete_btn || "탈퇴하기"}
               </button>
               <button
                 onClick={() => setShowDeleteConfirm(false)}
                 className="w-full bg-slate-100 text-slate-600 py-3 rounded-xl font-bold hover:bg-slate-200 transition-colors"
               >
-                취소
+                {t?.cancel || "취소"}
               </button>
             </div>
           </div>

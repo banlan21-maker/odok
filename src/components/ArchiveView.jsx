@@ -7,10 +7,10 @@ import { getCoverImageFromBook } from '../utils/bookCovers';
 import { formatCount } from '../utils/numberFormat';
 import { formatGenreTag } from '../utils/formatGenre';
 
-const ArchiveView = ({ books, user, onBookClick, favoriteBookIds = [] }) => {
+const ArchiveView = ({ books, user, onBookClick, favoriteBookIds = [], t }) => {
   // 내가 쓴 책 필터링
   const myBooks = books.filter(book => book.authorId === user?.uid) || [];
-  
+
   const favoriteBooks = books.filter(book => favoriteBookIds.includes(book.id)) || [];
 
   return (
@@ -18,10 +18,10 @@ const ArchiveView = ({ books, user, onBookClick, favoriteBookIds = [] }) => {
       {/* 헤더 */}
       <div className="space-y-2">
         <h2 className="text-2xl font-black text-slate-800 leading-tight">
-          보관함
+          {t?.archive_title || "보관함"}
         </h2>
         <p className="text-sm text-slate-500">
-          내가 작성한 책과 즐겨찾기한 책을 모아보세요.
+          {t?.archive_desc || "내가 작성한 책과 즐겨찾기한 책을 모아보세요."}
         </p>
       </div>
 
@@ -29,7 +29,7 @@ const ArchiveView = ({ books, user, onBookClick, favoriteBookIds = [] }) => {
       <div className="space-y-3">
         <div className="flex items-center gap-2 mb-2">
           <Book className="w-5 h-5 text-orange-600" />
-          <h3 className="font-bold text-slate-700 text-sm">내가 쓴 책</h3>
+          <h3 className="font-bold text-slate-700 text-sm">{t?.my_books_tab || "내가 쓴 책"}</h3>
           <span className="text-xs text-slate-400">({myBooks.length})</span>
         </div>
 
@@ -37,10 +37,10 @@ const ArchiveView = ({ books, user, onBookClick, favoriteBookIds = [] }) => {
           <div className="bg-white rounded-2xl border border-dashed border-slate-200 p-12 text-center">
             <Book className="w-12 h-12 text-slate-200 mx-auto mb-3" />
             <p className="text-slate-400 text-sm font-bold mb-1">
-              아직 작성한 책이 없습니다
+              {t?.my_books_empty || "아직 작성한 책이 없습니다"}
             </p>
             <p className="text-slate-300 text-xs">
-              집필 탭에서 첫 책을 작성해보세요
+              {t?.create_first_book || "집필 탭에서 첫 책을 작성해보세요"}
             </p>
           </div>
         ) : (
@@ -57,8 +57,8 @@ const ArchiveView = ({ books, user, onBookClick, favoriteBookIds = [] }) => {
                 >
                   <div className="flex items-start gap-3">
                     <div className="relative w-16 h-20 rounded-md overflow-hidden shrink-0 bg-slate-100">
-                      <img 
-                        src={coverImage} 
+                      <img
+                        src={coverImage}
                         alt={book.title}
                         className="w-full h-full object-cover"
                         onError={(e) => {
@@ -72,13 +72,12 @@ const ArchiveView = ({ books, user, onBookClick, favoriteBookIds = [] }) => {
                       </div>
                       {(book.isSeries || book.category === 'series') && book.episodes && (
                         <div
-                          className={`absolute top-1 right-1 w-8 h-8 rounded-full flex items-center justify-center text-[9px] font-black shadow-md ${
-                            book.status === 'ongoing'
+                          className={`absolute top-1 right-1 w-8 h-8 rounded-full flex items-center justify-center text-[9px] font-black shadow-md ${book.status === 'ongoing'
                               ? 'bg-amber-400 text-amber-900'
                               : 'bg-red-500 text-white'
-                          }`}
+                            }`}
                         >
-                          {book.status === 'ongoing' ? '연재중' : '완결'}
+                          {book.status === 'ongoing' ? (t?.ongoing || '연재중') : (t?.completed || '완결')}
                         </div>
                       )}
                     </div>
@@ -89,16 +88,16 @@ const ArchiveView = ({ books, user, onBookClick, favoriteBookIds = [] }) => {
                       <div className="flex items-center gap-2 text-xs text-slate-500 flex-wrap">
                         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-gradient-to-r from-orange-500 to-rose-500 text-white text-[11px] font-black shadow-sm">
                           <Book className="w-3 h-3" />
-                          작가: {book.authorName || '익명'}
+                          {(t?.author_by || "작가: {name}").replace('{name}', book.authorName || (t?.anonymous || '익명'))}
                         </span>
                         <span className="bg-slate-100 px-2 py-0.5 rounded-full font-bold text-slate-600">
-                          {book.category === 'webnovel' ? '웹소설' :
-                           book.category === 'novel' ? '소설' :
-                           book.category === 'series' ? '시리즈' :
-                           book.category === 'essay' ? '에세이' :
-                           book.category === 'self-improvement' ? '자기계발' :
-                           book.category === 'self-help' ? '자기계발' :
-                           book.category === 'humanities' ? '인문.철학' : book.category}
+                          {book.category === 'webnovel' ? (t?.cat_webnovel || '웹소설') :
+                            book.category === 'novel' ? (t?.cat_novel || '소설') :
+                              book.category === 'series' ? (t?.cat_series || '시리즈') :
+                                book.category === 'essay' ? (t?.cat_essay || '에세이') :
+                                  book.category === 'self-improvement' ? (t?.cat_self_help || '자기계발') :
+                                    book.category === 'self-help' ? (t?.cat_self_help || '자기계발') :
+                                      book.category === 'humanities' ? (t?.cat_humanities || '인문.철학') : book.category}
                         </span>
                         {book.subCategory && (
                           <span className="bg-slate-100 px-2 py-0.5 rounded-full text-slate-600">
@@ -141,17 +140,17 @@ const ArchiveView = ({ books, user, onBookClick, favoriteBookIds = [] }) => {
       <div className="space-y-3 mt-8">
         <div className="flex items-center gap-2 mb-2">
           <Heart className="w-5 h-5 text-red-400" />
-          <h3 className="font-bold text-slate-700 text-sm">즐겨찾기</h3>
+          <h3 className="font-bold text-slate-700 text-sm">{t?.favorites_tab || "즐겨찾기"}</h3>
           <span className="text-xs text-slate-400">({favoriteBooks.length})</span>
         </div>
         {favoriteBooks.length === 0 ? (
           <div className="bg-white rounded-2xl border border-dashed border-slate-200 p-12 text-center">
             <Bookmark className="w-12 h-12 text-slate-200 mx-auto mb-3" />
             <p className="text-slate-400 text-sm font-bold mb-1">
-              즐겨찾기한 책이 없습니다
+              {t?.favorites_empty || "즐겨찾기한 책이 없습니다"}
             </p>
             <p className="text-slate-300 text-xs">
-              마음에 드는 책을 즐겨찾기해보세요
+              {t?.find_favorites || "마음에 드는 책을 즐겨찾기해보세요"}
             </p>
           </div>
         ) : (
@@ -168,8 +167,8 @@ const ArchiveView = ({ books, user, onBookClick, favoriteBookIds = [] }) => {
                 >
                   <div className="flex items-start gap-3">
                     <div className="relative w-16 h-20 rounded-md overflow-hidden shrink-0 bg-slate-100">
-                      <img 
-                        src={coverImage} 
+                      <img
+                        src={coverImage}
                         alt={book.title}
                         className="w-full h-full object-cover"
                         onError={(e) => {
@@ -182,13 +181,12 @@ const ArchiveView = ({ books, user, onBookClick, favoriteBookIds = [] }) => {
                       </div>
                       {(book.isSeries || book.category === 'series') && book.episodes && (
                         <div
-                          className={`absolute top-1 right-1 w-8 h-8 rounded-full flex items-center justify-center text-[9px] font-black shadow-md ${
-                            book.status === 'ongoing'
+                          className={`absolute top-1 right-1 w-8 h-8 rounded-full flex items-center justify-center text-[9px] font-black shadow-md ${book.status === 'ongoing'
                               ? 'bg-amber-400 text-amber-900'
                               : 'bg-red-500 text-white'
-                          }`}
+                            }`}
                         >
-                          {book.status === 'ongoing' ? '연재중' : '완결'}
+                          {book.status === 'ongoing' ? (t?.ongoing || '연재중') : (t?.completed || '완결')}
                         </div>
                       )}
                     </div>
@@ -199,16 +197,16 @@ const ArchiveView = ({ books, user, onBookClick, favoriteBookIds = [] }) => {
                       <div className="flex items-center gap-2 text-xs text-slate-500 flex-wrap">
                         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-gradient-to-r from-orange-500 to-rose-500 text-white text-[11px] font-black shadow-sm">
                           <Book className="w-3 h-3" />
-                          작가: {book.authorName || '익명'}
+                          {(t?.author_by || "작가: {name}").replace('{name}', book.authorName || (t?.anonymous || '익명'))}
                         </span>
                         <span className="bg-slate-100 px-2 py-0.5 rounded-full font-bold text-slate-600">
-                          {book.category === 'webnovel' ? '웹소설' :
-                           book.category === 'novel' ? '소설' :
-                           book.category === 'series' ? '시리즈' :
-                           book.category === 'essay' ? '에세이' :
-                           book.category === 'self-improvement' ? '자기계발' :
-                           book.category === 'self-help' ? '자기계발' :
-                           book.category === 'humanities' ? '인문.철학' : book.category}
+                          {book.category === 'webnovel' ? (t?.cat_webnovel || '웹소설') :
+                            book.category === 'novel' ? (t?.cat_novel || '소설') :
+                              book.category === 'series' ? (t?.cat_series || '시리즈') :
+                                book.category === 'essay' ? (t?.cat_essay || '에세이') :
+                                  book.category === 'self-improvement' ? (t?.cat_self_help || '자기계발') :
+                                    book.category === 'self-help' ? (t?.cat_self_help || '자기계발') :
+                                      book.category === 'humanities' ? (t?.cat_humanities || '인문.철학') : book.category}
                         </span>
                         {book.subCategory && (
                           <span className="bg-slate-100 px-2 py-0.5 rounded-full text-slate-600">

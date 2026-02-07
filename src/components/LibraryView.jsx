@@ -6,11 +6,11 @@ import { getCoverImageFromBook } from '../utils/bookCovers';
 import { formatCount } from '../utils/numberFormat';
 import { formatGenreTag } from '../utils/formatGenre';
 
-const LibraryView = ({ books, onBookClick, filter = 'all', onFilterChange }) => {
+const LibraryView = ({ books, onBookClick, filter = 'all', onFilterChange, t }) => {
   // 필터별 책 목록 필터링
   const filteredBooks = useMemo(() => {
     let filtered = books;
-    
+
     if (filter === 'all') {
       // 전체 보기
       return filtered;
@@ -46,7 +46,7 @@ const LibraryView = ({ books, onBookClick, filter = 'all', onFilterChange }) => 
         return bookCategory === filter;
       });
     }
-    
+
     return filtered;
   }, [books, filter]);
 
@@ -60,28 +60,28 @@ const LibraryView = ({ books, onBookClick, filter = 'all', onFilterChange }) => 
   }, [filteredBooks]);
 
   const filterOptions = [
-    { id: 'all', name: '전체 보기' },
-    { id: 'webnovel', name: '웹소설 (단편)' },
-    { id: 'novel', name: '소설 (단편)' },
-    { id: 'series', name: '시리즈 (전체)' },
-    { id: 'series-webnovel', name: '시리즈 - 웹소설' },
-    { id: 'series-novel', name: '시리즈 - 소설' },
-    { id: 'essay', name: '에세이' },
-    { id: 'self-help', name: '자기계발' },
-    { id: 'humanities', name: '인문/철학' }
+    { id: 'all', name: t?.view_all || '전체 보기' },
+    { id: 'webnovel', name: `${t?.cat_webnovel || '웹소설'} (${t?.short_story || '단편'})` },
+    { id: 'novel', name: `${t?.cat_novel || '소설'} (${t?.short_story || '단편'})` },
+    { id: 'series', name: `${t?.cat_series || '시리즈'} (${t?.view_all || '전체'})` },
+    { id: 'series-webnovel', name: `${t?.cat_series} - ${t?.cat_webnovel}` },
+    { id: 'series-novel', name: `${t?.cat_series} - ${t?.cat_novel}` },
+    { id: 'essay', name: t?.cat_essay || '에세이' },
+    { id: 'self-help', name: t?.cat_self_help || '자기계발' },
+    { id: 'humanities', name: t?.cat_humanities || '인문/철학' }
   ];
-  
-  const selectedFilterName = filterOptions.find(opt => opt.id === filter)?.name || '전체 보기';
+
+  const selectedFilterName = filterOptions.find(opt => opt.id === filter)?.name || t?.view_all || '전체 보기';
 
   return (
     <div className="space-y-6 animate-in slide-in-from-bottom-2 fade-in pb-20">
       {/* 헤더 */}
       <div className="space-y-2">
         <h2 className="text-2xl font-black text-slate-800 leading-tight">
-          서재
+          {t?.library_title || "서재"}
         </h2>
         <p className="text-sm text-slate-500">
-          모든 유저가 생성한 책들을 모아둔 곳입니다.
+          {t?.library_desc || "모든 유저가 생성한 책들을 모아둔 곳입니다."}
         </p>
       </div>
 
@@ -89,7 +89,7 @@ const LibraryView = ({ books, onBookClick, filter = 'all', onFilterChange }) => 
       <div className="space-y-2">
         <div className="flex items-center gap-2 px-1">
           <Filter className="w-4 h-4 text-slate-400" />
-          <span className="text-xs font-bold text-slate-500">카테고리</span>
+          <span className="text-xs font-bold text-slate-500">{t?.category_label || "카테고리"}</span>
         </div>
         <div className="relative">
           <select
@@ -112,10 +112,10 @@ const LibraryView = ({ books, onBookClick, filter = 'all', onFilterChange }) => 
         <div className="bg-white rounded-2xl border border-dashed border-slate-200 p-12 text-center">
           <Book className="w-12 h-12 text-slate-200 mx-auto mb-3" />
           <p className="text-slate-400 text-sm font-bold mb-1">
-            아직 등록된 책이 없습니다
+            {t?.library_empty || "아직 등록된 책이 없습니다"}
           </p>
           <p className="text-slate-300 text-xs">
-            집필 탭에서 첫 책을 만들어보세요
+            {t?.library_empty_desc || "집필 탭에서 첫 책을 만들어보세요"}
           </p>
         </div>
       ) : (
@@ -132,8 +132,8 @@ const LibraryView = ({ books, onBookClick, filter = 'all', onFilterChange }) => 
               >
                 <div className="flex items-start gap-3">
                   <div className="relative w-16 h-20 rounded-md overflow-hidden shrink-0 bg-slate-100">
-                    <img 
-                      src={coverImage} 
+                    <img
+                      src={coverImage}
                       alt={book.title}
                       className="w-full h-full object-cover"
                       onError={(e) => {
@@ -147,13 +147,12 @@ const LibraryView = ({ books, onBookClick, filter = 'all', onFilterChange }) => 
                     </div>
                     {(book.isSeries || book.category === 'series') && book.episodes && (
                       <div
-                        className={`absolute top-1 right-1 w-8 h-8 rounded-full flex items-center justify-center text-[9px] font-black shadow-md ${
-                          book.status === 'ongoing'
+                        className={`absolute top-1 right-1 w-8 h-8 rounded-full flex items-center justify-center text-[9px] font-black shadow-md ${book.status === 'ongoing'
                             ? 'bg-amber-400 text-amber-900'
                             : 'bg-red-500 text-white'
-                        }`}
+                          }`}
                       >
-                        {book.status === 'ongoing' ? '연재중' : '완결'}
+                        {book.status === 'ongoing' ? (t?.ongoing || '연재중') : (t?.completed || '완결')}
                       </div>
                     )}
                   </div>
@@ -164,16 +163,16 @@ const LibraryView = ({ books, onBookClick, filter = 'all', onFilterChange }) => 
                     <div className="flex items-center gap-2 text-xs text-slate-500 flex-wrap">
                       <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-gradient-to-r from-orange-500 to-rose-500 text-white text-[11px] font-black shadow-sm">
                         <Book className="w-3 h-3" />
-                        작가: {book.authorName || '익명'}
+                        {(t?.author_by || "작가: {name}").replace('{name}', book.authorName || (t?.anonymous || '익명'))}
                       </span>
                       <span className="bg-slate-100 px-2 py-0.5 rounded-full font-bold text-slate-600">
-                        {book.category === 'webnovel' ? '웹소설' :
-                         book.category === 'novel' ? '소설' :
-                         book.category === 'series' ? '시리즈' :
-                         book.category === 'essay' ? '에세이' :
-                         book.category === 'self-improvement' ? '자기계발' :
-                         book.category === 'self-help' ? '자기계발' :
-                         book.category === 'humanities' ? '인문.철학' : book.category}
+                        {book.category === 'webnovel' ? (t?.cat_webnovel || '웹소설') :
+                          book.category === 'novel' ? (t?.cat_novel || '소설') :
+                            book.category === 'series' ? (t?.cat_series || '시리즈') :
+                              book.category === 'essay' ? (t?.cat_essay || '에세이') :
+                                book.category === 'self-improvement' ? (t?.cat_self_help || '자기계발') :
+                                  book.category === 'self-help' ? (t?.cat_self_help || '자기계발') :
+                                    book.category === 'humanities' ? (t?.cat_humanities || '인문.철학') : book.category}
                       </span>
                       {book.subCategory && (
                         <span className="bg-slate-100 px-2 py-0.5 rounded-full text-slate-600">
