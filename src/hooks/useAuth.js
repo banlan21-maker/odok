@@ -9,7 +9,7 @@ import {
 import { auth } from '../firebase';
 import { initializeAdMob } from '../utils/admobService';
 
-export const useAuth = ({ setView, setUserProfile, viewRef }) => {
+export const useAuth = ({ setView, viewRef }) => {
   const [user, setUser] = useState(null);
   const [showInAppBrowserWarning, setShowInAppBrowserWarning] = useState(false);
   const [detectedInAppBrowser, setDetectedInAppBrowser] = useState(null);
@@ -91,7 +91,6 @@ export const useAuth = ({ setView, setUserProfile, viewRef }) => {
           console.log('⚠️ 익명 로그인 감지, 로그아웃 처리');
           await signOut(auth);
           setUser(null);
-          setUserProfile(null);
           setView('login');
         } else {
           console.log('✅ 인증 상태 변경 - 로그인됨:', {
@@ -104,7 +103,6 @@ export const useAuth = ({ setView, setUserProfile, viewRef }) => {
       } else {
         console.log('❌ 인증 상태 변경 - 로그아웃됨');
         setUser(null);
-        setUserProfile(null);
         setView('login');
       }
     });

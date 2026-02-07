@@ -40,7 +40,11 @@ export const useUserProfile = ({ user, setView, setError, viewRef }) => {
 
   // 프로필 구독 및 초기화
   useEffect(() => {
-    if (!user) return;
+    if (!user) {
+      setUserProfile(null);
+      setTempNickname('');
+      return;
+    }
     const profileRef = doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'info');
 
     const initProfile = async () => {

@@ -55,7 +55,7 @@ const App = () => {
     handleGoogleLogin,
     handleLogout,
     showInAppBrowserWarning
-  } = useAuth({ setView, setError });
+  } = useAuth({ setView, viewRef });
 
   // 2. User Profile Hook
   const {
