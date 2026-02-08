@@ -28,8 +28,24 @@ const NOVEL_BASE_GUIDE = [
   "[CRITICAL RULE] 소설은 중간에 리셋하거나 앞 내용을 요약 반복하지 말고, 하나의 타임라인으로 쭉 이어가라.",
   "당신은 100만 부가 팔린 베스트셀러 작가다.",
   "요약문이 아니라 장면(Scene) 위주로 서술하라.",
-  "전체 소설은 공백 포함 약 3,000자 내외로, 단계별 비율에 맞춰 작성하라.",
+  "전체 소설은 공백 포함 약 4,000자 내외로, 단계별 비율에 맞춰 작성하라.",
   "반드시 [발단-전개-위기-절정-결말]의 5단계 구조를 따른다."
+].join(" ");
+
+// 장편/연재 시 디테일 유지를 위한 컨텍스트 전략 (서사가 길어질 때의 방지책)
+const NOVEL_LONG_FORM_CONTEXT_GUIDE = [
+  "[컨텍스트 전략 - 서사 디테일 유지]",
+  "A. 정적/동적 메모리 분리:",
+  "• 정적 메모리(불변): 캐릭터 바이블(외모, 성격, 버릇), 세계관 설정은 요약하지 않고 언제나 프롬프트 최상단에 고정한다.",
+  "• 동적 메모리(가변): 사건 진행, 인물 관계 변화, 현재 위치 등은 누적 요약으로 갱신한다.",
+  "B. 계층적 요약:",
+  "• 1단계(장면 요약): 방금 쓴 장면을 5줄로 요약. 2단계(챕터 요약): 장면 요약들이 모이면 챕터 요약으로 압축. 3단계(전체 줄거리): 전체 서사 흐름 유지.",
+  "• 다음 장면 작성 시 [전체 줄거리] + [직전 챕터 요약] + [직전 장면 요약]을 함께 참고하여 거시·미시 맥락을 잡는다.",
+  "C. 장면 브릿지(Scene Bridge):",
+  "• 요약에는 사건만 남기 쉬우므로, 각 장면 끝에 다음 3가지를 추출해 다음 프롬프트에 '다리'로 연결한다:",
+  "  1. 물리적 상태: 캐릭터 현재 위치, 부상 여부, 획득 아이템.",
+  "  2. 심리적 상태: 직전 사건으로 인한 감정 변화(분노, 의심 등).",
+  "  3. 미해결 정보: 캐릭터가 아직 모르는 사실, 오해."
 ].join(" ");
 
 const NOVEL_GENRE_STYLES = [
@@ -97,7 +113,7 @@ const NONFICTION_BASE_GUIDE = [
   "당신은 해당 분야의 최고 전문가이자 권위자다.",
   "입력된 키워드와 책 제목의 분위기/의도를 정확히 반영해 서술하라.",
   "50자 이내의 주제를 씨앗으로 삼아 깊이 있는 통찰을 제시하라.",
-  "공백 포함 약 2,000자 내외로 핵심 메시지를 명확히 전달하라."
+  "공백 포함 약 3,000자 내외로 핵심 메시지를 명확히 전달하라."
 ].join(" ");
 
 const NONFICTION_CATEGORY_STYLES = {
@@ -207,6 +223,7 @@ function buildSystemPrompt({ isNovel, category, subCategory, genre, endingStyle,
       moodGuide,
       "당신은 [장르] 분야의 최고 작가입니다.",
       NOVEL_BASE_GUIDE,
+      NOVEL_LONG_FORM_CONTEXT_GUIDE,
       pickGenreGuide(genre),
       "절정에서는 갈등을 최고조로 끌어올리며, 전체 분량의 약 30%를 할애한다.",
       endingGuide
@@ -230,6 +247,7 @@ function buildStepPrompt({
   synopsis,
   characterSheet,
   settingSheet,
+  sceneBridge,
   isNovel,
   title
 }) {
@@ -241,11 +259,14 @@ function buildStepPrompt({
   const lastBlock = lastParagraph
     ? `Last Paragraph (직전 내용 3~5문장):\n${lastParagraph}\n`
     : "Last Paragraph (직전 내용 3~5문장): (없음)\n";
+  const bridgeBlock = sceneBridge
+    ? `직전 장면 브릿지 (물리/심리/미해결 정보 - 다음 장면 연결용):\n${sceneBridge}\n`
+    : "";
   const staticContext = isNovel
-    ? `Static Context:\nSynopsis:\n${synopsis || "(없음)"}\n\nCharacter Sheet (이름/성격 절대 유지):\n${characterSheet || "(없음)"}\n\nSetting Sheet (시대/장소/세계관 절대 유지):\n${settingSheet || "(없음)"}\n\n`
+    ? `[정적 메모리 - 불변, 요약하지 않음]\nSynopsis (전체 시나리오):\n${synopsis || "(없음)"}\n\nCharacter Sheet (이름/성격/버릇·특이한 행동 절대 유지):\n${characterSheet || "(없음)"}\n\nSetting Sheet (시대/장소/세계관 절대 유지):\n${settingSheet || "(없음)"}\n\n`
     : "";
   const dynamicContext = isNovel
-    ? `Dynamic Context:\n${summaryBlock}\n${lastBlock}\n`
+    ? `[동적 메모리 - 누적 갱신]\n${summaryBlock}\n${lastBlock}\n${bridgeBlock}`
     : summaryBlock + "\n";
   const baseInstruction = [
     `사용자가 준 주제는 "${seed}"입니다. 이 짧은 문장을 씨앗으로 삼아 풍성한 디테일을 상상하여 확장하세요.`,
@@ -280,10 +301,33 @@ function extractLastSentences(content, maxSentences = 5) {
 
 async function summarizeStepContent(content, systemPrompt, isNovel) {
   const prompt = [
-    "다음 글을 한국어로 정확히 3줄로 요약해라.",
+    "다음 글을 한국어로 정확히 5줄로 요약해라.",
     "각 줄은 1~2문장으로 간결하게 작성하라.",
     "불릿/번호/특수기호 없이 줄바꿈만 사용하라.",
     "요약문에 새 정보를 추가하지 마라.",
+    "본문:",
+    content || ""
+  ].join("\n");
+  const result = await callGemini(systemPrompt, prompt, 0.2, isNovel);
+  return (result.content || "").trim();
+}
+
+/** 장면 브릿지: 직전 장면의 물리/심리/미해결 정보 추출 (다음 장면 연결용) */
+async function extractSceneBridge(content, systemPrompt, isNovel) {
+  if (!content || !content.trim()) return "";
+  const prompt = [
+    "다음 장면(본문)을 읽고, 다음 장면을 이어 쓸 때 필요한 '브릿지' 정보를 추출하라.",
+    "반드시 아래 3가지를 각각 한 줄 이내로 작성하라. 해당 정보가 없으면 '해당 없음'으로 표기.",
+    "",
+    "1. 물리적 상태: 캐릭터의 현재 위치, 부상 여부, 획득한 아이템 등.",
+    "2. 심리적 상태: 직전 사건으로 인한 감정 변화(예: 분노, 의심, 안도, 불안).",
+    "3. 미해결 정보: 캐릭터가 아직 모르는 사실, 오해하고 있는 것, 떡밥.",
+    "",
+    "출력 형식 (한국어):",
+    "물리적 상태: ...",
+    "심리적 상태: ...",
+    "미해결 정보: ...",
+    "",
     "본문:",
     content || ""
   ].join("\n");
@@ -308,7 +352,8 @@ async function generateStaticContext(systemPrompt, topic, title, genre, isNovel,
     "Character Sheet:",
     "- 이름: (고유명사)",
     "  성격: (핵심 성격 2~3가지)",
-    "  절대 유지 조건: (이름/성격은 절대 변경 금지)",
+    "  버릇/특이한 행동: (캐릭터별 고유한 습관, 말투, 몸짓, 반복되는 행동 등. 있다면 반드시 기재하고 각 단계에서 일관되게 반영하라)",
+    "  절대 유지 조건: (이름/성격/버릇·특이한 행동은 절대 변경 금지)",
     "",
     "Setting Sheet:",
     "- 시대배경: (연대, 시대적 분위기, 역사적 맥락 등)",
@@ -383,7 +428,7 @@ async function callGemini(systemPrompt, userPrompt, temperature = 0.75, isNovel 
 
     const generationConfig = {
       temperature: temperature,
-      maxOutputTokens: isNovel ? 6000 : 8192  // 소설 3000자/비소설 2000자 분량 대응
+      maxOutputTokens: isNovel ? 8192 : 8192  // 소설 4000자/비소설 3000자 분량 대응
     };
 
     if (isNovel) {
@@ -427,6 +472,7 @@ async function generateStep({
   synopsis,
   characterSheet,
   settingSheet,
+  sceneBridge,
   temperature,
   isNovel,
   title
@@ -439,6 +485,7 @@ async function generateStep({
     synopsis,
     characterSheet,
     settingSheet,
+    sceneBridge,
     isNovel,
     title
   });
@@ -484,17 +531,17 @@ exports.generateBookAI = onCall(
             { name: "사건과 훅", instruction: "평온하던 일상을 깨뜨리는 '사건(Inciting Incident)'을 발생시키세요. 주인공에게 모험이나 문제가 다가오는 장면을 보여주세요. [중요] 사건을 해결하지 말고, 주인공이 모험을 떠나거나 문제에 직면하는 순간에서 멈추세요. 마지막 문장은 다음 화가 궁금해서 미치게 만드는 '절단신공(Cliffhanger)'으로 끝내세요. [분량: 전체의 약 60%, 공백 포함 약 1,800자]" }
           ]
           : [
-            { name: "발단", instruction: "스토리의 시작과 등장인물을 소개하세요. [분량: 전체의 약 10%, 공백 포함 약 300자]" },
-            { name: "전개", instruction: "사건을 발전시키고 갈등을 구축하세요. [분량: 전체의 약 20%, 공백 포함 약 600자]" },
-            { name: "위기", instruction: "갈등을 심화시키고 긴장감을 높이세요. 중요한 전환 구간이므로 충분히 묘사하세요. [분량: 전체의 약 25%, 공백 포함 약 750자]" },
-            { name: "절정", instruction: "갈등을 최고조로 끌어올리고 전환점을 만드세요. 가장 핵심적인 장면이므로 분량을 넉넉히 할애하세요. [분량: 전체의 약 30%, 공백 포함 약 900자]" },
-            { name: "결말", instruction: "스토리를 해결하고 마무리하세요. [분량: 전체의 약 15%, 공백 포함 약 450자]" }
+            { name: "발단", instruction: "스토리의 시작과 등장인물을 소개하세요. [분량: 전체의 약 10%, 공백 포함 약 400자]" },
+            { name: "전개", instruction: "사건을 발전시키고 갈등을 구축하세요. [분량: 전체의 약 20%, 공백 포함 약 800자]" },
+            { name: "위기", instruction: "갈등을 심화시키고 긴장감을 높이세요. 중요한 전환 구간이므로 충분히 묘사하세요. [분량: 전체의 약 25%, 공백 포함 약 1,000자]" },
+            { name: "절정", instruction: "갈등을 최고조로 끌어올리고 전환점을 만드세요. 가장 핵심적인 장면이므로 분량을 넉넉히 할애하세요. [분량: 전체의 약 30%, 공백 포함 약 1,200자]" },
+            { name: "결말", instruction: "스토리를 해결하고 마무리하세요. [분량: 전체의 약 15%, 공백 포함 약 600자]" }
           ])
         : [
-          { name: "서론", instruction: "주제 제기, 독자의 흥미 유발, 문제 의식 공유. [분량: 전체의 약 25%, 공백 포함 약 500자]" },
-          { name: "본론 1", instruction: "주제에 대한 깊이 있는 통찰, 작가의 경험이나 예시. [분량: 전체의 약 25%, 공백 포함 약 500자]" },
-          { name: "본론 2", instruction: "구체적인 해결책, 철학적 사색, 혹은 반전된 시각 제시. 핵심 논점이므로 충분히 전개하세요. [분량: 전체의 약 30%, 공백 포함 약 600자]" },
-          { name: "결론", instruction: "핵심 메시지 요약, 독자에게 주는 제언, 여운이 남는 마무리. [분량: 전체의 약 20%, 공백 포함 약 400자]" }
+          { name: "서론", instruction: "주제 제기, 독자의 흥미 유발, 문제 의식 공유. [분량: 전체의 약 25%, 공백 포함 약 750자]" },
+          { name: "본론 1", instruction: "주제에 대한 깊이 있는 통찰, 작가의 경험이나 예시. [분량: 전체의 약 25%, 공백 포함 약 750자]" },
+          { name: "본론 2", instruction: "구체적인 해결책, 철학적 사색, 혹은 반전된 시각 제시. 핵심 논점이므로 충분히 전개하세요. [분량: 전체의 약 30%, 공백 포함 약 900자]" },
+          { name: "결론", instruction: "핵심 메시지 요약, 독자에게 주는 제언, 여운이 남는 마무리. [분량: 전체의 약 20%, 공백 포함 약 600자]" }
         ];
 
       let fullContent = "";
@@ -511,6 +558,7 @@ exports.generateBookAI = onCall(
       );
       let storySummary = (previousContext || "").toString().trim();
       let lastParagraph = "";
+      let sceneBridge = "";
       const stepResults = [];
 
       // 단계별 생성
@@ -528,6 +576,7 @@ exports.generateBookAI = onCall(
             synopsis: staticContext.synopsis,
             characterSheet: staticContext.characterSheet,
             settingSheet: staticContext.settingSheet,
+            sceneBridge: isNovel ? sceneBridge : "",
             temperature,
             isNovel,
             title: requestedTitle
@@ -542,6 +591,9 @@ exports.generateBookAI = onCall(
             storySummary = storySummary ? `${storySummary}\n${stepSummary}` : stepSummary;
           }
           lastParagraph = extractLastSentences(stepContent, 5);
+          if (isNovel) {
+            sceneBridge = await extractSceneBridge(stepContent, systemPrompt, isNovel);
+          }
 
           stepResults.push({
             name: step.name,
@@ -647,6 +699,9 @@ exports.generateSeriesEpisode = onCall(
 
       const lastParagraph = extractLastSentences(lastEpisodeContent || "", 10);
       const previousStorySummary = cumulativeSummary || "";
+      const sceneBridge = lastEpisodeContent
+        ? await extractSceneBridge(lastEpisodeContent, systemPrompt, true)
+        : "";
 
       // 시리즈 집필 단계별 지침 (Narrative Arc)
       const step = isFinalize
@@ -679,6 +734,7 @@ exports.generateSeriesEpisode = onCall(
         synopsis: synopsis || "",
         characterSheet: characterSheet || "",
         settingSheet: settingSheet || "",
+        sceneBridge,
         temperature,
         isNovel: true,
         title: requestedTitle
