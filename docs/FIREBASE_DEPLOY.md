@@ -7,10 +7,10 @@
 다음 명령어로 규칙만 배포해야 합니다:
 
 ```bash
-firebase deploy --only firestore:rules
+firebase deploy --only firestore
 ```
 
-- `--only firestore:rules`: Firestore 보안 규칙만 배포 (Functions, Hosting 등은 제외)
+- `--only firestore`: Firestore 보안 규칙만 배포 (Functions, Hosting 등은 제외)
 - 전체 배포: `firebase deploy`
 
 ## Functions 배포

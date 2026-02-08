@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import {
-    collection, onSnapshot, query, where, doc, setDoc, getDoc, updateDoc, serverTimestamp, increment, deleteDoc
+    collection, onSnapshot, query, where, doc, setDoc, getDoc, updateDoc, serverTimestamp, increment, deleteDoc, addDoc
 } from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
 import { db, functions } from '../firebase';
@@ -10,7 +10,7 @@ import { getTodayDateKey } from '../utils/dateUtils';
 const rawAppId = typeof __app_id !== 'undefined' ? __app_id : 'odok-app-default';
 const appId = rawAppId.replace(/\//g, '_');
 
-export const useStoryReader = ({ user, userProfile, view, setView, setError, earnPoints, checkAndGiveReward }) => {
+export const useStoryReader = ({ user, userProfile, view, setView, setError, earnPoints }) => {
     const [stories, setStories] = useState([]);
     const [favorites, setFavorites] = useState([]);
     const [bookFavorites, setBookFavorites] = useState([]);
@@ -225,7 +225,6 @@ export const useStoryReader = ({ user, userProfile, view, setView, setError, ear
             await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'ratings', `${user.uid}_${currentStory.id}`), {
                 storyId: currentStory.id, userId: user.uid, stars, updatedAt: serverTimestamp()
             });
-            setTimeout(() => checkAndGiveReward(currentStory.id), 500);
         } catch (err) { setError("평점 등록에 실패했습니다."); }
     };
 
