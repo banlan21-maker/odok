@@ -241,11 +241,11 @@ const App = () => {
                       <li><strong>광고 찬스:</strong> 광고를 보면 잉크 소모 없이 무료로 집필 가능합니다.</li>
                     </ul>
                   </section>
-                  
+
                   <section>
                     <h4 className="font-bold text-slate-800 mb-1">2. 💧 잉크 시스템</h4>
                     <ul className="list-disc list-inside space-y-1 text-xs text-slate-600">
-                      <li><strong>획득:</strong> 매일 출석(3~4개), 레벨업(5개) 시 지급됩니다.</li>
+                      <li><strong>획득:</strong> 매일 출석(2~3개), 레벨업(5개) 시 지급됩니다.</li>
                       <li><strong>사용:</strong> 책 읽기, 추가 집필, 키워드 변경, 작가 후원에 사용됩니다.</li>
                     </ul>
                   </section>
