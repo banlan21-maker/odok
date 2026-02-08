@@ -89,7 +89,7 @@ export const canDonate = (level = 1) => (level || 1) >= 6;
 
 /** 출석 보상: Lv 1~5 → 3, Lv 6+ → 4 (기본 +1 추가) */
 export const getAttendanceInk = (level = 1) => {
-  return (level || 1) >= 6 ? 4 : 3;
+  return (level || 1) >= 6 ? 3 : 2;
 };
 
 /** 2회차 집필 비용: Lv 21+ → 4, 그 외 → 5 */
