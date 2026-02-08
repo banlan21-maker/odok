@@ -1,0 +1,111 @@
+{
+  "timestamp": "2026-02-08T11:29:25.370Z",
+  "reason": "compaction",
+  "status": {
+    "version": "2.0",
+    "lastUpdated": "2026-02-07T07:31:17.971Z",
+    "activeFeatures": [
+      "odok-app"
+    ],
+    "primaryFeature": "odok-app",
+    "features": {
+      "odok-app": {
+        "phase": "do",
+        "phaseNumber": 3,
+        "matchRate": null,
+        "iterationCount": 0,
+        "requirements": [],
+        "documents": {},
+        "timestamps": {
+          "started": "2026-02-07T01:39:53.351Z",
+          "lastUpdated": "2026-02-07T07:31:17.971Z"
+        },
+        "lastFile": "E:\\projects\\odok-app\\src\\hooks\\useStoryReader.js"
+      }
+    },
+    "pipeline": {
+      "currentPhase": 1,
+      "level": "Dynamic",
+      "phaseHistory": []
+    },
+    "session": {
+      "startedAt": "2026-02-07T01:38:40.167Z",
+      "onboardingCompleted": false,
+      "lastActivity": "2026-02-07T07:31:17.971Z"
+    },
+    "history": [
+      {
+        "timestamp": "2026-02-07T01:39:53.351Z",
+        "feature": "odok-app",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-07T01:40:29.276Z",
+        "feature": "odok-app",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-07T01:41:28.796Z",
+        "feature": "odok-app",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-07T01:41:59.550Z",
+        "feature": "odok-app",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-07T06:57:28.332Z",
+        "feature": "odok-app",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-07T06:57:36.657Z",
+        "feature": "odok-app",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-07T06:57:42.916Z",
+        "feature": "odok-app",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-07T06:57:50.250Z",
+        "feature": "odok-app",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-07T06:57:55.983Z",
+        "feature": "odok-app",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-07T07:31:03.410Z",
+        "feature": "odok-app",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-07T07:31:13.549Z",
+        "feature": "odok-app",
+        "phase": "do",
+        "action": "updated"
+      },
+      {
+        "timestamp": "2026-02-07T07:31:17.971Z",
+        "feature": "odok-app",
+        "phase": "do",
+        "action": "updated"
+      }
+    ]
+  }
+}
