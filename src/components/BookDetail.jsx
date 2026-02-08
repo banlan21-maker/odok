@@ -137,11 +137,31 @@ const BookDetail = ({ book, onClose, onBookUpdate, fontSize = 'text-base', user,
     return onSnapshot(completionRef, (snap) => setIsCompleted(snap.exists()));
   }, [appId, completionDocId]);
 
+  const [timeLeft, setTimeLeft] = useState(180);
+
   useEffect(() => {
     setCanComplete(false);
-    const timer = setTimeout(() => setCanComplete(true), 3 * 60 * 1000);
-    return () => clearTimeout(timer);
+    setTimeLeft(180); // 3분에서 시작
+
+    const timer = setInterval(() => {
+      setTimeLeft((prev) => {
+        if (prev <= 1) {
+          clearInterval(timer);
+          setCanComplete(true);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
   }, [bookId]);
+
+  const formatTime = (seconds) => {
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${m}:${s.toString().padStart(2, '0')}`;
+  };
 
   useEffect(() => {
     if (!appId || !bookId) return;
@@ -710,7 +730,9 @@ const BookDetail = ({ book, onClose, onBookUpdate, fontSize = 'text-base', user,
               title={!canComplete ? (t?.read_more_time || '3분 이상 머문 뒤 완독 가능합니다') : undefined}
             >
               <CheckCircle className={`w-4 h-4 ${isCompleted ? 'fill-emerald-400 text-emerald-600' : ''}`} />
-              {isCompleted ? (t?.completed || '완독됨') : (t?.complete_btn || '완독')}
+              {isCompleted ? (t?.completed || '완독됨') :
+                canComplete ? (t?.complete_btn || '완독') :
+                  `${t?.reading || '읽는 중'} (${formatTime(timeLeft)})`}
             </button>
           </div>
           <div className="flex-1 flex justify-end">
