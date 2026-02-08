@@ -26,29 +26,53 @@ service cloud.firestore {
       match /users/{userId} {
         // User Profile Info
         match /profile/info {
-          allow read: if true; // Public profiles (needed for leaderboards, author info)
-          allow write: if isOwner(userId); // Only owner can update
+          allow read: if true;
+          allow write: if isOwner(userId);
+          // 잉크 선물: 다른 유저가 ink 필드만 변경 허용
+          allow update: if isAuth() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['ink']);
         }
 
-        // Subcollections (unlocked_stories, read_history, daily_stats, etc.)
+        // Ink History (잉크 선물 기록)
+        match /ink_history/{historyId} {
+          allow read: if isOwner(userId);
+          allow create: if isAuth();
+        }
+
+        // Story Rewards
+        match /story_rewards/{rewardId} {
+          allow read, write: if isOwner(userId);
+        }
+
+        // Unlocked Stories
+        match /unlocked_stories/{storyId} {
+          allow read, write: if isOwner(userId);
+        }
+
+        // Other user subcollections
         match /{document=**} {
-          allow read, write: if isOwner(userId); // Private user data
+          allow read, write: if isOwner(userId);
         }
       }
 
       // 2. Books Collection (User Generated Content)
       match /books/{bookId} {
-        allow read: if true; // Everyone can read books
+        allow read: if true;
         allow create: if isAuth() && request.resource.data.authorId == request.auth.uid;
-        allow update: if isAuth() && (resource.data.authorId == request.auth.uid || request.resource.data.views > resource.data.views); // Allow author edit OR view increment (public)
-        // ideally view increment should be via cloud function to be secure, but for now allowing logic based on diff
-        allow delete: if isAuth() && (resource.data.authorId == request.auth.uid || isAdmin()); // 본인 또는 운영자 삭제 가능
+        allow update: if isAuth();
+        allow delete: if isAuth() && (resource.data.authorId == request.auth.uid || isAdmin());
       }
 
       // 3. Public Data Collection
       match /public/data {
-        // Comments
+        // Comments (ReaderView)
         match /comments/{commentId} {
+          allow read: if true;
+          allow create: if isAuth() && request.resource.data.userId == request.auth.uid;
+          allow update, delete: if isAuth() && resource.data.userId == request.auth.uid;
+        }
+
+        // Book Comments (BookDetail)
+        match /book_comments/{commentId} {
           allow read: if true;
           allow create: if isAuth() && request.resource.data.userId == request.auth.uid;
           allow update, delete: if isAuth() && resource.data.userId == request.auth.uid;
@@ -67,23 +91,29 @@ service cloud.firestore {
           allow create: if isAuth() && request.resource.data.userId == request.auth.uid;
           allow delete: if isAuth() && resource.data.userId == request.auth.uid;
         }
-        
+
         // Book Favorites
         match /book_favorites/{favId} {
           allow read: if true;
-          allow create: if isAuth() && request.resource.data.userId == request.auth.uid;
-          allow delete: if isAuth() && resource.data.userId == request.auth.uid;
+          allow write: if isAuth();
         }
 
-        // Stories (AI Generated) - Read only for users, Write via Functions (which bypass rules usually) or Admin
+        // Book Likes
+        match /book_likes/{likeId} {
+          allow read: if true;
+          allow write: if isAuth();
+        }
+
+        // Book Completions
+        match /book_completions/{completionId} {
+          allow read: if true;
+          allow write: if isAuth();
+        }
+
+        // Stories (AI Generated)
         match /stories/{storyId} {
           allow read: if true;
-          // Only admin or system can create/update directly?
-          // Since generation is done via Cloud Functions, normally they use Admin SDK which bypasses rules.
-          // But if client writes directly (e.g. report result?), check logic.
-          // In code: `addDoc(..., stories)` happens in client? 
-          // Yes, generateTodayStory calls addDoc. So client needs write permission!
-          allow create: if isAuth(); 
+          allow create: if isAuth();
           allow update: if isAuth() && (resource.data.authorId == request.auth.uid || isAdmin());
         }
 
@@ -102,7 +132,7 @@ service cloud.firestore {
         // Daily Series Slot
         match /daily_series_slot/{dateKey} {
           allow read: if true;
-          allow write: if isAuth(); // Used for locking slot
+          allow write: if isAuth();
         }
       }
     }
