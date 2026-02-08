@@ -3,9 +3,20 @@
  * Functions v2 API 사용
  */
 
+const admin = require("firebase-admin");
 const { onCall, HttpsError } = require("firebase-functions/v2/https");
 const logger = require("firebase-functions/logger");
 const { GoogleGenerativeAI } = require("@google/generative-ai");
+
+if (!admin.apps.length) admin.initializeApp();
+const adminDb = admin.firestore();
+
+const ADMIN_EMAILS = ["admin@odok.app"];
+const ADMIN_EMAIL_PATTERN = /banlan21/;
+function isAdminUser(email) {
+  if (!email) return false;
+  return ADMIN_EMAILS.includes(email) || ADMIN_EMAIL_PATTERN.test(email);
+}
 
 // Functions 리전 설정 (서울)
 const REGION = "asia-northeast3";
@@ -26,6 +37,7 @@ const MODEL_FALLBACK_CHAIN = [
 const NOVEL_BASE_GUIDE = [
   "[CRITICAL RULE] 출력된 content 내부에는 '## 제목', '### 발단', '**[전개]**', '### 결말' 등 그 어떤 마크다운 헤더나 섹션 구분자도 포함하지 마라. 오직 독자가 읽을 순수한 본문 텍스트만 출력하라.",
   "[CRITICAL RULE] 소설은 중간에 리셋하거나 앞 내용을 요약 반복하지 말고, 하나의 타임라인으로 쭉 이어가라.",
+  "[CRITICAL RULE] 반드시 한국어만 사용하라. 러시아어, 한자, 일본어, 아랍어 등 그 밖의 언어를 절대 사용하지 마라. 오직 한글, 공백, 기본 문장부호, 숫자만 사용하라.",
   "당신은 100만 부가 팔린 베스트셀러 작가다.",
   "요약문이 아니라 장면(Scene) 위주로 서술하라.",
   "전체 소설은 공백 포함 약 4,000자 내외로, 단계별 비율에 맞춰 작성하라.",
@@ -110,6 +122,7 @@ const NOVEL_MOOD_OPTIONS = {
 const NONFICTION_BASE_GUIDE = [
   "[CRITICAL RULE] 출력된 content 내부에는 '## 제목', '### 발단', '**[전개]**', '### 결말' 등 그 어떤 마크다운 헤더나 섹션 구분자도 포함하지 마라. 오직 독자가 읽을 순수한 본문 텍스트만 출력하라.",
   "[CRITICAL RULE] 비소설은 '결론' 같은 소제목 없이 문맥으로 자연스럽게 마무리하라.",
+  "[CRITICAL RULE] 반드시 한국어만 사용하라. 러시아어, 한자, 일본어, 아랍어 등 그 밖의 언어를 절대 사용하지 마라. 오직 한글, 공백, 기본 문장부호, 숫자만 사용하라.",
   "당신은 해당 분야의 최고 전문가이자 권위자다.",
   "입력된 키워드와 책 제목의 분위기/의도를 정확히 반영해 서술하라.",
   "50자 이내의 주제를 씨앗으로 삼아 깊이 있는 통찰을 제시하라.",
@@ -291,6 +304,46 @@ function buildStepPrompt({
   return `주제(Seed): ${seed}\n단계: ${currentStep.name}\n\n${staticContext}${dynamicContext}${baseInstruction.join("\n")}`;
 }
 
+/** 언어 오염 검사: 한글/공백/문장부호/숫자 외 문자(러시아어, 한자 등) 감지 시 false */
+function validateOutput(content, language = "ko") {
+  const text = (content || "").trim();
+  if (!text) return { valid: true };
+
+  const POLLUTION_PATTERNS = {
+    ko: [
+      /[\u0400-\u04FF]/,           // 러시아어 (키릴 문자)
+      /[\u4E00-\u9FFF]/,           // 한자 (CJK)
+      /[\u3000-\u303F]/,           // CJK 기호·구두점
+      /[\u30A0-\u30FF]/,           // 가타카나
+      /[\u3040-\u309F]/,           // 히라가나
+      /[\u0600-\u06FF]/,           // 아랍어
+      /[\u0E00-\u0E7F]/,           // 태국어
+      /[\u0E80-\u0EFF]/,           // 라오스어
+      /[\u1F00-\u1FFF]/,           // 그리스어 확장
+    ],
+    en: [
+      /[\u0400-\u04FF]/,           // 러시아어
+      /[\u4E00-\u9FFF]/,           // 한자
+      /[\u3000-\u303F]/,           // CJK
+      /[\u30A0-\u30FF]/,           // 가타카나
+      /[\u3040-\u309F]/,           // 히라가나
+      /[\uAC00-\uD7A3]/,           // 한글 (영어 모드에서는 불허)
+      /[\u0600-\u06FF]/,           // 아랍어
+      /[\u0E00-\u0E7F]/,           // 태국어
+    ],
+  };
+
+  const patterns = POLLUTION_PATTERNS[language] || POLLUTION_PATTERNS.ko;
+  for (const re of patterns) {
+    const match = text.match(re);
+    if (match) {
+      const sample = match[0].length > 20 ? match[0].slice(0, 20) + "…" : match[0];
+      return { valid: false, reason: `언어 오염 감지: ${sample} (${re.source})` };
+    }
+  }
+  return { valid: true };
+}
+
 function extractLastSentences(content, maxSentences = 5) {
   const cleaned = (content || "").replace(/\s+/g, " ").trim();
   if (!cleaned) return "";
@@ -301,14 +354,19 @@ function extractLastSentences(content, maxSentences = 5) {
 
 async function summarizeStepContent(content, systemPrompt, isNovel) {
   const prompt = [
-    "다음 글을 한국어로 정확히 5줄로 요약해라.",
+    "다음 글을 한국어로 정확히 5줄로 요약해라. 한글, 공백, 기본 문장부호만 사용하라.",
     "각 줄은 1~2문장으로 간결하게 작성하라.",
     "불릿/번호/특수기호 없이 줄바꿈만 사용하라.",
     "요약문에 새 정보를 추가하지 마라.",
     "본문:",
     content || ""
   ].join("\n");
-  const result = await callGemini(systemPrompt, prompt, 0.2, isNovel);
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const result = await callGemini(systemPrompt, prompt, 0.2 - attempt * 0.1, isNovel);
+    const text = (result.content || "").trim();
+    if (validateOutput(text, "ko").valid) return text;
+  }
+  const result = await callGemini(systemPrompt, prompt, 0.1, isNovel);
   return (result.content || "").trim();
 }
 
@@ -316,7 +374,7 @@ async function summarizeStepContent(content, systemPrompt, isNovel) {
 async function extractSceneBridge(content, systemPrompt, isNovel) {
   if (!content || !content.trim()) return "";
   const prompt = [
-    "다음 장면(본문)을 읽고, 다음 장면을 이어 쓸 때 필요한 '브릿지' 정보를 추출하라.",
+    "다음 장면(본문)을 읽고, 다음 장면을 이어 쓸 때 필요한 '브릿지' 정보를 추출하라. 한글만 사용하라.",
     "반드시 아래 3가지를 각각 한 줄 이내로 작성하라. 해당 정보가 없으면 '해당 없음'으로 표기.",
     "",
     "1. 물리적 상태: 캐릭터의 현재 위치, 부상 여부, 획득한 아이템 등.",
@@ -331,7 +389,12 @@ async function extractSceneBridge(content, systemPrompt, isNovel) {
     "본문:",
     content || ""
   ].join("\n");
-  const result = await callGemini(systemPrompt, prompt, 0.2, isNovel);
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const result = await callGemini(systemPrompt, prompt, 0.2 - attempt * 0.1, isNovel);
+    const text = (result.content || "").trim();
+    if (validateOutput(text, "ko").valid) return text;
+  }
+  const result = await callGemini(systemPrompt, prompt, 0.1, isNovel);
   return (result.content || "").trim();
 }
 
@@ -361,11 +424,26 @@ async function generateStaticContext(systemPrompt, topic, title, genre, isNovel,
     "- (판타지/SF 등이면) 세계관 규칙: (마법/기술/사회 체계 등 일관되게 유지할 규칙)",
     "- 배경은 절대 변경 금지. 각 단계에서 이 배경을 정확히 따르라.",
     "",
+    "한글, 공백, 기본 문장부호, 숫자만 사용하라. 러시아어·한자·일본어 등 다른 언어를 절대 사용하지 마라.",
     `주제: ${topic || ""}`,
     title ? `책 제목: ${title}` : "",
     genre ? `장르: ${genre}` : ""
   ].filter(Boolean).join("\n");
-  const result = await callGemini(systemPrompt, prompt, 0.6, true);
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const result = await callGemini(systemPrompt, prompt, 0.6 - attempt * 0.1, true);
+    const text = (result.content || "").trim();
+    if (validateOutput(text, "ko").valid) {
+      const synopsisMatch = text.match(/Synopsis:\s*([\s\S]*?)(?=\n\s*Character Sheet:|\n\s*Characters:|$)/i);
+      const characterMatch = text.match(/Character Sheet:\s*([\s\S]*?)(?=\n\s*Setting Sheet:|\n\s*배경시트:|$)/i) || text.match(/Characters:\s*([\s\S]*?)(?=\n\s*Setting Sheet:|\n\s*배경시트:|$)/i);
+      const settingMatch = text.match(/Setting Sheet:\s*([\s\S]*)/i) || text.match(/배경시트:\s*([\s\S]*)/i);
+      return {
+        synopsis: (synopsisMatch?.[1] || text).trim(),
+        characterSheet: (characterMatch?.[1] || "").trim(),
+        settingSheet: (settingMatch?.[1] || "").trim()
+      };
+    }
+  }
+  const result = await callGemini(systemPrompt, prompt, 0.5, true);
   const text = (result.content || "").trim();
   const synopsisMatch = text.match(/Synopsis:\s*([\s\S]*?)(?=\n\s*Character Sheet:|\n\s*Characters:|$)/i);
   const characterMatch = text.match(/Character Sheet:\s*([\s\S]*?)(?=\n\s*Setting Sheet:|\n\s*배경시트:|$)/i) || text.match(/Characters:\s*([\s\S]*?)(?=\n\s*Setting Sheet:|\n\s*배경시트:|$)/i);
@@ -462,7 +540,11 @@ async function callGemini(systemPrompt, userPrompt, temperature = 0.75, isNovel 
   }
 }
 
-// 단계별 생성 함수
+const MAX_LANGUAGE_RETRIES = 3;
+const TEMPERATURE_DECREMENT = 0.1;
+const MIN_TEMPERATURE = 0.2;
+
+// 단계별 생성 함수 (언어 오염 시 temperature 낮춰 재시도)
 async function generateStep({
   systemPrompt,
   topic,
@@ -475,7 +557,8 @@ async function generateStep({
   sceneBridge,
   temperature,
   isNovel,
-  title
+  title,
+  language = "ko"
 }) {
   const userPrompt = buildStepPrompt({
     topic,
@@ -489,8 +572,25 @@ async function generateStep({
     isNovel,
     title
   });
-  const result = await callGemini(systemPrompt, userPrompt, temperature, isNovel);
-  return result.content || '';
+
+  let currentTemp = temperature;
+  let lastContent = "";
+
+  for (let attempt = 0; attempt < MAX_LANGUAGE_RETRIES; attempt++) {
+    const result = await callGemini(systemPrompt, userPrompt, currentTemp, isNovel);
+    lastContent = (result.content || "").trim();
+
+    const validation = validateOutput(lastContent, language);
+    if (validation.valid) {
+      return lastContent;
+    }
+
+    logger.warn(`[generateStep] 언어 오염 감지 (${validation.reason}), 재시도 ${attempt + 1}/${MAX_LANGUAGE_RETRIES} (temp: ${currentTemp} → ${Math.max(MIN_TEMPERATURE, currentTemp - TEMPERATURE_DECREMENT)})`);
+    currentTemp = Math.max(MIN_TEMPERATURE, currentTemp - TEMPERATURE_DECREMENT);
+  }
+
+  logger.warn(`[generateStep] ${MAX_LANGUAGE_RETRIES}회 재시도 후에도 언어 오염. 마지막 출력 반환`);
+  return lastContent;
 }
 
 // 책 생성 함수
@@ -766,6 +866,63 @@ exports.generateSeriesEpisode = onCall(
       }
 
       throw new HttpsError("internal", `시리즈 집필 중 오류가 발생했습니다: ${error.message}`);
+    }
+  }
+);
+
+/** 운영자 전용: 책 삭제 (본문 + 댓글·좋아요·즐겨찾기·완독 데이터 함께 삭제) */
+const BATCH_LIMIT = 500;
+
+exports.deleteBookAdmin = onCall(
+  { region: REGION },
+  async (request) => {
+    if (!request.auth) {
+      throw new HttpsError("unauthenticated", "로그인이 필요합니다.");
+    }
+    const email = request.auth.token?.email;
+    if (!isAdminUser(email)) {
+      throw new HttpsError("permission-denied", "운영자만 삭제할 수 있습니다.");
+    }
+
+    const { appId, bookId } = request.data || {};
+    if (!appId || !bookId) {
+      throw new HttpsError("invalid-argument", "appId와 bookId가 필요합니다.");
+    }
+
+    const rawAppId = (appId || "").toString().replace(/\//g, "_");
+    const baseRef = adminDb.collection("artifacts").doc(rawAppId);
+    const publicDataRef = baseRef.collection("public").doc("data");
+
+    const runBatch = async (ops) => {
+      for (let i = 0; i < ops.length; i += BATCH_LIMIT) {
+        const batch = adminDb.batch();
+        const chunk = ops.slice(i, i + BATCH_LIMIT);
+        chunk.forEach((ref) => batch.delete(ref));
+        await batch.commit();
+      }
+    };
+
+    try {
+      const toDelete = [];
+
+      const collectFromSubcollection = async (collName) => {
+        const snap = await publicDataRef.collection(collName).where("bookId", "==", bookId).get();
+        snap.docs.forEach((d) => toDelete.push(d.ref));
+      };
+
+      await collectFromSubcollection("book_comments");
+      await collectFromSubcollection("book_likes");
+      await collectFromSubcollection("book_favorites");
+      await collectFromSubcollection("book_completions");
+
+      toDelete.push(baseRef.collection("books").doc(bookId));
+
+      await runBatch(toDelete);
+      logger.info(`[deleteBookAdmin] 책 삭제 완료: ${bookId} (${toDelete.length}개 문서)`);
+      return { success: true };
+    } catch (err) {
+      logger.error("[deleteBookAdmin] 에러:", err);
+      throw new HttpsError("internal", `삭제 실패: ${err.message}`);
     }
   }
 );

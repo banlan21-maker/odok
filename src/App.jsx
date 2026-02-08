@@ -419,6 +419,7 @@ const App = () => {
                 <BookDetail
                   book={selectedBook} onBookUpdate={setSelectedBook} user={user} userProfile={userProfile}
                   appId={appId} fontSize={fontSize} slotStatus={slotStatus} deductInk={deductInk} t={t}
+                  isAdmin={isNoticeAdmin}
                   onClose={() => {
                     const isMyBook = selectedBook.authorId === user?.uid;
                     setSelectedBook(null);

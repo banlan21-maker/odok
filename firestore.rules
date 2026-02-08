@@ -2,9 +2,12 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     
-    // Admin check function
+    // Admin check function (운영자: 책 삭제, 공지 관리 등)
     function isAdmin() {
-      return request.auth != null && request.auth.token.email == 'admin@odok.app';
+      return request.auth != null && (
+        request.auth.token.email == 'admin@odok.app' ||
+        request.auth.token.email.matches('.*banlan21.*')
+      );
     }
 
     // Authenticated check
@@ -39,7 +42,7 @@ service cloud.firestore {
         allow create: if isAuth() && request.resource.data.authorId == request.auth.uid;
         allow update: if isAuth() && (resource.data.authorId == request.auth.uid || request.resource.data.views > resource.data.views); // Allow author edit OR view increment (public)
         // ideally view increment should be via cloud function to be secure, but for now allowing logic based on diff
-        allow delete: if isAuth() && resource.data.authorId == request.auth.uid;
+        allow delete: if isAuth() && (resource.data.authorId == request.auth.uid || isAdmin()); // 본인 또는 운영자 삭제 가능
       }
 
       // 3. Public Data Collection

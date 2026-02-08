@@ -77,6 +77,21 @@ export const generateBook = async ({
 };
 
 /**
+ * 운영자 전용: 책 삭제 (본문 + 댓글·좋아요·즐겨찾기·완독 데이터 함께 삭제)
+ */
+export const deleteBookAdmin = async ({ appId, bookId }) => {
+  try {
+    const deleteBookAdminFn = httpsCallable(functions, "deleteBookAdmin");
+    await deleteBookAdminFn({ appId, bookId });
+    return { success: true };
+  } catch (error) {
+    console.error("[AI Service] 책 삭제 오류:", error);
+    const errorMessage = error?.message || error?.details?.message || "삭제에 실패했습니다.";
+    throw new Error(errorMessage);
+  }
+};
+
+/**
  * 시리즈 다음 화 생성
  */
 export const generateSeriesEpisode = async ({

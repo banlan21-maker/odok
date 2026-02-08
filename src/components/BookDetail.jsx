@@ -1,10 +1,11 @@
 // src/components/BookDetail.jsx
 // 책 상세/뷰어 페이지 컴포넌트
 import React, { useEffect, useMemo, useState, useRef } from 'react';
-import { ChevronLeft, ChevronRight, Book, Calendar, User, Heart, Send, Bookmark, CheckCircle, PenTool, RefreshCw } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Book, Calendar, User, Heart, Send, Bookmark, CheckCircle, PenTool, RefreshCw, Trash2 } from 'lucide-react';
 import { formatDateDetailed } from '../utils/dateUtils';
 import { getCoverImageFromBook } from '../utils/bookCovers';
 import { collection, addDoc, deleteDoc, doc, onSnapshot, serverTimestamp, setDoc, updateDoc, increment, runTransaction, getDoc } from 'firebase/firestore';
+import { deleteBookAdmin } from '../utils/aiService';
 import { db } from '../firebase';
 import { generateSeriesEpisode } from '../utils/aiService';
 import { getTodayDateKey } from '../utils/dateUtils';
@@ -15,7 +16,7 @@ const DAILY_WRITE_LIMIT = 2;
 const DAILY_FREE_WRITES = 1;
 const INK_MAX = 999;
 
-const BookDetail = ({ book, onClose, onBookUpdate, fontSize = 'text-base', user, userProfile, appId, slotStatus, deductInk, t }) => {
+const BookDetail = ({ book, onClose, onBookUpdate, fontSize = 'text-base', user, userProfile, appId, slotStatus, deductInk, t, isAdmin }) => {
   if (!book) return null;
 
   // 수정 5: fontSize 값을 Tailwind 클래스로 매핑
@@ -69,6 +70,23 @@ const BookDetail = ({ book, onClose, onBookUpdate, fontSize = 'text-base', user,
   const [replyTo, setReplyTo] = useState(null);
   const [inkAmount, setInkAmount] = useState(1);
   const [isSendingInk, setIsSendingInk] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const handleAdminDeleteBook = async () => {
+    if (!isAdmin || !appId || !bookId) return;
+    setIsDeleting(true);
+    try {
+      await deleteBookAdmin({ appId, bookId });
+      setShowDeleteConfirm(false);
+      onClose();
+    } catch (err) {
+      console.error('책 삭제 실패:', err);
+      alert(t?.admin_delete_fail || err?.message || '삭제에 실패했습니다. 다시 시도해주세요.');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   const currentEpisode = isSeries && episodes.length > 0 ? episodes[currentEpisodeIndex] : null;
   const displayContent = isSeries ? (currentEpisode?.content || '') : (book.content || '');
@@ -526,12 +544,23 @@ const BookDetail = ({ book, onClose, onBookUpdate, fontSize = 'text-base', user,
       <div className="animate-in slide-in-from-right-4 fade-in pb-20">
         {/* 헤더 */}
         <div className="mb-6 space-y-4">
-          <button
-            onClick={onClose}
-            className="p-2 -ml-2 rounded-full hover:bg-slate-50 transition-colors"
-          >
-            <ChevronLeft className="w-6 h-6 text-slate-600" />
-          </button>
+          <div className="flex items-center justify-between">
+            <button
+              onClick={onClose}
+              className="p-2 -ml-2 rounded-full hover:bg-slate-50 transition-colors"
+            >
+              <ChevronLeft className="w-6 h-6 text-slate-600" />
+            </button>
+            {isAdmin && (
+              <button
+                onClick={() => setShowDeleteConfirm(true)}
+                className="p-2 rounded-full hover:bg-rose-50 text-slate-400 hover:text-rose-500 transition-colors"
+                title={t?.admin_delete_book || '책 삭제'}
+              >
+                <Trash2 className="w-5 h-5" />
+              </button>
+            )}
+          </div>
 
           {/* 표지 이미지 및 기본 정보 */}
           <div className="flex gap-4">
@@ -904,6 +933,36 @@ const BookDetail = ({ book, onClose, onBookUpdate, fontSize = 'text-base', user,
                   className="flex-1 py-3 rounded-xl text-sm font-black bg-slate-100 text-slate-600 hover:bg-slate-200"
                 >
                   {t?.stay || "머물기"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* 운영자: 책 삭제 확인 모달 */}
+        {showDeleteConfirm && isAdmin && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-6">
+            <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl space-y-4">
+              <div className="text-center space-y-2">
+                <h3 className="text-lg font-black text-slate-800">{t?.admin_delete_confirm_title || "책 삭제"}</h3>
+                <p className="text-sm text-slate-600">
+                  {t?.admin_delete_confirm_desc || "이 책을 삭제하면 복구할 수 없습니다. 신고된 불순 콘텐츠나 문제가 있는 책일 때만 삭제해주세요."}
+                </p>
+              </div>
+              <div className="space-y-2">
+                <button
+                  onClick={handleAdminDeleteBook}
+                  disabled={isDeleting}
+                  className="w-full bg-rose-500 text-white py-3 rounded-xl text-sm font-black hover:bg-rose-600 transition-colors disabled:opacity-50"
+                >
+                  {isDeleting ? (t?.deleting || "삭제 중...") : (t?.admin_delete_confirm || "삭제하기")}
+                </button>
+                <button
+                  onClick={() => setShowDeleteConfirm(false)}
+                  disabled={isDeleting}
+                  className="w-full bg-slate-100 text-slate-600 py-2 rounded-xl text-sm font-bold hover:bg-slate-200 transition-colors disabled:opacity-50"
+                >
+                  {t?.cancel || "취소"}
                 </button>
               </div>
             </div>
