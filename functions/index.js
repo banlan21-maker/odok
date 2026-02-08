@@ -927,6 +927,102 @@ exports.deleteBookAdmin = onCall(
   }
 );
 
+// 이야기 번역 함수
+exports.translateStoryAI = onCall(
+  {
+    region: REGION,
+    maxInstances: 5,
+    timeoutSeconds: 120
+  },
+  async (request) => {
+    try {
+      if (!GEMINI_API_KEY) {
+        throw new HttpsError("failed-precondition", "Gemini API 키가 설정되지 않았습니다.");
+      }
+      if (!request.auth) {
+        throw new HttpsError("unauthenticated", "로그인이 필요합니다.");
+      }
+
+      const { content, targetLanguage } = request.data || {};
+      if (!content || !targetLanguage) {
+        throw new HttpsError("invalid-argument", "content와 targetLanguage가 필요합니다.");
+      }
+
+      const langNames = {
+        ko: "한국어", en: "English", ja: "日本語", zh: "中文",
+        es: "Español", fr: "Français", de: "Deutsch"
+      };
+      const langName = langNames[targetLanguage] || targetLanguage;
+
+      const systemPrompt = "당신은 전문 문학 번역가입니다. 원문의 분위기와 문체를 최대한 살려서 자연스럽게 번역하세요. 순수 번역 텍스트만 출력하세요.";
+      const userPrompt = `다음 글을 ${langName}(으)로 번역하세요. 원문의 감성과 뉘앙스를 유지하세요.\n\n${content}`;
+
+      const result = await callGemini(systemPrompt, userPrompt, 0.3, false);
+
+      return {
+        translatedContent: (result.content || "").trim(),
+        targetLanguage
+      };
+    } catch (error) {
+      logger.error("[translateStoryAI] 에러:", error.message);
+      if (error instanceof HttpsError) throw error;
+      throw new HttpsError("internal", `번역 중 오류가 발생했습니다: ${error.message}`);
+    }
+  }
+);
+
+// 오류 신고 분석 함수
+exports.analyzeReportAI = onCall(
+  {
+    region: REGION,
+    maxInstances: 5,
+    timeoutSeconds: 60
+  },
+  async (request) => {
+    try {
+      if (!GEMINI_API_KEY) {
+        throw new HttpsError("failed-precondition", "Gemini API 키가 설정되지 않았습니다.");
+      }
+      if (!request.auth) {
+        throw new HttpsError("unauthenticated", "로그인이 필요합니다.");
+      }
+
+      const { reportText, originalContent, reportType } = request.data || {};
+      if (!reportText) {
+        throw new HttpsError("invalid-argument", "reportText가 필요합니다.");
+      }
+
+      const systemPrompt = "당신은 콘텐츠 품질 분석 전문가입니다. 사용자의 신고 내용을 분석하고 타당성을 판단하세요.";
+      const userPrompt = [
+        `신고 유형: ${reportType || "기타"}`,
+        `신고 내용: ${reportText}`,
+        originalContent ? `원문 일부: ${originalContent.substring(0, 500)}` : "",
+        "",
+        "다음 형식으로 응답하세요:",
+        "판정: 승인 또는 거절",
+        "이유: (한 줄 설명)",
+        "심각도: 높음/보통/낮음"
+      ].filter(Boolean).join("\n");
+
+      const result = await callGemini(systemPrompt, userPrompt, 0.2, false);
+      const text = (result.content || "").trim();
+
+      const isApproved = text.includes("승인");
+      const severityMatch = text.match(/심각도:\s*(높음|보통|낮음)/);
+
+      return {
+        approved: isApproved,
+        analysis: text,
+        severity: severityMatch ? severityMatch[1] : "보통"
+      };
+    } catch (error) {
+      logger.error("[analyzeReportAI] 에러:", error.message);
+      if (error instanceof HttpsError) throw error;
+      throw new HttpsError("internal", `신고 분석 중 오류가 발생했습니다: ${error.message}`);
+    }
+  }
+);
+
 // 호환성 유지용 함수
 exports.generateStoryAI = onCall(
   {

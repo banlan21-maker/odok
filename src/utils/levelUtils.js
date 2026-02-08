@@ -107,8 +107,8 @@ export const getReadInkCost = (level = 1) => {
   return (level || 1) >= 11 ? 1 : 2;
 };
 
-/** 비소설 키워드 새로고침 무료 여부 (레벨 10 이상) */
-export const isKeywordRefreshFree = (level = 1) => (level || 1) >= 10;
+/** 비소설 키워드 새로고침 무료 여부 (베스트 티어: 레벨 11 이상) */
+export const isKeywordRefreshFree = (level = 1) => (level || 1) >= 11;
 
 /** 레벨업 시 잉크 보너스 (기존 유지) */
 export const getLevelUpInkBonus = () => 5;
