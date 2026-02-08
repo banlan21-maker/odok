@@ -231,8 +231,44 @@ const App = () => {
           {storyReaderHook.isHelpModalOpen && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-6">
               <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl">
-                <div className="flex justify-between items-center mb-4"><h3 className="font-bold">사용 설명서</h3><button onClick={() => storyReaderHook.setIsHelpModalOpen(false)}><X className="w-4 h-4" /></button></div>
-                <div className="text-sm text-slate-600 space-y-2"><p>1. 잉크를 사용하여 책을 읽거나 집필할 수 있습니다.</p><p>2. 매일 출석하면 잉크를 받습니다.</p><p>3. 하루 2회 집필 가능 (1회 무료).</p></div>
+                <div className="flex justify-between items-center mb-4"><h3 className="font-bold text-lg">사용 설명서</h3><button onClick={() => storyReaderHook.setIsHelpModalOpen(false)}><X className="w-5 h-5 text-slate-400" /></button></div>
+                <div className="text-sm text-slate-600 space-y-4 max-h-[60vh] overflow-y-auto pr-2">
+                  <section>
+                    <h4 className="font-bold text-slate-800 mb-1">1. 🖊️ 집필 시스템</h4>
+                    <ul className="list-disc list-inside space-y-1 text-xs text-slate-600">
+                      <li><strong>1일 2회 집필:</strong> 매일 최대 2번 글을 쓸 수 있습니다. (첫 번째 무료, 두 번째 잉크 소모)</li>
+                      <li><strong>선착순 발행:</strong> 각 장르별로 <strong>하루에 단 한 권</strong>만 발행됩니다. 서둘러 집필해보세요!</li>
+                      <li><strong>광고 찬스:</strong> 광고를 보면 잉크 소모 없이 무료로 집필 가능합니다.</li>
+                    </ul>
+                  </section>
+                  
+                  <section>
+                    <h4 className="font-bold text-slate-800 mb-1">2. 💧 잉크 시스템</h4>
+                    <ul className="list-disc list-inside space-y-1 text-xs text-slate-600">
+                      <li><strong>획득:</strong> 매일 출석(3~4개), 레벨업(5개) 시 지급됩니다.</li>
+                      <li><strong>사용:</strong> 책 읽기, 추가 집필, 키워드 변경, 작가 후원에 사용됩니다.</li>
+                    </ul>
+                  </section>
+
+                  <section>
+                    <h4 className="font-bold text-slate-800 mb-1">3. 🏆 레벨 시스템</h4>
+                    <p className="text-xs mb-1">잉크 1개 사용 시 경험치 10XP 획득</p>
+                    <ul className="list-disc list-inside space-y-1 text-xs text-slate-600">
+                      <li><strong>새싹 (Lv.1~5):</strong> 기본 혜택</li>
+                      <li><strong>작가 (Lv.6~10):</strong> 출석 잉크 증가(+1), 후원 기능 오픈</li>
+                      <li><strong>베스트 (Lv.11~20):</strong> 독서 비용 할인 (2개→1개)</li>
+                      <li><strong>마스터 (Lv.21~):</strong> 집필 비용 할인 (5개→4개)</li>
+                    </ul>
+                  </section>
+
+                  <section>
+                    <h4 className="font-bold text-slate-800 mb-1">4. 📚 릴레이 시리즈</h4>
+                    <ul className="list-disc list-inside space-y-1 text-xs text-slate-600">
+                      <li><strong>이어쓰기:</strong> 시리즈는 <strong>누구나</strong> 다음 화를 이어 쓸 수 있는 릴레이 소설입니다.</li>
+                      <li><strong>통합 슬롯:</strong> 시리즈 신작과 이어쓰기를 포함해 <strong>하루에 단 한 번</strong>만 발행 가능합니다.</li>
+                    </ul>
+                  </section>
+                </div>
                 <div className="pt-4 mt-2 border-t border-slate-100 text-right text-xs text-slate-400">Ver {APP_VERSION}</div>
               </div>
             </div>
