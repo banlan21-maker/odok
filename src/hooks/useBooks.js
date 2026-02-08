@@ -270,12 +270,18 @@ export const useBooks = ({ user, userProfile, setError, deductInk, setShowInkCon
                 summary: bookData.summary || bookData.content.substring(0, 100) + '...',
                 category: bookData.category,
                 subCategory: bookData.subCategory || null,
+                genre: bookData.genre || bookData.subCategory || null,
+                keywords: bookData.keywords || null,
+                selectedMood: bookData.selectedMood || null,
+                endingStyle: bookData.endingStyle || null,
                 authorId: user.uid,
                 authorName: authorName,
                 createdAt: serverTimestamp(),
                 dateKey: todayDateKey,
                 views: 0,
                 likes: 0,
+                favorites: 0,
+                completions: 0,
                 isSeries: isSeries
             };
 
