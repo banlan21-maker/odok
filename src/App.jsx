@@ -65,6 +65,8 @@ const App = () => {
     fontSize, setFontSize,
     isNoticeAdmin, saveProfile,
     showSaveSuccessModal, setShowSaveSuccessModal,
+    showAttendanceModal, setShowAttendanceModal,
+    lastAttendanceInk,
     handleDevReset, handleDeleteAccount,
     earnPoints,
     levelInfo, remainingDailyWrites
@@ -337,6 +339,18 @@ const App = () => {
               <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl space-y-4">
                 <div className="text-center space-y-2"><h3 className="text-xl font-black text-slate-800">{t.extra_write_title}</h3><p className="text-sm text-slate-600">{(t.extra_write_desc || "").replace('{amount}', getExtraWriteInkCost(levelInfo.level))}</p></div>
                 <div className="flex gap-3"><button onClick={() => { setShowInkConfirmModal(false); setPendingBookData(null); }} className="flex-1 bg-slate-100 text-slate-600 py-3 rounded-xl font-bold">{t.cancel}</button><button onClick={async () => { setShowInkConfirmModal(false); const bookData = pendingBookData; setPendingBookData(null); await handleBookGenerated(bookData, true); }} className="flex-1 bg-orange-500 text-white py-3 rounded-xl font-black">{t.write_btn}</button></div>
+              </div>
+            </div>
+          )}
+
+          {showAttendanceModal && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-6">
+              <div className="bg-gradient-to-br from-sky-50 to-sky-100 rounded-2xl p-8 w-full max-w-sm shadow-xl space-y-4 text-center">
+                <div className="text-5xl mb-2">💧</div>
+                <h2 className="text-2xl font-black text-slate-800">{t.attendance_check}</h2>
+                <p className="text-lg font-bold text-sky-600">+{lastAttendanceInk} {t.ink || '잉크'}</p>
+                <p className="text-xs text-slate-500">{language === 'en' ? 'Daily check-in reward' : '매일 접속하면 잉크가 지급돼요!'}</p>
+                <button onClick={() => setShowAttendanceModal(false)} className="w-full bg-slate-900 text-white py-3 rounded-xl font-black mt-4">{t.confirm}</button>
               </div>
             </div>
           )}
