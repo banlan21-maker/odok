@@ -18,6 +18,8 @@ import { useStoryReader } from './hooks/useStoryReader';
 import { T, genres } from './data';
 import { getReadInkCost, getExtraWriteInkCost } from './utils/levelUtils';
 import { getTodayDateKey } from './utils/dateUtils';
+import { Capacitor } from '@capacitor/core';
+import { App as CapApp } from '@capacitor/app';
 
 // Components
 import HomeView from './components/HomeView';
@@ -48,6 +50,7 @@ const App = () => {
   const [error, setError] = useState(null);
   const [selectedBook, setSelectedBook] = useState(null);
   const [currentBook, setCurrentBook] = useState(null);
+  const [showExitModal, setShowExitModal] = useState(false);
 
   // 1. Auth Hook
   const {
@@ -149,6 +152,24 @@ const App = () => {
 
   const t = T[language] || T.ko;
 
+  // Android 뒤로가기 버튼 처리
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return;
+    const handler = CapApp.addListener('backButton', () => {
+      const v = viewRef.current;
+      if (v === 'reader' || v === 'book_detail') {
+        setView('home');
+      } else if (v === 'genre_select' || v === 'story_list') {
+        setView('home');
+      } else if (v !== 'home' && v !== 'login' && v !== 'profile_setup') {
+        setView('home');
+      } else if (v === 'home') {
+        setShowExitModal(true);
+      }
+    });
+    return () => { handler.then(h => h.remove()); };
+  }, []);
+
   const filteredStories = storyReaderHook.stories.filter(s => {
     if (s.genreId !== storyReaderHook.selectedGenre?.id) return false;
     if (storyReaderHook.selectedSubGenre && s.subGenre !== storyReaderHook.selectedSubGenre.id) return false;
@@ -162,7 +183,7 @@ const App = () => {
   return (
     <div className="bg-gray-100 min-h-screen flex justify-center items-center">
       <style>{`@import url('https://fonts.googleapis.com/css2?family=Jua&display=swap'); .font-jua { font-family: 'Jua', sans-serif; } .scrollbar-hide::-webkit-scrollbar { display: none; }`}</style>
-      <div className="w-full max-w-md bg-slate-50 h-[100dvh] flex flex-col shadow-2xl relative overflow-hidden text-slate-900 font-sans selection:bg-orange-200">
+      <div className="w-full max-w-md bg-slate-50 h-[100dvh] flex flex-col shadow-2xl relative overflow-hidden text-slate-900 font-sans selection:bg-orange-200" style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}>
 
         {/* In-App Browser Warning */}
         {showInAppBrowserWarning && (
@@ -506,8 +527,20 @@ const App = () => {
           </div>
         )}
 
+        {showExitModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-6">
+            <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl space-y-4 text-center">
+              <h3 className="text-lg font-black text-slate-800">오독오독을 종료하시겠습니까?</h3>
+              <div className="flex gap-3">
+                <button onClick={() => setShowExitModal(false)} className="flex-1 bg-orange-500 text-white py-3 rounded-xl font-black">머물기</button>
+                <button onClick={() => CapApp.exitApp()} className="flex-1 bg-slate-100 text-slate-600 py-3 rounded-xl font-bold">나가기</button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {user && userProfile && userProfile.nickname && view !== 'reader' && view !== 'book_detail' && (
-          <nav className="flex-none h-16 bg-white border-t border-slate-100 flex items-center px-1 pb-2 pt-1 z-40">
+          <nav className="flex-none bg-white border-t border-slate-100 flex items-center px-1 pt-1 z-40" style={{ paddingBottom: 'calc(8px + env(safe-area-inset-bottom, 0px))' }}>
             <button onClick={() => setView('home')} className={`flex flex-col items-center justify-center flex-1 h-full space-y-0.5 transition-colors ${view === 'home' ? 'text-orange-600' : 'text-slate-400'}`}>
               <Home className={`w-6 h-6 ${view === 'home' ? 'fill-orange-100' : ''}`} /><span className="text-[10px] font-bold">{t.tab_home}</span>
             </button>

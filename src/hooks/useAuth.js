@@ -8,6 +8,7 @@ import {
 } from 'firebase/auth';
 import { auth } from '../firebase';
 import { initializeAdMob } from '../utils/admobService';
+import { StatusBar, Style } from '@capacitor/status-bar';
 
 export const useAuth = ({ setView, viewRef }) => {
   const [user, setUser] = useState(null);
@@ -73,6 +74,13 @@ export const useAuth = ({ setView, viewRef }) => {
     }
 
     initializeAdMob();
+
+    // StatusBar 투명 설정 (컨텐츠가 상태바 아래까지 확장)
+    if (Capacitor.isNativePlatform()) {
+      StatusBar.setOverlaysWebView({ overlay: true }).catch(() => {});
+      StatusBar.setStyle({ style: Style.Light }).catch(() => {});
+      StatusBar.setBackgroundColor({ color: '#00000000' }).catch(() => {});
+    }
   }, []);
 
   // 1. 로그인 (Google 로그인 필수)
