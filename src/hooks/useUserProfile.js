@@ -22,12 +22,15 @@ export const useUserProfile = ({ user, setView, setError, viewRef }) => {
   const [lastAttendanceInk, setLastAttendanceInk] = useState(1);
   const [showSaveSuccessModal, setShowSaveSuccessModal] = useState(false);
 
-  const getTodayString = () => new Date().toISOString().split('T')[0];
+  const attendanceCheckedRef = useRef(false);
 
   const checkAttendance = async (profileRef, today) => {
+    if (attendanceCheckedRef.current) return;
+    attendanceCheckedRef.current = true;
     try {
       const snap = await getDoc(profileRef);
       const data = snap.exists() ? snap.data() : {};
+      if (data.lastAttendanceDate === today) return;
       const currentInk = data.ink || 0;
       const level = getLevelFromXp(data.xp ?? 0);
       const attendanceInk = getAttendanceInk(level);
@@ -35,7 +38,10 @@ export const useUserProfile = ({ user, setView, setError, viewRef }) => {
       await updateDoc(profileRef, { lastAttendanceDate: today, ink: nextInk });
       setLastAttendanceInk(attendanceInk);
       setShowAttendanceModal(true);
-    } catch (e) { }
+    } catch (e) {
+      console.error('출석 체크 오류:', e);
+      attendanceCheckedRef.current = false;
+    }
   };
 
   // 프로필 구독 및 초기화
@@ -45,6 +51,7 @@ export const useUserProfile = ({ user, setView, setError, viewRef }) => {
       setTempNickname('');
       return;
     }
+    attendanceCheckedRef.current = false;
     const profileRef = doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'info');
 
     const initProfile = async () => {
@@ -128,7 +135,7 @@ export const useUserProfile = ({ user, setView, setError, viewRef }) => {
         if (data.language) setLanguage(data.language);
         if (data.fontSize) setFontSize(data.fontSize);
 
-        const today = getTodayString();
+        const today = getTodayDateKey();
         if (data.lastAttendanceDate !== today) checkAttendance(profileRef, today);
 
         if (!data.nickname || data.nickname.trim() === '') {
@@ -163,7 +170,7 @@ export const useUserProfile = ({ user, setView, setError, viewRef }) => {
         if (data.language) setLanguage(data.language);
         if (data.fontSize) setFontSize(data.fontSize);
 
-        const today = getTodayString();
+        const today = getTodayDateKey();
         if (data.lastAttendanceDate !== today) checkAttendance(profileRef, today);
 
         if (!data.nickname || data.nickname.trim() === '') {
@@ -393,7 +400,7 @@ export const useUserProfile = ({ user, setView, setError, viewRef }) => {
     saveProfile,
     handleDevReset,
     handleDeleteAccount,
-    getTodayString,
+    getTodayDateKey,
     appId,
     INITIAL_INK,
     INK_MAX,
@@ -403,8 +410,8 @@ export const useUserProfile = ({ user, setView, setError, viewRef }) => {
       nextLevelXp: getXpToNextLevel(userProfile.xp ?? 0),
       progress: getLevelProgressPercent(userProfile.xp ?? 0)
     } : { level: 1, nextLevelXp: 100, progress: 0 },
-    remainingDailyWrites: userProfile ? Math.max(0, DAILY_WRITE_LIMIT - (userProfile.lastBookCreatedDate === getTodayString() ? (userProfile.dailyWriteCount || 0) : 0)) : 2,
-    dailyWriteCount: userProfile && userProfile.lastBookCreatedDate === getTodayString() ? (userProfile.dailyWriteCount || 0) : 0,
+    remainingDailyWrites: userProfile ? Math.max(0, DAILY_WRITE_LIMIT - (userProfile.lastBookCreatedDate === getTodayDateKey() ? (userProfile.dailyWriteCount || 0) : 0)) : 2,
+    dailyWriteCount: userProfile && userProfile.lastBookCreatedDate === getTodayDateKey() ? (userProfile.dailyWriteCount || 0) : 0,
     lastBookCreatedDate: userProfile?.lastBookCreatedDate || null,
     isNoticeAdmin: user?.email && (user.email === 'admin@odok.app' || user.email.includes('banlan21')), // 관리자 권한 부여
     isAdmin: user?.email === 'banlan21@gmail.com',
