@@ -14,6 +14,14 @@
       },
       "oauth_client": [
         {
+          "client_id": "38540467550-0e1qd1egip893riockgj3c2lmif9gj00.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.banlan21.odok",
+            "certificate_hash": "9253e2806e3c10d9d35c86de32261bf9e84bf21b"
+          }
+        },
+        {
           "client_id": "38540467550-ichnnhrukr9tcg4c701pefj4t6j3dgmf.apps.googleusercontent.com",
           "client_type": 3
         }
