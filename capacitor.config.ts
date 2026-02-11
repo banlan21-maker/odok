@@ -3,7 +3,7 @@ import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
   appId: 'com.banlan21.odok',
-  appName: 'odok',
+  appName: '오독오독',
   webDir: 'dist',
   plugins: {
     FirebaseAuthentication: {

@@ -22,6 +22,7 @@ export const getBookCoverImage = (category, subCategory = null) => {
     
     // 자기계발: 나침반, 깔끔한 책상, 등대, 시계
     'self-improvement': 'https://images.unsplash.com/photo-1450101499163-c8848c66ca85?w=400&h=600&fit=crop&auto=format',
+    'self-help': 'https://images.unsplash.com/photo-1450101499163-c8848c66ca85?w=400&h=600&fit=crop&auto=format',
     
     // 인문/철학: 고대 건축물, 도서관 서가, 생각하는 사람
     'humanities': 'https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=400&h=600&fit=crop&auto=format',
@@ -46,6 +47,11 @@ export const getBookCoverImage = (category, subCategory = null) => {
  */
 export const getCoverImageFromBook = (book) => {
   if (!book) return getBookCoverImage('default');
-  
+
+  // 시리즈인 경우 seriesSubType(webnovel/novel)을 카테고리로 사용
+  if ((book.category === 'series' || book.isSeries) && book.seriesSubType) {
+    return getBookCoverImage(book.seriesSubType, book.subCategory);
+  }
+
   return getBookCoverImage(book.category, book.subCategory);
 };

@@ -3,9 +3,9 @@ import {
     collection, query, onSnapshot, where, getDocs, doc, getDoc, addDoc, serverTimestamp, updateDoc, increment, setDoc, deleteDoc
 } from 'firebase/firestore';
 import { db } from '../firebase';
-import { startOfDay, startOfWeek, endOfWeek, endOfDay } from 'date-fns';
+import { startOfDay, startOfWeek, endOfWeek } from 'date-fns';
 import { getTodayDateKey } from '../utils/dateUtils';
-import { getExtraWriteInkCost, getLevelFromXp, INK_MAX, DAILY_WRITE_LIMIT, DAILY_FREE_WRITES } from '../utils/levelUtils';
+import { getExtraWriteInkCost, getLevelFromXp, getGradeInfo, INK_MAX, DAILY_WRITE_LIMIT, DAILY_FREE_WRITES } from '../utils/levelUtils';
 
 const rawAppId = typeof __app_id !== 'undefined' ? __app_id : 'odok-app-default';
 const appId = rawAppId.replace(/\//g, '_');
@@ -24,17 +24,18 @@ function computeSlotStatus(booksData, todayDateKey, dssData) {
     todayBooksForSlots.forEach((book) => {
         const category = String(book.category || '').trim().toLowerCase();
         const isSeries = book.isSeries === true;
+        const slotData = { book, authorId: book.authorId };
         if (category === 'series' || isSeries) {
-            if (!st.series) st.series = { book, authorName: book.authorName || '익명' };
+            if (!st.series) st.series = slotData;
             return;
         }
-        if (category === 'webnovel' && !st.webnovel) st.webnovel = { book, authorName: book.authorName || '익명' };
-        else if (category === 'novel' && !st.novel) st.novel = { book, authorName: book.authorName || '익명' };
-        else if (category === 'essay' && !st.essay) st.essay = { book, authorName: book.authorName || '익명' };
-        else if ((category === 'self-improvement' || category === 'self-help') && !st['self-help']) st['self-help'] = { book, authorName: book.authorName || '익명' };
-        else if (category === 'humanities' && !st.humanities) st.humanities = { book, authorName: book.authorName || '익명' };
+        if (category === 'webnovel' && !st.webnovel) st.webnovel = slotData;
+        else if (category === 'novel' && !st.novel) st.novel = slotData;
+        else if (category === 'essay' && !st.essay) st.essay = slotData;
+        else if ((category === 'self-improvement' || category === 'self-help') && !st['self-help']) st['self-help'] = slotData;
+        else if (category === 'humanities' && !st.humanities) st.humanities = slotData;
     });
-    if (!st.series && dssData) st.series = { book: { id: dssData.bookId }, authorName: dssData.authorName || '익명' };
+    if (!st.series && dssData) st.series = { book: { id: dssData.bookId }, authorId: dssData.authorId || null };
     return st;
 }
 
@@ -52,8 +53,10 @@ export const useBooks = ({ user, userProfile, setError, deductInk, setShowInkCon
     const [isLoadingHomeData, setIsLoadingHomeData] = useState(true);
     const [isWritingInProgress, setIsWritingInProgress] = useState(false);
     const [showWritingCompleteModal, setShowWritingCompleteModal] = useState(null);
+    const [authorProfiles, setAuthorProfiles] = useState({});
 
     const latestBooksRef = useRef([]);
+    const authorProfilesCacheRef = useRef({});
 
     // Step 1: 생성된 책 목록 가져오기 & 실시간 동기화
     useEffect(() => {
@@ -67,8 +70,6 @@ export const useBooks = ({ user, userProfile, setError, deductInk, setShowInkCon
 
             const todayDateKey = getTodayDateKey();
             const today = startOfDay(new Date());
-            const weekStart = startOfWeek(today, { weekStartsOn: 1 });
-            const weekEnd = endOfWeek(today, { weekStartsOn: 1 });
 
             const todayBooksList = booksData.filter(book => {
                 if (book.dateKey) return book.dateKey === todayDateKey;
@@ -81,14 +82,12 @@ export const useBooks = ({ user, userProfile, setError, deductInk, setShowInkCon
             });
             setTodayBooks(todayBooksList);
 
-            const weeklyBooks = booksData.filter(book => {
-                const createdAt = book.createdAt?.toDate?.() || (book.createdAt?.seconds ? new Date(book.createdAt.seconds * 1000) : null);
-                return createdAt && createdAt >= weekStart && createdAt <= weekEnd;
-            }).map(book => ({
+            // 주간 베스트셀러: 전체 기간 누적 점수 기준 (높은 점수의 책은 몇 주든 연속 유지)
+            const bestBooks = booksData.map(book => ({
                 ...book,
                 score: (book.views || 0) + (book.likes || 0) + (book.favorites || 0) + (book.completions || 0)
-            })).sort((a, b) => b.score - a.score).slice(0, 3);
-            setWeeklyBestBooks(weeklyBooks);
+            })).sort((a, b) => b.score - a.score).slice(0, 5);
+            setWeeklyBestBooks(bestBooks);
 
             const dssRef = doc(db, 'artifacts', appId, 'public', 'data', 'daily_series_slot', todayDateKey);
             getDoc(dssRef).then((dssSnap) => {
@@ -118,43 +117,109 @@ export const useBooks = ({ user, userProfile, setError, deductInk, setShowInkCon
         return () => unsub();
     }, [user, appId]);
 
+    // 작가 프로필 캐시: authorId → { nickname, profileImageUrl }
+    useEffect(() => {
+        if (!books.length) return;
+        const authorIds = [...new Set(books.map(b => b.authorId).filter(Boolean))];
+        const toFetch = authorIds.filter(id => !authorProfilesCacheRef.current[id]);
+        if (toFetch.length === 0) return;
+
+        let isActive = true;
+        Promise.all(toFetch.map(async (id) => {
+            try {
+                const profileRef = doc(db, 'artifacts', appId, 'users', id, 'profile', 'info');
+                const profileSnap = await getDoc(profileRef);
+                if (profileSnap.exists()) {
+                    const data = profileSnap.data();
+                    return [id, { nickname: data.nickname || '익명', profileImageUrl: data.profileImageUrl || null }];
+                }
+                return [id, { nickname: '익명', profileImageUrl: null }];
+            } catch {
+                return [id, { nickname: '익명', profileImageUrl: null }];
+            }
+        })).then(results => {
+            if (!isActive) return;
+            const newProfiles = Object.fromEntries(results);
+            authorProfilesCacheRef.current = { ...authorProfilesCacheRef.current, ...newProfiles };
+            setAuthorProfiles({ ...authorProfilesCacheRef.current });
+        });
+
+        return () => { isActive = false; };
+    }, [books, appId]);
+
+    // 현재 유저 닉네임 변경 시 즉시 반영
+    useEffect(() => {
+        if (!user || !userProfile?.nickname) return;
+        const updated = {
+            nickname: userProfile.nickname,
+            profileImageUrl: userProfile.profileImageUrl || null
+        };
+        authorProfilesCacheRef.current[user.uid] = updated;
+        setAuthorProfiles(prev => ({ ...prev, [user.uid]: updated }));
+    }, [user, userProfile?.nickname, userProfile?.profileImageUrl]);
+
     // 주간 집필왕 계산
     useEffect(() => {
         if (!user || books.length === 0) return;
         let isActive = true;
         const timer = setTimeout(() => {
             const buildTopWriters = async () => {
-                const today = startOfDay(new Date());
-                const weekStart = startOfWeek(today, { weekStartsOn: 1 });
-                const weekEnd = endOfWeek(today, { weekStartsOn: 1 });
+                const now = new Date();
+                const weekStartDate = startOfWeek(now, { weekStartsOn: 1 });
+                const weekEndDate = endOfWeek(now, { weekStartsOn: 1 });
+                const toDateKey = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+                const weekStartKey = toDateKey(weekStartDate);
+                const weekEndKey = toDateKey(weekEndDate);
 
                 const weeklyBooks = books.filter(book => {
+                    if (book.dateKey) return book.dateKey >= weekStartKey && book.dateKey <= weekEndKey;
                     const createdAt = book.createdAt?.toDate?.() || (book.createdAt?.seconds ? new Date(book.createdAt.seconds * 1000) : null);
-                    return createdAt && createdAt >= weekStart && createdAt <= weekEnd;
+                    return createdAt && createdAt >= weekStartDate && createdAt <= weekEndDate;
                 });
 
                 const counts = weeklyBooks.reduce((acc, book) => {
                     const authorId = book.authorId;
                     if (!authorId) return acc;
                     if (!acc[authorId]) {
-                        acc[authorId] = { id: authorId, nickname: book.authorName || '익명', bookCount: 0 };
+                        acc[authorId] = { id: authorId, weeklyCount: 0 };
                     }
-                    acc[authorId].bookCount += 1;
+                    acc[authorId].weeklyCount += 1;
+                    return acc;
+                }, {});
+
+                // 누적 집필수 계산 (전체 books에서)
+                const totalCounts = booksData.reduce((acc, book) => {
+                    const authorId = book.authorId;
+                    if (!authorId) return acc;
+                    acc[authorId] = (acc[authorId] || 0) + 1;
                     return acc;
                 }, {});
 
                 const topWritersList = Object.values(counts)
-                    .sort((a, b) => b.bookCount - a.bookCount)
+                    .sort((a, b) => b.weeklyCount - a.weeklyCount)
                     .slice(0, 3);
 
+                // 프로필에서 닉네임/프로필사진/xp 가져오기
                 const enriched = await Promise.all(topWritersList.map(async (writer) => {
+                    const totalBookCount = totalCounts[writer.id] || 0;
                     try {
                         const profileRef = doc(db, 'artifacts', appId, 'users', writer.id, 'profile', 'info');
                         const profileSnap = await getDoc(profileRef);
-                        const profileImageUrl = profileSnap.exists() ? profileSnap.data().profileImageUrl : null;
-                        return { ...writer, profileImageUrl: profileImageUrl || null };
+                        if (profileSnap.exists()) {
+                            const data = profileSnap.data();
+                            const xp = data.xp ?? 0;
+                            const level = getLevelFromXp(xp);
+                            const gradeInfo = getGradeInfo(level);
+                            return {
+                                ...writer, totalBookCount,
+                                nickname: data.nickname || '익명',
+                                profileImageUrl: data.profileImageUrl || null,
+                                level, gradeName: gradeInfo.gradeName, gradeIcon: gradeInfo.icon
+                            };
+                        }
+                        return { ...writer, totalBookCount, nickname: '익명', profileImageUrl: null, level: 1, gradeName: '새싹', gradeIcon: '🌱' };
                     } catch (err) {
-                        return writer;
+                        return { ...writer, totalBookCount, nickname: '익명', profileImageUrl: null, level: 1, gradeName: '새싹', gradeIcon: '🌱' };
                     }
                 }));
 
@@ -351,6 +416,7 @@ export const useBooks = ({ user, userProfile, setError, deductInk, setShowInkCon
         isLoadingHomeData, setIsLoadingHomeData,
         isWritingInProgress, setIsWritingInProgress,
         showWritingCompleteModal, setShowWritingCompleteModal,
+        authorProfiles,
         handleBookGenerated
     };
 };

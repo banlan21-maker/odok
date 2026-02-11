@@ -102,6 +102,7 @@ const App = () => {
     isLoadingHomeData,
     isWritingInProgress, setIsWritingInProgress,
     showWritingCompleteModal, setShowWritingCompleteModal,
+    authorProfiles,
     handleBookGenerated
   } = useBooks({
     user,
@@ -386,7 +387,7 @@ const App = () => {
 
           {!user && (
             <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-8 animate-in fade-in">
-              <div className="text-center space-y-4"><h1 className="text-3xl font-black text-slate-800 mb-2">오독오독</h1><p className="text-slate-600 font-bold">{t.app_slogan}</p></div>
+              <div className="text-center space-y-4"><img src="/logo.png" alt="오독오독" className="w-32 h-32 mx-auto mb-2" /><h1 className="text-3xl font-black text-slate-800 mb-2">오독오독</h1><p className="text-slate-600 font-bold">{t.app_slogan}</p></div>
               <div className="w-full max-w-sm space-y-4"><button onClick={handleGoogleLogin} className="w-full bg-white border-2 border-slate-200 text-slate-700 py-4 rounded-2xl font-black flex items-center justify-center gap-3"><Globe className="w-6 h-6 text-slate-400" />{t.google_start}</button>{error && <div className="bg-red-50 border border-red-200 rounded-xl p-3 text-center"><p className="text-red-600 text-xs font-bold">{error}</p></div>}</div>
             </div>
           )}
@@ -410,7 +411,7 @@ const App = () => {
                   userProfile={userProfile} t={t} levelInfo={levelInfo} notices={notices}
                   setView={setView} todayBooks={todayBooks} weeklyBestBooks={weeklyBestBooks}
                   topWriters={topWriters} isLoadingHomeData={isLoadingHomeData}
-                  handleBookClick={handleBookClick}
+                  handleBookClick={handleBookClick} authorProfiles={authorProfiles}
                 />
               )}
 
@@ -478,19 +479,20 @@ const App = () => {
                     slotStatus={slotStatus} setView={setView} setSelectedBook={setSelectedBook}
                     error={error} setError={setError} deductInk={deductInk}
                     onGeneratingChange={setIsWritingInProgress} onGenerationComplete={() => { }}
+                    authorProfiles={authorProfiles}
                   />
                 </div>
               )}
 
-              {view === 'library' && <LibraryView t={t} books={books} onBookClick={handleBookClick} filter={libraryFilter} onFilterChange={setLibraryFilter} />}
+              {view === 'library' && <LibraryView t={t} books={books} onBookClick={handleBookClick} filter={libraryFilter} onFilterChange={setLibraryFilter} authorProfiles={authorProfiles} />}
 
-              {view === 'archive' && <ArchiveView t={t} books={books} user={user} favoriteBookIds={storyReaderHook.bookFavorites.map(f => f.bookId)} onBookClick={handleBookClick} />}
+              {view === 'archive' && <ArchiveView t={t} books={books} user={user} favoriteBookIds={storyReaderHook.bookFavorites.map(f => f.bookId)} onBookClick={handleBookClick} authorProfiles={authorProfiles} />}
 
               {view === 'book_detail' && selectedBook && (
                 <BookDetail
                   book={selectedBook} onBookUpdate={setSelectedBook} user={user} userProfile={userProfile}
                   appId={appId} fontSize={fontSize} slotStatus={slotStatus} deductInk={deductInk} t={t}
-                  isAdmin={isNoticeAdmin}
+                  isAdmin={isNoticeAdmin} authorProfiles={authorProfiles}
                   onClose={() => {
                     const isMyBook = selectedBook.authorId === user?.uid;
                     setSelectedBook(null);

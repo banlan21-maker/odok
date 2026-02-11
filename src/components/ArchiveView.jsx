@@ -7,7 +7,7 @@ import { getCoverImageFromBook } from '../utils/bookCovers';
 import { formatCount } from '../utils/numberFormat';
 import { formatGenreTag } from '../utils/formatGenre';
 
-const ArchiveView = ({ books, user, onBookClick, favoriteBookIds = [], t }) => {
+const ArchiveView = ({ books, user, onBookClick, favoriteBookIds = [], t, authorProfiles = {} }) => {
   // 내가 쓴 책 필터링
   const myBooks = books.filter(book => book.authorId === user?.uid) || [];
 
@@ -88,7 +88,7 @@ const ArchiveView = ({ books, user, onBookClick, favoriteBookIds = [], t }) => {
                       <div className="flex items-center gap-2 text-xs text-slate-500 flex-wrap">
                         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-gradient-to-r from-orange-500 to-rose-500 text-white text-[11px] font-black shadow-sm">
                           <Book className="w-3 h-3" />
-                          {(t?.author_by || "작가: {name}").replace('{name}', book.authorName || (t?.anonymous || '익명'))}
+                          {(t?.author_by || "작가: {name}").replace('{name}', authorProfiles[book.authorId]?.nickname || (t?.anonymous || '익명'))}
                         </span>
                         <span className="bg-slate-100 px-2 py-0.5 rounded-full font-bold text-slate-600">
                           {book.category === 'webnovel' ? (t?.cat_webnovel || '웹소설') :
@@ -197,7 +197,7 @@ const ArchiveView = ({ books, user, onBookClick, favoriteBookIds = [], t }) => {
                       <div className="flex items-center gap-2 text-xs text-slate-500 flex-wrap">
                         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-gradient-to-r from-orange-500 to-rose-500 text-white text-[11px] font-black shadow-sm">
                           <Book className="w-3 h-3" />
-                          {(t?.author_by || "작가: {name}").replace('{name}', book.authorName || (t?.anonymous || '익명'))}
+                          {(t?.author_by || "작가: {name}").replace('{name}', authorProfiles[book.authorId]?.nickname || (t?.anonymous || '익명'))}
                         </span>
                         <span className="bg-slate-100 px-2 py-0.5 rounded-full font-bold text-slate-600">
                           {book.category === 'webnovel' ? (t?.cat_webnovel || '웹소설') :
