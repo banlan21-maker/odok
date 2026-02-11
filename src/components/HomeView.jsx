@@ -39,8 +39,11 @@ const HomeView = ({
   weeklyBestBooks,
   topWriters,
   isLoadingHomeData,
-  handleBookClick
+  handleBookClick,
+  authorProfiles = {}
 }) => {
+  const getAuthorName = (authorId) => authorProfiles[authorId]?.nickname || '익명';
+  const getAuthorImage = (authorId) => authorProfiles[authorId]?.profileImageUrl || null;
   // Mock 공지사항 데이터 (슬라이드 배너용)
   const mockBanners = [
     { id: '1', title: '오독오독 오픈!', subtitle: '나만의 책을 만들어보세요.' },
@@ -230,7 +233,7 @@ const HomeView = ({
                       {book.title}
                     </h4>
                     <div className="flex items-center gap-2 text-xs text-slate-500 flex-wrap">
-                      <span className="font-bold">{book.authorName || '익명'}</span>
+                      <span className="font-bold">{getAuthorName(book.authorId)}</span>
                       <span className="bg-slate-100 px-2 py-0.5 rounded-full font-bold text-slate-600">
                         {book.category === 'webnovel' ? '웹소설' :
                           book.category === 'novel' ? '소설' :
@@ -322,7 +325,12 @@ const HomeView = ({
                     <div className="flex items-center gap-2 text-xs text-slate-500 flex-wrap">
                       <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-gradient-to-r from-orange-500 to-rose-500 text-white text-[11px] font-black shadow-sm">
                         <Book className="w-3 h-3" />
-                        {(t.author_by || "작가: {name}").replace('{name}', book.authorName || '익명')}
+                        {getAuthorImage(book.authorId) ? (
+                          <img src={getAuthorImage(book.authorId)} alt="" className="w-4 h-4 rounded-full object-cover" />
+                        ) : (
+                          <User className="w-3 h-3" />
+                        )}
+                        {getAuthorName(book.authorId)}
                       </span>
                       {(book.isSeries || book.category === 'series') && book.episodes && (
                         <span className="text-[10px] font-bold text-orange-600">
@@ -383,34 +391,42 @@ const HomeView = ({
             </p>
           </div>
         ) : (
-          <div className="flex gap-4 overflow-x-auto scrollbar-hide pb-2 -mx-5 px-5 snap-x snap-mandatory scroll-smooth">
+          <div className="space-y-3">
             {topWriters.map((writer, index) => {
-              const isTopThree = index < 3;
+              const rankColors = [
+                'from-yellow-400 to-amber-500 text-amber-900',
+                'from-slate-300 to-slate-400 text-slate-700',
+                'from-orange-300 to-orange-400 text-orange-800'
+              ];
+              const rankBg = rankColors[index] || 'from-slate-200 to-slate-300 text-slate-600';
 
               return (
-                <div key={writer.id} className="w-20 shrink-0 text-center snap-start">
-                  <div className={`relative w-20 h-20 rounded-full mx-auto mb-2 flex items-center justify-center overflow-hidden ${isTopThree ? 'bg-gradient-to-br from-orange-400 to-orange-600' : 'bg-slate-100'}`}>
+                <div key={writer.id} className="flex items-center gap-3 bg-white rounded-xl border border-slate-100 shadow-sm p-3">
+                  <div className={`w-8 h-8 rounded-full bg-gradient-to-br ${rankBg} flex items-center justify-center text-sm font-black shrink-0`}>
+                    {index + 1}
+                  </div>
+                  <div className="w-11 h-11 rounded-full overflow-hidden bg-slate-100 shrink-0">
                     {writer.profileImageUrl ? (
-                      <img
-                        src={writer.profileImageUrl}
-                        alt={`${writer.nickname} 프로필`}
-                        className="w-full h-full object-cover"
-                      />
+                      <img src={writer.profileImageUrl} alt="" className="w-full h-full object-cover" />
                     ) : (
-                      <User className={`w-10 h-10 ${isTopThree ? 'text-white' : 'text-slate-400'}`} />
-                    )}
-                    {isTopThree && (
-                      <div className="absolute -top-1 -right-1 w-6 h-6 bg-yellow-400 rounded-full flex items-center justify-center">
-                        <Crown className="w-3 h-3 text-yellow-700" />
+                      <div className="w-full h-full flex items-center justify-center">
+                        <User className="w-6 h-6 text-slate-400" />
                       </div>
                     )}
                   </div>
-                  <p className="text-xs font-bold text-slate-800 truncate mb-0.5">
-                    {writer.nickname}
-                  </p>
-                  <p className="text-[10px] text-slate-400">
-                    {writer.bookCount}권
-                  </p>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1.5 mb-0.5">
+                      <span className="text-sm font-black text-slate-800 truncate">{writer.nickname}</span>
+                      <span className="text-[10px] font-bold text-slate-400 shrink-0">Lv.{writer.level}</span>
+                      <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-slate-100 font-bold text-slate-500 shrink-0">
+                        {writer.gradeIcon} {writer.gradeName}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-3 text-[11px] text-slate-400">
+                      <span className="font-bold text-orange-500">{t?.weekly || '주간'} {writer.weeklyCount}권</span>
+                      <span>{t?.total || '누적'} {writer.totalBookCount}권</span>
+                    </div>
+                  </div>
                 </div>
               );
             })}

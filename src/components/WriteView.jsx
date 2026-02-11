@@ -108,7 +108,7 @@ const endingStyles = [
   '수미상관 (처음과 끝이 연결됨)'
 ];
 
-const WriteView = ({ user, userProfile, t, onBookGenerated, slotStatus, setView, setSelectedBook, error, setError, deductInk, onGeneratingChange, onGenerationComplete }) => {
+const WriteView = ({ user, userProfile, t, onBookGenerated, slotStatus, setView, setSelectedBook, error, setError, deductInk, onGeneratingChange, onGenerationComplete, authorProfiles = {} }) => {
   // 메인 카테고리 목록 (6개)
   const categories = [
     { id: 'webnovel', name: t?.cat_webnovel || '웹소설', icon: '📱', isNovel: true, isSingle: true },
@@ -572,7 +572,8 @@ const WriteView = ({ user, userProfile, t, onBookGenerated, slotStatus, setView,
     // 슬롯 확인
     if (!isSlotAvailable(selectedCategory.id)) {
       const slotInfo = getSlotStatus(selectedCategory.id);
-      const errorMsg = `이미 오늘의 책이 발행되었습니다! (By. ${slotInfo?.authorName || '익명'}) 서재에서 읽어보세요.`;
+      const slotAuthor = slotInfo?.authorId ? (authorProfiles[slotInfo.authorId]?.nickname || '익명') : '익명';
+      const errorMsg = `이미 오늘의 책이 발행되었습니다! (By. ${slotAuthor}) 서재에서 읽어보세요.`;
       setLocalError(errorMsg);
       if (setError) setError(errorMsg);
       return;
@@ -702,7 +703,8 @@ const WriteView = ({ user, userProfile, t, onBookGenerated, slotStatus, setView,
 
     if (!isSlotAvailable(slotCheckCategoryId, slotCheckSubCategoryId)) {
       const slotInfo = getSlotStatus(slotCheckCategoryId, slotCheckSubCategoryId);
-      const errorMsg = `이미 오늘의 책이 발행되었습니다! (By. ${slotInfo?.authorName || '익명'}) 서재에서 읽어보세요.`;
+      const slotAuthor = slotInfo?.authorId ? (authorProfiles[slotInfo.authorId]?.nickname || '익명') : '익명';
+      const errorMsg = `이미 오늘의 책이 발행되었습니다! (By. ${slotAuthor}) 서재에서 읽어보세요.`;
       setLocalError(errorMsg);
       if (setError) setError(errorMsg);
       return;
@@ -901,9 +903,9 @@ const WriteView = ({ user, userProfile, t, onBookGenerated, slotStatus, setView,
                     <p className="text-[10px] text-slate-500 font-bold line-clamp-1">
                       {(t?.today_sold_out || "오늘의 {name} 마감").replace('{name}', category.name)}
                     </p>
-                    {slotInfo?.authorName && (
+                    {slotInfo?.authorId && (
                       <p className="text-[9px] text-slate-400 mt-0.5 line-clamp-1">
-                        {(t?.by_author || "By. {name}").replace('{name}', slotInfo.authorName)}
+                        {(t?.by_author || "By. {name}").replace('{name}', authorProfiles[slotInfo.authorId]?.nickname || '익명')}
                       </p>
                     )}
                   </div>

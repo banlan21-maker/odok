@@ -6,7 +6,7 @@ import { getCoverImageFromBook } from '../utils/bookCovers';
 import { formatCount } from '../utils/numberFormat';
 import { formatGenreTag } from '../utils/formatGenre';
 
-const LibraryView = ({ books, onBookClick, filter = 'all', onFilterChange, t }) => {
+const LibraryView = ({ books, onBookClick, filter = 'all', onFilterChange, t, authorProfiles = {} }) => {
   // 필터별 책 목록 필터링
   const filteredBooks = useMemo(() => {
     let filtered = books;
@@ -163,7 +163,7 @@ const LibraryView = ({ books, onBookClick, filter = 'all', onFilterChange, t }) 
                     <div className="flex items-center gap-2 text-xs text-slate-500 flex-wrap">
                       <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-gradient-to-r from-orange-500 to-rose-500 text-white text-[11px] font-black shadow-sm">
                         <Book className="w-3 h-3" />
-                        {(t?.author_by || "작가: {name}").replace('{name}', book.authorName || (t?.anonymous || '익명'))}
+                        {(t?.author_by || "작가: {name}").replace('{name}', authorProfiles[book.authorId]?.nickname || (t?.anonymous || '익명'))}
                       </span>
                       <span className="bg-slate-100 px-2 py-0.5 rounded-full font-bold text-slate-600">
                         {book.category === 'webnovel' ? (t?.cat_webnovel || '웹소설') :

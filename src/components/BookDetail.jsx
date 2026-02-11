@@ -1,7 +1,7 @@
 // src/components/BookDetail.jsx
 // 책 상세/뷰어 페이지 컴포넌트
 import React, { useEffect, useMemo, useState, useRef } from 'react';
-import { ChevronLeft, ChevronRight, Book, Calendar, User, Heart, Send, Bookmark, CheckCircle, PenTool, RefreshCw, Trash2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Book, Calendar, User, Heart, Send, Bookmark, CheckCircle, PenTool, RefreshCw, Trash2, Eye } from 'lucide-react';
 import { formatDateDetailed } from '../utils/dateUtils';
 import { getCoverImageFromBook } from '../utils/bookCovers';
 import { collection, addDoc, deleteDoc, doc, onSnapshot, serverTimestamp, setDoc, updateDoc, increment, runTransaction, getDoc } from 'firebase/firestore';
@@ -16,7 +16,7 @@ const DAILY_WRITE_LIMIT = 2;
 const DAILY_FREE_WRITES = 1;
 const INK_MAX = 999;
 
-const BookDetail = ({ book, onClose, onBookUpdate, fontSize = 'text-base', user, userProfile, appId, slotStatus, deductInk, t, isAdmin }) => {
+const BookDetail = ({ book, onClose, onBookUpdate, fontSize = 'text-base', user, userProfile, appId, slotStatus, deductInk, t, isAdmin, authorProfiles = {} }) => {
   if (!book) return null;
 
   // 수정 5: fontSize 값을 Tailwind 클래스로 매핑
@@ -609,7 +609,7 @@ const BookDetail = ({ book, onClose, onBookUpdate, fontSize = 'text-base', user,
               <div className="flex items-center gap-3 flex-wrap">
                 <div className="flex items-center gap-1.5 text-xs text-slate-500">
                   <User className="w-3.5 h-3.5" />
-                  <span className="font-bold">{book.authorName || '익명'}</span>
+                  <span className="font-bold">{authorProfiles[book.authorId]?.nickname || '익명'}</span>
                 </div>
                 <span className="text-slate-300">•</span>
                 <div className="flex items-center gap-1.5 text-xs text-slate-500">
@@ -689,62 +689,56 @@ const BookDetail = ({ book, onClose, onBookUpdate, fontSize = 'text-base', user,
           )}
 
           {/* 하단 통계 (옵션) */}
-          <div className="flex items-center gap-4 pt-4 border-t border-slate-100 text-xs text-slate-400 flex-wrap">
+          <div className="flex items-center justify-around pt-4 border-t border-slate-100 text-xs text-slate-400">
             <div className="flex items-center gap-1">
-              <Book className="w-3.5 h-3.5" />
-              <span>{(t?.view_count || "조회 {count}회").replace('{count}', book.views || 0)}</span>
+              <Eye className="w-3.5 h-3.5" />
+              <span>{book.views || 0}</span>
             </div>
             <div className="flex items-center gap-1">
               <Heart className="w-3.5 h-3.5" />
-              <span>{(t?.like_count_full || "좋아요 {count}회").replace('{count}', likesCount)}</span>
+              <span>{likesCount}</span>
             </div>
             <div className="flex items-center gap-1">
               <Bookmark className="w-3.5 h-3.5" />
-              <span>{(t?.favorite_count_full || "즐겨찾기 {count}회").replace('{count}', favoritesCount)}</span>
+              <span>{favoritesCount}</span>
             </div>
             <div className="flex items-center gap-1">
               <CheckCircle className="w-3.5 h-3.5" />
-              <span>{(t?.complete_count_full || "완독 {count}회").replace('{count}', completionsCount)}</span>
+              <span>{completionsCount}</span>
             </div>
           </div>
         </div>
 
-        {/* 좋아요 */}
-        <div className="flex items-center gap-3">
-          <div className="flex-1 flex justify-start">
-            <button
-              onClick={toggleLike}
-              className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-bold border transition-colors ${isLiked ? 'bg-rose-50 border-rose-200 text-rose-600' : 'bg-white border-slate-200 text-slate-600'
-                }`}
-            >
-              <Heart className={`w-4 h-4 ${isLiked ? 'fill-rose-500 text-rose-500' : ''}`} />
-              {t?.like_btn || "좋아요"}
-            </button>
-          </div>
-          <div className="flex-1 flex justify-center">
-            <button
-              onClick={submitCompletion}
-              disabled={!canComplete || isCompleted}
-              className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-bold border transition-colors ${isCompleted ? 'bg-emerald-50 border-emerald-200 text-emerald-600' : 'bg-white border-slate-200 text-slate-600'
-                } disabled:bg-slate-100 disabled:text-slate-400`}
-              title={!canComplete ? (t?.read_more_time || '3분 이상 머문 뒤 완독 가능합니다') : undefined}
-            >
-              <CheckCircle className={`w-4 h-4 ${isCompleted ? 'fill-emerald-400 text-emerald-600' : ''}`} />
-              {isCompleted ? (t?.completed || '완독됨') :
-                canComplete ? (t?.complete_btn || '완독') :
-                  `${t?.reading || '읽는 중'} (${formatTime(timeLeft)})`}
-            </button>
-          </div>
-          <div className="flex-1 flex justify-end">
-            <button
-              onClick={toggleFavorite}
-              className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-bold border transition-colors ${isBookFavorited ? 'bg-amber-50 border-amber-200 text-amber-700' : 'bg-white border-slate-200 text-slate-600'
-                }`}
-            >
-              <Bookmark className={`w-4 h-4 ${isBookFavorited ? 'fill-amber-400 text-amber-600' : ''}`} />
-              {t?.favorite_btn || "즐겨찾기"}
-            </button>
-          </div>
+        {/* 좋아요 / 완독 / 즐겨찾기 */}
+        <div className="flex items-stretch justify-around">
+          <button
+            onClick={toggleLike}
+            className={`flex flex-col items-center gap-1 px-5 py-2.5 rounded-2xl text-xs font-bold border transition-colors ${isLiked ? 'bg-rose-50 border-rose-200 text-rose-600' : 'bg-white border-slate-200 text-slate-600'
+              }`}
+          >
+            <Heart className={`w-5 h-5 ${isLiked ? 'fill-rose-500 text-rose-500' : ''}`} />
+            {t?.like_btn || "좋아요"}
+          </button>
+          <button
+            onClick={submitCompletion}
+            disabled={!canComplete || isCompleted}
+            className={`flex flex-col items-center gap-1 px-5 py-2.5 rounded-2xl text-xs font-bold border transition-colors ${isCompleted ? 'bg-emerald-50 border-emerald-200 text-emerald-600' : 'bg-white border-slate-200 text-slate-600'
+              } disabled:bg-slate-100 disabled:text-slate-400`}
+            title={!canComplete ? (t?.read_more_time || '3분 이상 머문 뒤 완독 가능합니다') : undefined}
+          >
+            <CheckCircle className={`w-5 h-5 ${isCompleted ? 'fill-emerald-400 text-emerald-600' : ''}`} />
+            {isCompleted ? (t?.reading_completed || '완독됨') :
+              canComplete ? (t?.complete_btn || '완독') :
+                `${t?.reading || '읽는 중'} (${formatTime(timeLeft)})`}
+          </button>
+          <button
+            onClick={toggleFavorite}
+            className={`flex flex-col items-center gap-1 px-5 py-2.5 rounded-2xl text-xs font-bold border transition-colors ${isBookFavorited ? 'bg-amber-50 border-amber-200 text-amber-700' : 'bg-white border-slate-200 text-slate-600'
+              }`}
+          >
+            <Bookmark className={`w-5 h-5 ${isBookFavorited ? 'fill-amber-400 text-amber-600' : ''}`} />
+            {t?.favorite_btn || "즐겨찾기"}
+          </button>
         </div>
         {!user && <p className="text-xs text-slate-400">{t?.login_required || "로그인 후 사용 가능"}</p>}
 
@@ -754,8 +748,8 @@ const BookDetail = ({ book, onClose, onBookUpdate, fontSize = 'text-base', user,
             {seriesSlotTaken ? (
               <div className="w-full bg-slate-100 text-slate-500 py-3 rounded-xl text-sm font-bold text-center">
                 {t?.series_limit_reached || "오늘 시리즈 집필 마감"}
-                {slotStatus?.series?.authorName && (
-                  <span className="block text-xs text-slate-400 mt-0.5">By. {slotStatus.series.authorName}</span>
+                {slotStatus?.series?.authorId && (
+                  <span className="block text-xs text-slate-400 mt-0.5">By. {authorProfiles[slotStatus.series.authorId]?.nickname || '익명'}</span>
                 )}
               </div>
             ) : (
@@ -824,17 +818,23 @@ const BookDetail = ({ book, onClose, onBookUpdate, fontSize = 'text-base', user,
                     className={`text-sm ${isMine ? 'bg-amber-50/60 border border-amber-100 rounded-xl p-3' : 'text-slate-700'
                       } ${isReply ? 'ml-6 border-l-2 border-slate-100 pl-3' : ''}`}
                   >
-                    <div className="flex items-center gap-2 text-xs text-slate-400 mb-1">
-                      <span className="font-bold text-slate-600">{c.authorName || (t?.anonymous || '익명')}</span>
-                      {isMine && <span className="text-[10px] font-bold text-amber-600 bg-amber-100 px-2 py-0.5 rounded-full">{t?.my_comment || "내 댓글"}</span>}
-                      {isReply && (
-                        <span className="text-[10px] font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full">
-                          ↳ {(t?.reply_to || "{name}에게 답글").replace('{name}', c.parentAuthorName || (t?.anonymous || '익명'))}
-                        </span>
+                    <div className="text-xs text-slate-400 mb-1 space-y-0.5">
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-slate-600">{c.authorName || (t?.anonymous || '익명')}</span>
+                        <span>·</span>
+                        <span>{c.createdAt?.toDate?.()?.toLocaleString('ko-KR') || (t?.just_now || '방금 전')}</span>
+                        {c.editedAt && <span>· {t?.edited || "수정됨"}</span>}
+                      </div>
+                      {(isMine || isReply) && (
+                        <div className="flex items-center gap-2">
+                          {isMine && <span className="text-[10px] font-bold text-amber-600 bg-amber-100 px-2 py-0.5 rounded-full">{t?.my_comment || "내 댓글"}</span>}
+                          {isReply && (
+                            <span className="text-[10px] font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full">
+                              ↳ {(t?.reply_to || "{name}에게 답글").replace('{name}', c.parentAuthorName || (t?.anonymous || '익명'))}
+                            </span>
+                          )}
+                        </div>
                       )}
-                      <span>·</span>
-                      <span>{c.createdAt?.toDate?.()?.toLocaleString('ko-KR') || (t?.just_now || '방금 전')}</span>
-                      {c.editedAt && <span>· {t?.edited || "수정됨"}</span>}
                     </div>
                     {isEditing ? (
                       <div className="space-y-2">
