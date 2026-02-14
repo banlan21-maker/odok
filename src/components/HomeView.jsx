@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import {
   BookOpen, Crown, Trophy, Star, Megaphone, User,
   ArrowRight, Medal, Book, Bell, Sparkles, ChevronLeft, ChevronRight, Calendar,
-  Eye, Heart, Bookmark, CheckCircle
+  Eye, Heart, Bookmark, CheckCircle, Clock
 } from 'lucide-react';
 import { formatDate } from '../utils/dateUtils';
 import { getCoverImageFromBook } from '../utils/bookCovers';
@@ -40,7 +40,9 @@ const HomeView = ({
   topWriters,
   isLoadingHomeData,
   handleBookClick,
-  authorProfiles = {}
+  authorProfiles = {},
+  promotions = [],
+  books = []
 }) => {
   const getAuthorName = (authorId) => authorProfiles[authorId]?.nickname || '익명';
   const getAuthorImage = (authorId) => authorProfiles[authorId]?.profileImageUrl || null;
@@ -167,6 +169,69 @@ const HomeView = ({
           </>
         )}
       </div>
+
+      {/* 홍보 섹션 */}
+      {promotions.length > 0 && (() => {
+        const getRemainingTime = (expiresAt) => {
+          const expires = expiresAt?.toDate?.() || (expiresAt?.seconds ? new Date(expiresAt.seconds * 1000) : null);
+          if (!expires) return '';
+          const diff = expires - new Date();
+          if (diff <= 0) return '';
+          const hours = Math.floor(diff / (1000 * 60 * 60));
+          const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+          return `${hours}${t.promo_hours} ${minutes}${t.promo_minutes}`;
+        };
+
+        return (
+          <div className="space-y-3">
+            <div className="flex items-center gap-2 px-1">
+              <Megaphone className="w-5 h-5 text-violet-500" />
+              <h3 className="text-xl font-black text-slate-800">{t.promo_section_title}</h3>
+            </div>
+            <div className="space-y-2">
+              {promotions.map(promo => {
+                const promoBook = books.find(b => b.id === promo.bookId);
+                if (!promoBook) return null;
+                const coverImage = getCoverImageFromBook(promoBook);
+                const authorName = authorProfiles[promo.authorId]?.nickname || '익명';
+                const authorGrade = authorProfiles[promo.authorId]?.gradeIcon || '🌱';
+                const remaining = getRemainingTime(promo.expiresAt);
+                const categoryName = {
+                  'webnovel': '웹소설', 'novel': '소설', 'essay': '에세이',
+                  'self-improvement': '자기계발', 'self-help': '자기계발',
+                  'humanities': '인문·철학', 'series': '시리즈'
+                }[promoBook.category] || promoBook.category;
+
+                return (
+                  <button
+                    key={promo.id}
+                    onClick={() => handleBookClick(promoBook)}
+                    className="w-full flex items-center gap-3 bg-gradient-to-r from-violet-50 to-white p-3 rounded-xl border border-violet-100 hover:border-violet-200 transition-colors text-left"
+                  >
+                    <img
+                      src={coverImage}
+                      alt={promoBook.title}
+                      className="w-16 h-20 rounded-lg object-cover shrink-0 shadow-sm"
+                    />
+                    <div className="flex-1 min-w-0 space-y-1">
+                      <p className="text-sm font-black text-slate-800 truncate">{promoBook.title}</p>
+                      <p className="text-xs text-violet-600 truncate">{promo.promoText}</p>
+                      <div className="flex items-center gap-2 text-xs text-slate-400">
+                        <span>{authorGrade} {authorName}</span>
+                        <span className="text-slate-200">•</span>
+                        <span className="bg-violet-100 text-violet-500 px-1.5 py-0.5 rounded text-[10px] font-bold">{categoryName}</span>
+                      </div>
+                      {remaining && (
+                        <p className="text-[10px] text-slate-300">{t.promo_remaining}: {remaining}</p>
+                      )}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })()}
 
       {/* 3. 오늘의 신간 (세로 리스트) */}
       <div className="space-y-4">

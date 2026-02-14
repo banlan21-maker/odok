@@ -44,7 +44,7 @@ const ArchiveView = ({ books, user, onBookClick, favoriteBookIds = [], t, author
             </p>
           </div>
         ) : (
-          <div className="space-y-3">
+          <div className="space-y-2">
             {myBooks.map((book) => {
               const dateString = formatDate(book.createdAt);
               const coverImage = getCoverImageFromBook(book);
@@ -53,44 +53,43 @@ const ArchiveView = ({ books, user, onBookClick, favoriteBookIds = [], t, author
                 <button
                   key={book.id}
                   onClick={() => onBookClick?.(book)}
-                  className="w-full p-4 bg-white rounded-xl border border-slate-100 shadow-sm text-left hover:border-orange-200 active:bg-slate-50 transition-colors"
+                  className="w-full px-3 py-2.5 bg-white rounded-xl border border-slate-100 shadow-sm text-left hover:border-orange-200 active:bg-slate-50 transition-colors"
                 >
-                  <div className="flex items-start gap-3">
-                    <div className="relative w-16 h-20 rounded-md overflow-hidden shrink-0 bg-slate-100">
+                  <div className="flex items-center gap-2.5">
+                    <div className="relative w-11 h-14 rounded-md overflow-hidden shrink-0 bg-slate-100">
                       <img
                         src={coverImage}
                         alt={book.title}
                         className="w-full h-full object-cover"
                         onError={(e) => {
-                          // 이미지 로드 실패 시 기본 아이콘으로 대체
                           e.target.style.display = 'none';
                           e.target.nextElementSibling.style.display = 'flex';
                         }}
                       />
                       <div className="w-full h-full bg-gradient-to-br from-orange-100 to-orange-200 flex items-center justify-center hidden">
-                        <Book className="w-6 h-6 text-orange-600" />
+                        <Book className="w-4 h-4 text-orange-600" />
                       </div>
                       {(book.isSeries || book.category === 'series') && book.episodes && (
                         <div
-                          className={`absolute top-1 right-1 w-8 h-8 rounded-full flex items-center justify-center text-[9px] font-black shadow-md ${book.status === 'ongoing'
+                          className={`absolute top-0.5 right-0.5 w-6 h-6 rounded-full flex items-center justify-center text-[7px] font-black shadow-md ${book.status === 'ongoing'
                               ? 'bg-amber-400 text-amber-900'
                               : 'bg-red-500 text-white'
                             }`}
                         >
-                          {book.status === 'ongoing' ? (t?.ongoing || '연재중') : (t?.completed || '완결')}
+                          {book.status === 'ongoing' ? (t?.ongoing || '연재') : (t?.completed || '완결')}
                         </div>
                       )}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <h3 className="font-black text-slate-800 text-lg mb-2 line-clamp-1">
+                      <h3 className="font-black text-slate-800 text-sm mb-1 line-clamp-1">
                         {book.title}
                       </h3>
-                      <div className="flex items-center gap-2 text-xs text-slate-500 flex-wrap">
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-gradient-to-r from-orange-500 to-rose-500 text-white text-[11px] font-black shadow-sm">
-                          <Book className="w-3 h-3" />
-                          {(t?.author_by || "작가: {name}").replace('{name}', authorProfiles[book.authorId]?.nickname || (t?.anonymous || '익명'))}
+                      <div className="flex items-center gap-1.5 text-[10px] text-slate-500 flex-wrap">
+                        <span className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-white text-[10px] font-black shadow-sm ${authorProfiles[book.authorId]?.badgeStyle || 'bg-green-500'}`}>
+                          <span className="text-[10px]">{authorProfiles[book.authorId]?.gradeIcon || '🌱'}</span>
+                          {authorProfiles[book.authorId]?.nickname || (t?.anonymous || '익명')}
                         </span>
-                        <span className="bg-slate-100 px-2 py-0.5 rounded-full font-bold text-slate-600">
+                        <span className="bg-slate-100 px-1.5 py-0.5 rounded-full font-bold text-slate-600">
                           {book.category === 'webnovel' ? (t?.cat_webnovel || '웹소설') :
                             book.category === 'novel' ? (t?.cat_novel || '소설') :
                               book.category === 'series' ? (t?.cat_series || '시리즈') :
@@ -100,30 +99,30 @@ const ArchiveView = ({ books, user, onBookClick, favoriteBookIds = [], t, author
                                       book.category === 'humanities' ? (t?.cat_humanities || '인문.철학') : book.category}
                         </span>
                         {book.subCategory && (
-                          <span className="bg-slate-100 px-2 py-0.5 rounded-full text-slate-600">
+                          <span className="bg-slate-100 px-1.5 py-0.5 rounded-full text-slate-600">
                             {formatGenreTag(book.subCategory)}
                           </span>
                         )}
-                        <span className="flex items-center gap-1 text-slate-400 ml-auto">
-                          <Clock className="w-3 h-3" />
+                        <span className="flex items-center gap-0.5 text-slate-400 ml-auto">
+                          <Clock className="w-2.5 h-2.5" />
                           {dateString}
                         </span>
                       </div>
-                      <div className="flex items-center gap-3 text-[11px] text-slate-400 mt-2">
-                        <span className="flex items-center gap-1">
-                          <Eye className="w-3 h-3" />
+                      <div className="flex items-center gap-2.5 text-[10px] text-slate-400 mt-1">
+                        <span className="flex items-center gap-0.5">
+                          <Eye className="w-2.5 h-2.5" />
                           {formatCount(book.views)}
                         </span>
-                        <span className="flex items-center gap-1">
-                          <Heart className="w-3 h-3" />
+                        <span className="flex items-center gap-0.5">
+                          <Heart className="w-2.5 h-2.5" />
                           {formatCount(book.likes)}
                         </span>
-                        <span className="flex items-center gap-1">
-                          <Bookmark className="w-3 h-3" />
+                        <span className="flex items-center gap-0.5">
+                          <Bookmark className="w-2.5 h-2.5" />
                           {formatCount(book.favorites)}
                         </span>
-                        <span className="flex items-center gap-1">
-                          <CheckCircle className="w-3 h-3" />
+                        <span className="flex items-center gap-0.5">
+                          <CheckCircle className="w-2.5 h-2.5" />
                           {formatCount(book.completions)}
                         </span>
                       </div>
@@ -154,7 +153,7 @@ const ArchiveView = ({ books, user, onBookClick, favoriteBookIds = [], t, author
             </p>
           </div>
         ) : (
-          <div className="space-y-3">
+          <div className="space-y-2">
             {favoriteBooks.map((book) => {
               const dateString = formatDate(book.createdAt);
               const coverImage = getCoverImageFromBook(book);
@@ -163,10 +162,10 @@ const ArchiveView = ({ books, user, onBookClick, favoriteBookIds = [], t, author
                 <button
                   key={book.id}
                   onClick={() => onBookClick?.(book)}
-                  className="w-full p-4 bg-white rounded-xl border border-slate-100 shadow-sm text-left hover:border-amber-200 active:bg-slate-50 transition-colors"
+                  className="w-full px-3 py-2.5 bg-white rounded-xl border border-slate-100 shadow-sm text-left hover:border-amber-200 active:bg-slate-50 transition-colors"
                 >
-                  <div className="flex items-start gap-3">
-                    <div className="relative w-16 h-20 rounded-md overflow-hidden shrink-0 bg-slate-100">
+                  <div className="flex items-center gap-2.5">
+                    <div className="relative w-11 h-14 rounded-md overflow-hidden shrink-0 bg-slate-100">
                       <img
                         src={coverImage}
                         alt={book.title}
@@ -177,29 +176,29 @@ const ArchiveView = ({ books, user, onBookClick, favoriteBookIds = [], t, author
                         }}
                       />
                       <div className="w-full h-full bg-gradient-to-br from-orange-100 to-orange-200 flex items-center justify-center hidden">
-                        <Book className="w-6 h-6 text-orange-600" />
+                        <Book className="w-4 h-4 text-orange-600" />
                       </div>
                       {(book.isSeries || book.category === 'series') && book.episodes && (
                         <div
-                          className={`absolute top-1 right-1 w-8 h-8 rounded-full flex items-center justify-center text-[9px] font-black shadow-md ${book.status === 'ongoing'
+                          className={`absolute top-0.5 right-0.5 w-6 h-6 rounded-full flex items-center justify-center text-[7px] font-black shadow-md ${book.status === 'ongoing'
                               ? 'bg-amber-400 text-amber-900'
                               : 'bg-red-500 text-white'
                             }`}
                         >
-                          {book.status === 'ongoing' ? (t?.ongoing || '연재중') : (t?.completed || '완결')}
+                          {book.status === 'ongoing' ? (t?.ongoing || '연재') : (t?.completed || '완결')}
                         </div>
                       )}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <h3 className="font-black text-slate-800 text-lg mb-2 line-clamp-1">
+                      <h3 className="font-black text-slate-800 text-sm mb-1 line-clamp-1">
                         {book.title}
                       </h3>
-                      <div className="flex items-center gap-2 text-xs text-slate-500 flex-wrap">
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-gradient-to-r from-orange-500 to-rose-500 text-white text-[11px] font-black shadow-sm">
-                          <Book className="w-3 h-3" />
-                          {(t?.author_by || "작가: {name}").replace('{name}', authorProfiles[book.authorId]?.nickname || (t?.anonymous || '익명'))}
+                      <div className="flex items-center gap-1.5 text-[10px] text-slate-500 flex-wrap">
+                        <span className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-white text-[10px] font-black shadow-sm ${authorProfiles[book.authorId]?.badgeStyle || 'bg-green-500'}`}>
+                          <span className="text-[10px]">{authorProfiles[book.authorId]?.gradeIcon || '🌱'}</span>
+                          {authorProfiles[book.authorId]?.nickname || (t?.anonymous || '익명')}
                         </span>
-                        <span className="bg-slate-100 px-2 py-0.5 rounded-full font-bold text-slate-600">
+                        <span className="bg-slate-100 px-1.5 py-0.5 rounded-full font-bold text-slate-600">
                           {book.category === 'webnovel' ? (t?.cat_webnovel || '웹소설') :
                             book.category === 'novel' ? (t?.cat_novel || '소설') :
                               book.category === 'series' ? (t?.cat_series || '시리즈') :
@@ -209,30 +208,30 @@ const ArchiveView = ({ books, user, onBookClick, favoriteBookIds = [], t, author
                                       book.category === 'humanities' ? (t?.cat_humanities || '인문.철학') : book.category}
                         </span>
                         {book.subCategory && (
-                          <span className="bg-slate-100 px-2 py-0.5 rounded-full text-slate-600">
+                          <span className="bg-slate-100 px-1.5 py-0.5 rounded-full text-slate-600">
                             {formatGenreTag(book.subCategory)}
                           </span>
                         )}
-                        <span className="flex items-center gap-1 text-slate-400 ml-auto">
-                          <Clock className="w-3 h-3" />
+                        <span className="flex items-center gap-0.5 text-slate-400 ml-auto">
+                          <Clock className="w-2.5 h-2.5" />
                           {dateString}
                         </span>
                       </div>
-                      <div className="flex items-center gap-3 text-[11px] text-slate-400 mt-2">
-                        <span className="flex items-center gap-1">
-                          <Eye className="w-3 h-3" />
+                      <div className="flex items-center gap-2.5 text-[10px] text-slate-400 mt-1">
+                        <span className="flex items-center gap-0.5">
+                          <Eye className="w-2.5 h-2.5" />
                           {formatCount(book.views)}
                         </span>
-                        <span className="flex items-center gap-1">
-                          <Heart className="w-3 h-3" />
+                        <span className="flex items-center gap-0.5">
+                          <Heart className="w-2.5 h-2.5" />
                           {formatCount(book.likes)}
                         </span>
-                        <span className="flex items-center gap-1">
-                          <Bookmark className="w-3 h-3" />
+                        <span className="flex items-center gap-0.5">
+                          <Bookmark className="w-2.5 h-2.5" />
                           {formatCount(book.favorites)}
                         </span>
-                        <span className="flex items-center gap-1">
-                          <CheckCircle className="w-3 h-3" />
+                        <span className="flex items-center gap-0.5">
+                          <CheckCircle className="w-2.5 h-2.5" />
                           {formatCount(book.completions)}
                         </span>
                       </div>

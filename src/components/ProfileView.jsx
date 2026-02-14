@@ -143,18 +143,17 @@ const ProfileView = ({
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between mb-2">
                     <div>
-                      <span className="text-[10px] text-slate-400 font-bold">{t?.level || "LEVEL"}</span>
-                      <div className="text-xl font-black text-slate-800 leading-none mt-0.5 flex items-center gap-1">
-                        Lv.{levelInfo.level}
-                        {levelInfo.gradeIcon && <span className="text-lg">{levelInfo.gradeIcon}</span>}
-                        {levelInfo.badge === 'silver' && <span className="text-xs px-1.5 py-0.5 rounded bg-slate-300 text-white font-bold">은색</span>}
-                        {levelInfo.badge === 'gold' && <span className="text-xs px-1.5 py-0.5 rounded bg-amber-400 text-amber-900 font-bold">금색</span>}
-                      </div>
                       {levelInfo.title && (
-                        <div className="text-xs font-bold text-orange-500 mt-1">
-                          {levelInfo.title}
+                        <div className="flex items-center gap-1 mb-1">
+                          <span className="text-base">{levelInfo.gradeIcon}</span>
+                          <span className={`text-xs font-black ${levelInfo.badge === 'rainbow' ? 'bg-gradient-to-r from-red-500 via-yellow-500 to-blue-500 bg-clip-text text-transparent' : levelInfo.badge === 'gold' ? 'text-amber-500' : levelInfo.badge === 'silver' ? 'text-slate-400' : levelInfo.badge === 'bronze' ? 'text-amber-700' : 'text-orange-500'}`}>
+                            {levelInfo.title}
+                          </span>
                         </div>
                       )}
+                      <div className="text-xl font-black text-slate-800 leading-none flex items-center gap-1">
+                        Lv.{levelInfo.level}
+                      </div>
                     </div>
                     <div className="text-xs font-bold text-orange-500">{levelInfo.progress}%</div>
                   </div>
@@ -172,7 +171,7 @@ const ProfileView = ({
                   </div>
                 </div>
                 <div className="w-24 flex flex-col items-center justify-center gap-2 border-l border-slate-100 pl-4">
-                  <div className="w-16 h-16 rounded-full bg-slate-100 overflow-hidden flex items-center justify-center border border-slate-200">
+                  <div className={`w-16 h-16 rounded-full bg-slate-100 overflow-hidden flex items-center justify-center ${levelInfo.badge === 'rainbow' ? 'ring-2 ring-offset-1 ring-purple-400 border-0' : 'border border-slate-200'}`}>
                     {profileImageUrl ? (
                       <img
                         src={profileImageUrl}

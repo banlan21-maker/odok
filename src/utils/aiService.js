@@ -107,13 +107,14 @@ export const generateSeriesEpisode = async ({
   characterSheet,
   settingSheet,
   continuationType,
-  selectedMood
+  selectedMood,
+  endingStyle
 }) => {
   try {
     const generateSeriesEpisodeFn = httpsCallable(functions, 'generateSeriesEpisode', {
       timeout: 540000
     });
-    
+
     const result = await generateSeriesEpisodeFn({
       seriesId,
       category,
@@ -127,7 +128,8 @@ export const generateSeriesEpisode = async ({
       characterSheet,
       settingSheet,
       continuationType,
-      selectedMood
+      selectedMood,
+      endingStyle
     });
     
     const episodeData = result.data;

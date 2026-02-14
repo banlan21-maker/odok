@@ -103,6 +103,8 @@ const App = () => {
     isWritingInProgress, setIsWritingInProgress,
     showWritingCompleteModal, setShowWritingCompleteModal,
     authorProfiles,
+    promotions,
+    createPromotion,
     handleBookGenerated
   } = useBooks({
     user,
@@ -260,36 +262,49 @@ const App = () => {
                   <section>
                     <h4 className="font-bold text-slate-800 mb-1">1. 🖊️ 집필 시스템</h4>
                     <ul className="list-disc list-inside space-y-1 text-xs text-slate-600">
-                      <li><strong>1일 2회 집필:</strong> 매일 최대 2번 글을 쓸 수 있습니다. (첫 번째 무료, 두 번째 잉크 소모)</li>
-                      <li><strong>선착순 발행:</strong> 각 장르별로 <strong>하루에 단 한 권</strong>만 발행됩니다. 서둘러 집필해보세요!</li>
-                      <li><strong>광고 찬스:</strong> 광고를 보면 잉크 소모 없이 무료로 집필 가능합니다.</li>
+                      <li><strong>1일 2회 집필:</strong> 매일 최대 2번 글을 쓸 수 있습니다. (첫 번째 무료, 두 번째는 잉크 소모·레벨에 따라 3~5개)</li>
+                      <li><strong>선착순 발행:</strong> 장르별로 <strong>하루에 단 한 권</strong>만 발행됩니다. 서둘러 집필해보세요!</li>
+                      <li><strong>광고 찬스:</strong> 광고를 보면 잉크 없이 무료로 한 번 더 집필할 수 있습니다.</li>
                     </ul>
                   </section>
 
                   <section>
                     <h4 className="font-bold text-slate-800 mb-1">2. 💧 잉크 시스템</h4>
                     <ul className="list-disc list-inside space-y-1 text-xs text-slate-600">
-                      <li><strong>획득:</strong> 매일 출석(2~3개), 레벨업(5개) 시 지급됩니다.</li>
-                      <li><strong>사용:</strong> 책 읽기, 추가 집필, 키워드 변경, 작가 후원에 사용됩니다.</li>
+                      <li><strong>획득:</strong> 출석(레벨별 2~5개), 레벨업 시 5개, 집필 완료 시 보상 등.</li>
+                      <li><strong>사용:</strong> 책 읽기(1~2개), 추가 집필, 키워드 변경, 작가 후원, <strong>작품 홍보(10개)</strong>에 사용됩니다.</li>
+                      <li><strong>XP:</strong> 잉크 1개 사용 시 10XP가 쌓여 레벨업에 반영됩니다.</li>
                     </ul>
                   </section>
 
                   <section>
-                    <h4 className="font-bold text-slate-800 mb-1">3. 🏆 레벨 시스템</h4>
-                    <p className="text-xs mb-1">잉크 1개 사용 시 경험치 10XP 획득</p>
+                    <h4 className="font-bold text-slate-800 mb-1">3. 🏆 레벨 &amp; 칭호 (7단계)</h4>
+                    <p className="text-xs mb-1">잉크 사용 시 10XP 적립 → 레벨 상승 → 칭호·아이콘이 책 표지 등에 표시됩니다.</p>
                     <ul className="list-disc list-inside space-y-1 text-xs text-slate-600">
-                      <li><strong>새싹 (Lv.1~5):</strong> 기본 혜택</li>
-                      <li><strong>작가 (Lv.6~10):</strong> 출석 잉크 증가(+1), 후원 기능 오픈</li>
-                      <li><strong>베스트 (Lv.11~20):</strong> 독서 비용 할인 (2개→1개)</li>
-                      <li><strong>마스터 (Lv.21~):</strong> 집필 비용 할인 (5개→4개)</li>
+                      <li><strong>🌱 새싹 (Lv.1~10):</strong> 기본 혜택, 출석 2개</li>
+                      <li><strong>✏️ 작가 (Lv.11~20):</strong> 출석 3개, 후원 기능 오픈</li>
+                      <li><strong>🪶 숙련 작가 (Lv.21~40):</strong> 출석 4개, 키워드 무료 새로고침</li>
+                      <li><strong>🖊️ 베스트 작가 (Lv.41~60):</strong> 독서 비용 할인 (2→1)</li>
+                      <li><strong>✒️ 스타 작가 (Lv.61~80):</strong> 집필 비용 할인 (5→4)</li>
+                      <li><strong>🖋️ 거장 (Lv.81~98):</strong> 출석 5개</li>
+                      <li><strong>🌈 마스터 (Lv.99):</strong> 집필 비용 최종 할인 (5→3)</li>
                     </ul>
                   </section>
 
                   <section>
-                    <h4 className="font-bold text-slate-800 mb-1">4. 📚 릴레이 시리즈</h4>
+                    <h4 className="font-bold text-slate-800 mb-1">4. 📢 작품 홍보</h4>
+                    <ul className="list-disc list-inside space-y-1 text-xs text-slate-600">
+                      <li>본인이 쓴 책 상세에서 <strong>홍보하기</strong> 버튼을 누르면, 잉크 10개로 <strong>48시간 동안</strong> 홈의 「작품 홍보」 구역에 노출됩니다.</li>
+                      <li>이미 홍보 중인 작품이 있으면 새로 홍보할 수 없습니다.</li>
+                    </ul>
+                  </section>
+
+                  <section>
+                    <h4 className="font-bold text-slate-800 mb-1">5. 📚 릴레이 시리즈</h4>
                     <ul className="list-disc list-inside space-y-1 text-xs text-slate-600">
                       <li><strong>이어쓰기:</strong> 시리즈는 <strong>누구나</strong> 다음 화를 이어 쓸 수 있는 릴레이 소설입니다.</li>
-                      <li><strong>통합 슬롯:</strong> 시리즈 신작과 이어쓰기를 포함해 <strong>하루에 단 한 번</strong>만 발행 가능합니다.</li>
+                      <li><strong>연재/완결:</strong> 2화부터 독자 투표로 「연재」 또는 「완결」을 선택할 수 있습니다.</li>
+                      <li><strong>통합 슬롯:</strong> 시리즈 신작·이어쓰기 포함 <strong>하루에 단 한 번</strong> 발행 가능합니다.</li>
                     </ul>
                   </section>
                 </div>
@@ -412,6 +427,7 @@ const App = () => {
                   setView={setView} todayBooks={todayBooks} weeklyBestBooks={weeklyBestBooks}
                   topWriters={topWriters} isLoadingHomeData={isLoadingHomeData}
                   handleBookClick={handleBookClick} authorProfiles={authorProfiles}
+                  promotions={promotions} books={books}
                 />
               )}
 
@@ -493,6 +509,7 @@ const App = () => {
                   book={selectedBook} onBookUpdate={setSelectedBook} user={user} userProfile={userProfile}
                   appId={appId} fontSize={fontSize} slotStatus={slotStatus} deductInk={deductInk} t={t}
                   isAdmin={isNoticeAdmin} authorProfiles={authorProfiles}
+                  promotions={promotions} createPromotion={createPromotion}
                   onClose={() => {
                     const isMyBook = selectedBook.authorId === user?.uid;
                     setSelectedBook(null);

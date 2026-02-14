@@ -36,6 +36,8 @@ const MODEL_FALLBACK_CHAIN = [
 // 프롬프트 설정 (Strategy Pattern)
 const NOVEL_BASE_GUIDE = [
   "[CRITICAL RULE] 출력된 content 내부에는 '## 제목', '### 발단', '**[전개]**', '### 결말' 등 그 어떤 마크다운 헤더나 섹션 구분자도 포함하지 마라. 오직 독자가 읽을 순수한 본문 텍스트만 출력하라.",
+  "[CRITICAL RULE] [제목], [줄거리], [요약], [브릿지], [전개], [결말], [설정], [캐릭터] 등 대괄호로 감싼 메타 정보를 본문에 절대 출력하지 마라. 너의 내부 추론이나 요약도 출력하지 마라. 오직 '소설의 본문 내용'만 작성하라.",
+  "[CRITICAL RULE] 장면이 바뀔 때 설명이나 태그 대신 자연스러운 문장이나 '*' 같은 기호로만 구분하라. 불필요한 태그, 괄호, 라벨을 모두 삭제하라. 독자가 읽는 책이라고 생각하라.",
   "[CRITICAL RULE] 소설은 중간에 리셋하거나 앞 내용을 요약 반복하지 말고, 하나의 타임라인으로 쭉 이어가라.",
   "[CRITICAL RULE] 반드시 한국어만 사용하라. 러시아어, 한자, 일본어, 아랍어 등 그 밖의 언어를 절대 사용하지 마라. 오직 한글, 공백, 기본 문장부호, 숫자만 사용하라.",
   "당신은 100만 부가 팔린 베스트셀러 작가다.",
@@ -121,6 +123,8 @@ const NOVEL_MOOD_OPTIONS = {
 
 const NONFICTION_BASE_GUIDE = [
   "[CRITICAL RULE] 출력된 content 내부에는 '## 제목', '### 발단', '**[전개]**', '### 결말' 등 그 어떤 마크다운 헤더나 섹션 구분자도 포함하지 마라. 오직 독자가 읽을 순수한 본문 텍스트만 출력하라.",
+  "[CRITICAL RULE] [제목], [줄거리], [요약], [브릿지], [서론], [본론], [결론], [주제] 등 대괄호로 감싼 메타 정보를 본문에 절대 출력하지 마라. 너의 내부 추론이나 요약도 출력하지 마라. 오직 '글의 본문 내용'만 작성하라.",
+  "[CRITICAL RULE] 단락이 바뀔 때 태그나 라벨 없이 자연스러운 문장 흐름으로만 전환하라. 독자가 읽는 책이라고 생각하라.",
   "[CRITICAL RULE] 비소설은 '결론' 같은 소제목 없이 문맥으로 자연스럽게 마무리하라.",
   "[CRITICAL RULE] 반드시 한국어만 사용하라. 러시아어, 한자, 일본어, 아랍어 등 그 밖의 언어를 절대 사용하지 마라. 오직 한글, 공백, 기본 문장부호, 숫자만 사용하라.",
   "당신은 해당 분야의 최고 전문가이자 권위자다.",
@@ -291,6 +295,7 @@ function buildStepPrompt({
       : "Persuasive & Insightful 톤으로 논리적 흐름을 유지하고, 독자에게 말을 거는 듯한 어조로 작성하세요.",
     "순수 텍스트로만 작성하세요 (JSON 형식, 코드, 특수 기호 사용 금지).",
     `[절대 금지] "${currentStep.name}", "## ${currentStep.name}", "### ${currentStep.name}", "**[${currentStep.name}]**" 등의 단계명을 본문에 포함하지 마십시오. 오직 내용만 출력하세요.`,
+    "[절대 금지] [제목], [줄거리], [요약], [브릿지], [설정], [캐릭터], [전개], [결말] 등 대괄호 메타 태그를 본문에 절대 포함하지 마세요. 내부 추론이나 구조 설명도 출력하지 마세요. 독자가 읽는 소설/글의 본문만 작성하세요.",
     "이전 내용을 반복하지 마세요.",
     "한국어로 작성하세요."
   ];
@@ -342,6 +347,21 @@ function validateOutput(content, language = "ko") {
     }
   }
   return { valid: true };
+}
+
+/** 후처리: 본문에 혼입된 메타 태그/마크다운 헤더 제거 */
+function stripMetaTags(content) {
+  if (!content) return content;
+  let cleaned = content;
+  // 대괄호 메타 태그 제거: [제목], [줄거리], [요약], [브릿지], [전개], [결말], [설정] 등
+  cleaned = cleaned.replace(/\[(?:제목|줄거리|요약|브릿지|전개|결말|설정|캐릭터|서론|본론|결론|주제|발단|위기|절정|시작|사건과 훅|다음 화|완결)[^\]]*\]/g, "");
+  // 마크다운 헤더 제거: ## 제목, ### 발단 등
+  cleaned = cleaned.replace(/^#{1,6}\s+.+$/gm, "");
+  // 볼드 메타 태그 제거: **[전개]**, **발단** 등
+  cleaned = cleaned.replace(/\*\*\[?(?:제목|줄거리|요약|브릿지|전개|결말|설정|캐릭터|서론|본론|결론|주제|발단|위기|절정|시작|사건과 훅|다음 화|완결)[^\]]*\]?\*\*/g, "");
+  // 연속 빈 줄 정리 (3줄 이상 → 2줄)
+  cleaned = cleaned.replace(/\n{3,}/g, "\n\n");
+  return cleaned.trim();
 }
 
 function extractLastSentences(content, maxSentences = 5) {
@@ -582,7 +602,7 @@ async function generateStep({
 
     const validation = validateOutput(lastContent, language);
     if (validation.valid) {
-      return lastContent;
+      return stripMetaTags(lastContent);
     }
 
     logger.warn(`[generateStep] 언어 오염 감지 (${validation.reason}), 재시도 ${attempt + 1}/${MAX_LANGUAGE_RETRIES} (temp: ${currentTemp} → ${Math.max(MIN_TEMPERATURE, currentTemp - TEMPERATURE_DECREMENT)})`);
@@ -590,7 +610,7 @@ async function generateStep({
   }
 
   logger.warn(`[generateStep] ${MAX_LANGUAGE_RETRIES}회 재시도 후에도 언어 오염. 마지막 출력 반환`);
-  return lastContent;
+  return stripMetaTags(lastContent);
 }
 
 // 책 생성 함수
@@ -772,7 +792,8 @@ exports.generateSeriesEpisode = onCall(
         characterSheet,
         settingSheet,
         continuationType,
-        selectedMood
+        selectedMood,
+        endingStyle
       } = request.data;
 
       if (!seriesId || !continuationType) {
@@ -789,7 +810,7 @@ exports.generateSeriesEpisode = onCall(
         category,
         subCategory,
         genre,
-        endingStyle: isFinalize ? '닫힌 결말 (해피 엔딩)' : null,
+        endingStyle: isFinalize ? (endingStyle || '닫힌 결말 (해피 엔딩)') : null,
         selectedTone: null,
         selectedMood
       });

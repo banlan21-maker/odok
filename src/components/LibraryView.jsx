@@ -1,109 +1,268 @@
 // src/components/LibraryView.jsx
-import React, { useMemo } from 'react';
-import { Book, Calendar, Filter, ChevronDown, Eye, Heart, Bookmark, CheckCircle } from 'lucide-react';
+import React, { useMemo, useState } from 'react';
+import { Book, Calendar, Eye, Heart, Bookmark, CheckCircle, Search, ChevronLeft, ChevronDown } from 'lucide-react';
 import { formatDate } from '../utils/dateUtils';
 import { getCoverImageFromBook } from '../utils/bookCovers';
 import { formatCount } from '../utils/numberFormat';
 import { formatGenreTag } from '../utils/formatGenre';
 
 const LibraryView = ({ books, onBookClick, filter = 'all', onFilterChange, t, authorProfiles = {} }) => {
-  // 필터별 책 목록 필터링
+  const [selectedCategory, setSelectedCategory] = useState(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedMonth, setSelectedMonth] = useState('');
+
+  const categories = [
+    { id: 'webnovel', name: t?.cat_webnovel || '웹소설', icon: '📱' },
+    { id: 'novel', name: t?.cat_novel || '소설', icon: '📖' },
+    { id: 'series', name: t?.cat_series || '시리즈', icon: '📚' },
+    { id: 'essay', name: t?.cat_essay || '에세이', icon: '✍️' },
+    { id: 'self-help', name: t?.cat_self_help || '자기계발', icon: '🌟' },
+    { id: 'humanities', name: t?.cat_humanities || '인문·철학', icon: '💭' }
+  ];
+
+  // 책별 월 키 (createdAt 우선, 없으면 dateKey로 보정 — 방금 만든 책도 이번 달에 포함)
+  const getBookMonthKey = (book) => {
+    const date = book.createdAt?.toDate?.() || (book.createdAt?.seconds ? new Date(book.createdAt.seconds * 1000) : null);
+    if (date && !isNaN(date.getTime())) {
+      return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+    }
+    if (book.dateKey && typeof book.dateKey === 'string' && book.dateKey.length >= 7) {
+      return book.dateKey.substring(0, 7);
+    }
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  };
+
+  // 책 생성월 목록 추출
+  const availableMonths = useMemo(() => {
+    const months = new Set();
+    books.forEach(book => {
+      months.add(getBookMonthKey(book));
+    });
+    return [...months].sort().reverse();
+  }, [books]);
+
+  const formatMonthLabel = (monthKey) => {
+    const [year, month] = monthKey.split('-');
+    if (t?.year_suffix === '') {
+      // 영어: "Jan 2025" 형태
+      const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      return `${monthNames[parseInt(month) - 1]} ${year}`;
+    }
+    return `${year}${t?.year_suffix || '년'} ${parseInt(month)}${t?.month_suffix || '월'}`;
+  };
+
+  // 카테고리 + 검색 + 월별 필터링
   const filteredBooks = useMemo(() => {
+    const activeFilter = selectedCategory || 'all';
     let filtered = books;
 
-    if (filter === 'all') {
-      // 전체 보기
-      return filtered;
-    } else if (filter === 'series') {
-      // 시리즈 전체 (seriesSubType 없는 기존 데이터 포함)
-      filtered = books.filter(book => book.category === 'series' || book.isSeries === true);
-    } else if (filter === 'series-webnovel') {
-      // 시리즈 - 웹소설형 (seriesSubType 또는 subCategory로 판별, 기존 데이터 호환)
-      filtered = books.filter(book => {
-        const isSeriesBook = book.category === 'series' || book.isSeries === true;
-        if (!isSeriesBook) return false;
-        const seriesType = String(book.seriesSubType || '').trim().toLowerCase();
-        const subCategory = String(book.subCategory || '').trim().toLowerCase();
-        return seriesType === 'webnovel' || subCategory === 'webnovel' || subCategory === 'web-novel';
-      });
-    } else if (filter === 'series-novel') {
-      // 시리즈 - 소설형 (seriesSubType 또는 subCategory로 판별, 기존 데이터 호환)
-      filtered = books.filter(book => {
-        const isSeriesBook = book.category === 'series' || book.isSeries === true;
-        if (!isSeriesBook) return false;
-        const seriesType = String(book.seriesSubType || '').trim().toLowerCase();
-        const subCategory = String(book.subCategory || '').trim().toLowerCase();
-        return seriesType === 'novel' || subCategory === 'novel' || subCategory === 'fiction';
-      });
+    if (activeFilter === 'all') {
+      // 전체
+    } else if (activeFilter === 'series') {
+      filtered = filtered.filter(book => book.category === 'series' || book.isSeries === true);
     } else {
-      // 일반 카테고리
-      filtered = books.filter(book => {
+      filtered = filtered.filter(book => {
         const bookCategory = String(book.category || '').trim().toLowerCase();
-        // self-improvement -> self-help 매핑
-        if (bookCategory === 'self-improvement' && filter === 'self-help') {
-          return true;
-        }
-        return bookCategory === filter;
+        if (bookCategory === 'self-improvement' && activeFilter === 'self-help') return true;
+        return bookCategory === activeFilter;
       });
     }
 
-    return filtered;
-  }, [books, filter]);
+    // 검색어 필터
+    if (searchQuery.trim()) {
+      const query = searchQuery.trim().toLowerCase();
+      filtered = filtered.filter(book =>
+        book.title?.toLowerCase().includes(query) ||
+        (authorProfiles[book.authorId]?.nickname || '').toLowerCase().includes(query)
+      );
+    }
 
-  // 생성일 기준 최신순 정렬
+    // 월별 필터 (createdAt 없으면 dateKey·이번 달로 보정)
+    if (selectedMonth) {
+      filtered = filtered.filter(book => getBookMonthKey(book) === selectedMonth);
+    }
+
+    return filtered;
+  }, [books, selectedCategory, searchQuery, selectedMonth, authorProfiles]);
+
+  // 최신순 정렬 (createdAt 없으면 dateKey 또는 현재 시각 사용 — 방금 만든 책이 위로)
   const sortedBooks = useMemo(() => {
-    return [...filteredBooks].sort((a, b) => {
-      const dateA = a.createdAt?.toDate?.() || (a.createdAt?.seconds ? new Date(a.createdAt.seconds * 1000) : new Date(0));
-      const dateB = b.createdAt?.toDate?.() || (b.createdAt?.seconds ? new Date(b.createdAt.seconds * 1000) : new Date(0));
-      return dateB - dateA;
-    });
+    const toSortDate = (book) => {
+      const date = book.createdAt?.toDate?.() || (book.createdAt?.seconds ? new Date(book.createdAt.seconds * 1000) : null);
+      if (date && !isNaN(date.getTime())) return date.getTime();
+      if (book.dateKey && typeof book.dateKey === 'string') {
+        const parsed = new Date(book.dateKey + 'T12:00:00');
+        if (!isNaN(parsed.getTime())) return parsed.getTime();
+      }
+      return Date.now();
+    };
+    return [...filteredBooks].sort((a, b) => toSortDate(b) - toSortDate(a));
   }, [filteredBooks]);
 
-  const filterOptions = [
-    { id: 'all', name: t?.view_all || '전체 보기' },
-    { id: 'webnovel', name: `${t?.cat_webnovel || '웹소설'} (${t?.short_story || '단편'})` },
-    { id: 'novel', name: `${t?.cat_novel || '소설'} (${t?.short_story || '단편'})` },
-    { id: 'series', name: `${t?.cat_series || '시리즈'} (${t?.view_all || '전체'})` },
-    { id: 'series-webnovel', name: `${t?.cat_series} - ${t?.cat_webnovel}` },
-    { id: 'series-novel', name: `${t?.cat_series} - ${t?.cat_novel}` },
-    { id: 'essay', name: t?.cat_essay || '에세이' },
-    { id: 'self-help', name: t?.cat_self_help || '자기계발' },
-    { id: 'humanities', name: t?.cat_humanities || '인문/철학' }
-  ];
+  // 카테고리별 책 수
+  const categoryCounts = useMemo(() => {
+    const counts = { all: books.length };
+    books.forEach(book => {
+      const cat = String(book.category || '').trim().toLowerCase();
+      if (cat === 'series' || book.isSeries === true) {
+        counts['series'] = (counts['series'] || 0) + 1;
+      }
+      if (cat === 'self-improvement') {
+        counts['self-help'] = (counts['self-help'] || 0) + 1;
+      } else {
+        counts[cat] = (counts[cat] || 0) + 1;
+      }
+    });
+    return counts;
+  }, [books]);
 
-  const selectedFilterName = filterOptions.find(opt => opt.id === filter)?.name || t?.view_all || '전체 보기';
+  const currentCategoryName = selectedCategory === 'all'
+    ? (t?.view_all || '전체 보기')
+    : categories.find(c => c.id === selectedCategory)?.name || '';
 
+  // 카테고리 선택 화면
+  if (!selectedCategory) {
+    return (
+      <div className="space-y-5 animate-in slide-in-from-bottom-2 fade-in pb-20">
+        {/* 헤더 */}
+        <div className="space-y-2">
+          <h2 className="text-2xl font-black text-slate-800 leading-tight">
+            {t?.library_title || "서재"}
+          </h2>
+          <p className="text-sm text-slate-500">
+            {t?.library_desc || "모든 유저가 생성한 책들을 모아둔 곳입니다."}
+          </p>
+        </div>
+
+        {/* 검색창 */}
+        <div className="space-y-2">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder={t?.search_placeholder || "책 제목 또는 작가로 검색..."}
+              className="w-full bg-white border-2 border-slate-200 rounded-xl py-2.5 pl-10 pr-4 text-sm focus:border-orange-500 focus:outline-none transition-colors"
+            />
+          </div>
+          <div className="relative">
+            <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+            <select
+              value={selectedMonth}
+              onChange={(e) => setSelectedMonth(e.target.value)}
+              className="w-full bg-white border-2 border-slate-200 rounded-xl py-2.5 pl-10 pr-10 text-sm font-bold text-slate-700 appearance-none focus:border-orange-500 focus:outline-none transition-colors cursor-pointer"
+            >
+              <option value="">{t?.all_months || "전체 기간"}</option>
+              {availableMonths.map(m => (
+                <option key={m} value={m}>{formatMonthLabel(m)}</option>
+              ))}
+            </select>
+            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+          </div>
+        </div>
+
+        {/* 검색 결과가 있으면 바로 책 목록 표시 */}
+        {(searchQuery.trim() || selectedMonth) ? (
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-bold text-slate-600">
+                {t?.search_results || "검색 결과"} ({sortedBooks.length})
+              </h3>
+              <button
+                onClick={() => { setSearchQuery(''); setSelectedMonth(''); }}
+                className="text-xs text-orange-500 font-bold"
+              >
+                {t?.clear_filter || "필터 초기화"}
+              </button>
+            </div>
+            {sortedBooks.length === 0 ? (
+              <div className="bg-white rounded-2xl border border-dashed border-slate-200 p-8 text-center">
+                <Search className="w-10 h-10 text-slate-200 mx-auto mb-2" />
+                <p className="text-slate-400 text-sm font-bold">
+                  {t?.no_search_results || "검색 결과가 없습니다"}
+                </p>
+              </div>
+            ) : (
+              <BookList books={sortedBooks} onBookClick={onBookClick} t={t} authorProfiles={authorProfiles} />
+            )}
+          </div>
+        ) : (
+          <>
+            {/* 전체 보기 */}
+            <button
+              onClick={() => setSelectedCategory('all')}
+              className="w-full p-4 bg-gradient-to-r from-orange-500 to-rose-500 rounded-2xl text-white text-center shadow-sm active:scale-[0.98] transition-transform"
+            >
+              <h3 className="font-black text-base">{t?.view_all || "전체 보기"}</h3>
+              <p className="text-xs text-white/80 mt-0.5">{(t?.total_books || "총 {count}권").replace('{count}', books.length)}</p>
+            </button>
+
+            {/* 카테고리 카드 */}
+            <div className="space-y-3">
+              <h3 className="text-sm font-bold text-slate-500 px-1">{t?.category_label || "카테고리 선택"}</h3>
+              <div className="grid grid-cols-2 gap-3">
+                {categories.map((category) => (
+                  <button
+                    key={category.id}
+                    onClick={() => setSelectedCategory(category.id)}
+                    className="p-4 rounded-2xl border-2 bg-white border-slate-100 shadow-sm hover:border-orange-200 active:scale-95 transition-all text-center"
+                  >
+                    <div className="text-3xl mb-2">{category.icon}</div>
+                    <h3 className="font-bold text-sm text-slate-800 mb-0.5">{category.name}</h3>
+                    <p className="text-[10px] text-slate-400 font-bold">{categoryCounts[category.id] || 0}{t?.book_count_suffix || '권'}</p>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </>
+        )}
+      </div>
+    );
+  }
+
+  // 책 목록 화면 (카테고리 선택 후)
   return (
-    <div className="space-y-6 animate-in slide-in-from-bottom-2 fade-in pb-20">
-      {/* 헤더 */}
-      <div className="space-y-2">
-        <h2 className="text-2xl font-black text-slate-800 leading-tight">
-          {t?.library_title || "서재"}
-        </h2>
-        <p className="text-sm text-slate-500">
-          {t?.library_desc || "모든 유저가 생성한 책들을 모아둔 곳입니다."}
-        </p>
+    <div className="space-y-4 animate-in slide-in-from-right fade-in pb-20">
+      {/* 헤더 + 뒤로가기 */}
+      <div className="flex items-center gap-2">
+        <button
+          onClick={() => { setSelectedCategory(null); setSearchQuery(''); setSelectedMonth(''); }}
+          className="w-9 h-9 flex items-center justify-center rounded-xl bg-slate-100 hover:bg-slate-200 transition-colors shrink-0"
+        >
+          <ChevronLeft className="w-5 h-5 text-slate-600" />
+        </button>
+        <div className="flex-1 min-w-0">
+          <h2 className="text-lg font-black text-slate-800 truncate">{currentCategoryName}</h2>
+          <p className="text-xs text-slate-400">{sortedBooks.length}{t?.book_count_suffix || '권'}</p>
+        </div>
       </div>
 
-      {/* 카테고리 필터 드롭다운 */}
-      <div className="space-y-2">
-        <div className="flex items-center gap-2 px-1">
-          <Filter className="w-4 h-4 text-slate-400" />
-          <span className="text-xs font-bold text-slate-500">{t?.category_label || "카테고리"}</span>
+      {/* 검색 + 월별 필터 */}
+      <div className="flex gap-2">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder={t?.search_placeholder || "책 제목 또는 작가로 검색..."}
+            className="w-full bg-white border-2 border-slate-200 rounded-xl py-2 pl-9 pr-3 text-sm focus:border-orange-500 focus:outline-none transition-colors"
+          />
         </div>
-        <div className="relative">
+        <div className="relative shrink-0">
           <select
-            value={filter}
-            onChange={(e) => onFilterChange?.(e.target.value)}
-            className="w-full bg-white border-2 border-slate-200 rounded-xl py-3 px-4 pr-10 text-sm font-bold text-slate-700 appearance-none focus:border-orange-500 focus:outline-none transition-colors cursor-pointer"
+            value={selectedMonth}
+            onChange={(e) => setSelectedMonth(e.target.value)}
+            className="h-full bg-white border-2 border-slate-200 rounded-xl py-2 pl-3 pr-8 text-xs font-bold text-slate-600 appearance-none focus:border-orange-500 focus:outline-none transition-colors cursor-pointer"
           >
-            {filterOptions.map((option) => (
-              <option key={option.id} value={option.id}>
-                {option.name}
-              </option>
+            <option value="">{t?.all_period || "전체"}</option>
+            {availableMonths.map(m => (
+              <option key={m} value={m}>{formatMonthLabel(m)}</option>
             ))}
           </select>
-          <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 pointer-events-none" />
+          <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 pointer-events-none" />
         </div>
       </div>
 
@@ -119,98 +278,102 @@ const LibraryView = ({ books, onBookClick, filter = 'all', onFilterChange, t, au
           </p>
         </div>
       ) : (
-        <div className="space-y-3">
-          {sortedBooks.map((book) => {
-            const dateString = formatDate(book.createdAt);
-            const coverImage = getCoverImageFromBook(book);
-
-            return (
-              <button
-                key={book.id}
-                onClick={() => onBookClick(book)}
-                className="w-full p-4 bg-white rounded-xl border border-slate-100 shadow-sm active:bg-slate-50 transition-colors text-left hover:border-orange-200"
-              >
-                <div className="flex items-start gap-3">
-                  <div className="relative w-16 h-20 rounded-md overflow-hidden shrink-0 bg-slate-100">
-                    <img
-                      src={coverImage}
-                      alt={book.title}
-                      className="w-full h-full object-cover"
-                      onError={(e) => {
-                        // 이미지 로드 실패 시 기본 아이콘으로 대체
-                        e.target.style.display = 'none';
-                        e.target.nextElementSibling.style.display = 'flex';
-                      }}
-                    />
-                    <div className="w-full h-full bg-gradient-to-br from-orange-100 to-orange-200 flex items-center justify-center hidden">
-                      <Book className="w-6 h-6 text-orange-600" />
-                    </div>
-                    {(book.isSeries || book.category === 'series') && book.episodes && (
-                      <div
-                        className={`absolute top-1 right-1 w-8 h-8 rounded-full flex items-center justify-center text-[9px] font-black shadow-md ${book.status === 'ongoing'
-                            ? 'bg-amber-400 text-amber-900'
-                            : 'bg-red-500 text-white'
-                          }`}
-                      >
-                        {book.status === 'ongoing' ? (t?.ongoing || '연재중') : (t?.completed || '완결')}
-                      </div>
-                    )}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <h3 className="font-black text-slate-800 text-lg mb-2 line-clamp-1">
-                      {book.title}
-                    </h3>
-                    <div className="flex items-center gap-2 text-xs text-slate-500 flex-wrap">
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-gradient-to-r from-orange-500 to-rose-500 text-white text-[11px] font-black shadow-sm">
-                        <Book className="w-3 h-3" />
-                        {(t?.author_by || "작가: {name}").replace('{name}', authorProfiles[book.authorId]?.nickname || (t?.anonymous || '익명'))}
-                      </span>
-                      <span className="bg-slate-100 px-2 py-0.5 rounded-full font-bold text-slate-600">
-                        {book.category === 'webnovel' ? (t?.cat_webnovel || '웹소설') :
-                          book.category === 'novel' ? (t?.cat_novel || '소설') :
-                            book.category === 'series' ? (t?.cat_series || '시리즈') :
-                              book.category === 'essay' ? (t?.cat_essay || '에세이') :
-                                book.category === 'self-improvement' ? (t?.cat_self_help || '자기계발') :
-                                  book.category === 'self-help' ? (t?.cat_self_help || '자기계발') :
-                                    book.category === 'humanities' ? (t?.cat_humanities || '인문.철학') : book.category}
-                      </span>
-                      {book.subCategory && (
-                        <span className="bg-slate-100 px-2 py-0.5 rounded-full text-slate-600">
-                          {formatGenreTag(book.subCategory)}
-                        </span>
-                      )}
-                      <span className="flex items-center gap-1 text-slate-400 ml-auto">
-                        <Calendar className="w-3 h-3" />
-                        {dateString}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-3 text-[11px] text-slate-400 mt-2">
-                      <span className="flex items-center gap-1">
-                        <Eye className="w-3 h-3" />
-                        {formatCount(book.views)}
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <Heart className="w-3 h-3" />
-                        {formatCount(book.likes)}
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <Bookmark className="w-3 h-3" />
-                        {formatCount(book.favorites)}
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <CheckCircle className="w-3 h-3" />
-                        {formatCount(book.completions)}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </button>
-            );
-          })}
-        </div>
+        <BookList books={sortedBooks} onBookClick={onBookClick} t={t} authorProfiles={authorProfiles} />
       )}
     </div>
   );
 };
+
+// 책 목록 컴포넌트 (재사용)
+const BookList = ({ books, onBookClick, t, authorProfiles }) => (
+  <div className="space-y-2">
+    {books.map((book) => {
+      const dateString = formatDate(book.createdAt);
+      const coverImage = getCoverImageFromBook(book);
+
+      return (
+        <button
+          key={book.id}
+          onClick={() => onBookClick(book)}
+          className="w-full px-3 py-2.5 bg-white rounded-xl border border-slate-100 shadow-sm active:bg-slate-50 transition-colors text-left hover:border-orange-200"
+        >
+          <div className="flex items-center gap-2.5">
+            <div className="relative w-11 h-14 rounded-md overflow-hidden shrink-0 bg-slate-100">
+              <img
+                src={coverImage}
+                alt={book.title}
+                className="w-full h-full object-cover"
+                onError={(e) => {
+                  e.target.style.display = 'none';
+                  e.target.nextElementSibling.style.display = 'flex';
+                }}
+              />
+              <div className="w-full h-full bg-gradient-to-br from-orange-100 to-orange-200 flex items-center justify-center hidden">
+                <Book className="w-4 h-4 text-orange-600" />
+              </div>
+              {(book.isSeries || book.category === 'series') && book.episodes && (
+                <div
+                  className={`absolute top-0.5 right-0.5 w-6 h-6 rounded-full flex items-center justify-center text-[7px] font-black shadow-md ${book.status === 'ongoing'
+                    ? 'bg-amber-400 text-amber-900'
+                    : 'bg-red-500 text-white'
+                    }`}
+                >
+                  {book.status === 'ongoing' ? (t?.ongoing || '연재') : (t?.completed || '완결')}
+                </div>
+              )}
+            </div>
+            <div className="flex-1 min-w-0">
+              <h3 className="font-black text-slate-800 text-sm mb-1 line-clamp-1">
+                {book.title}
+              </h3>
+              <div className="flex items-center gap-1.5 text-[10px] text-slate-500 flex-wrap">
+                <span className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-white text-[10px] font-black shadow-sm ${authorProfiles[book.authorId]?.badgeStyle || 'bg-green-500'}`}>
+                  <span className="text-[10px]">{authorProfiles[book.authorId]?.gradeIcon || '🌱'}</span>
+                  {authorProfiles[book.authorId]?.nickname || (t?.anonymous || '익명')}
+                </span>
+                <span className="bg-slate-100 px-1.5 py-0.5 rounded-full font-bold text-slate-600">
+                  {book.category === 'webnovel' ? (t?.cat_webnovel || '웹소설') :
+                    book.category === 'novel' ? (t?.cat_novel || '소설') :
+                      book.category === 'series' ? (t?.cat_series || '시리즈') :
+                        book.category === 'essay' ? (t?.cat_essay || '에세이') :
+                          book.category === 'self-improvement' ? (t?.cat_self_help || '자기계발') :
+                            book.category === 'self-help' ? (t?.cat_self_help || '자기계발') :
+                              book.category === 'humanities' ? (t?.cat_humanities || '인문.철학') : book.category}
+                </span>
+                {book.subCategory && (
+                  <span className="bg-slate-100 px-1.5 py-0.5 rounded-full text-slate-600">
+                    {formatGenreTag(book.subCategory)}
+                  </span>
+                )}
+                <span className="flex items-center gap-0.5 text-slate-400 ml-auto">
+                  <Calendar className="w-2.5 h-2.5" />
+                  {dateString}
+                </span>
+              </div>
+              <div className="flex items-center gap-2.5 text-[10px] text-slate-400 mt-1">
+                <span className="flex items-center gap-0.5">
+                  <Eye className="w-2.5 h-2.5" />
+                  {formatCount(book.views)}
+                </span>
+                <span className="flex items-center gap-0.5">
+                  <Heart className="w-2.5 h-2.5" />
+                  {formatCount(book.likes)}
+                </span>
+                <span className="flex items-center gap-0.5">
+                  <Bookmark className="w-2.5 h-2.5" />
+                  {formatCount(book.favorites)}
+                </span>
+                <span className="flex items-center gap-0.5">
+                  <CheckCircle className="w-2.5 h-2.5" />
+                  {formatCount(book.completions)}
+                </span>
+              </div>
+            </div>
+          </div>
+        </button>
+      );
+    })}
+  </div>
+);
 
 export default LibraryView;
