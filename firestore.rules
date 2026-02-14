@@ -134,6 +134,13 @@ service cloud.firestore {
           allow read: if true;
           allow write: if isAuth();
         }
+
+        // Promotions (홍보하기: 48시간 홈 홍보 구역)
+        match /promotions/{promoId} {
+          allow read: if true;
+          allow create: if isAuth() && request.resource.data.authorId == request.auth.uid;
+          allow update, delete: if isAuth() && resource.data.authorId == request.auth.uid;
+        }
       }
     }
 

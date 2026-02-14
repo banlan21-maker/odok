@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import {
-    collection, query, onSnapshot, where, getDocs, doc, getDoc, addDoc, serverTimestamp, updateDoc, increment, setDoc, deleteDoc
+    collection, query, onSnapshot, where, getDocs, doc, getDoc, addDoc, serverTimestamp, updateDoc, increment, setDoc, deleteDoc, Timestamp
 } from 'firebase/firestore';
 import { db } from '../firebase';
 import { startOfDay, startOfWeek, endOfWeek } from 'date-fns';
@@ -54,6 +54,7 @@ export const useBooks = ({ user, userProfile, setError, deductInk, setShowInkCon
     const [isWritingInProgress, setIsWritingInProgress] = useState(false);
     const [showWritingCompleteModal, setShowWritingCompleteModal] = useState(null);
     const [authorProfiles, setAuthorProfiles] = useState({});
+    const [promotions, setPromotions] = useState([]);
 
     const latestBooksRef = useRef([]);
     const authorProfilesCacheRef = useRef({});
@@ -71,15 +72,39 @@ export const useBooks = ({ user, userProfile, setError, deductInk, setShowInkCon
             const todayDateKey = getTodayDateKey();
             const today = startOfDay(new Date());
 
+            const getBookActivityTime = (book) => {
+                const isSeries = book.isSeries === true || book.category === 'series';
+                if (isSeries && book.episodes && book.episodes.length > 0) {
+                    const lastEp = book.episodes[book.episodes.length - 1];
+                    const epCreated = lastEp.createdAt;
+                    if (epCreated) {
+                        const t = typeof epCreated === 'string' ? new Date(epCreated) : (epCreated?.toDate?.() || (epCreated?.seconds ? new Date(epCreated.seconds * 1000) : null));
+                        if (t && !isNaN(t.getTime())) return t.getTime();
+                    }
+                }
+                if (book.updatedAt?.toDate) return book.updatedAt.toDate().getTime();
+                if (book.updatedAt?.seconds) return book.updatedAt.seconds * 1000;
+                const created = book.createdAt?.toDate?.() || (book.createdAt?.seconds ? new Date(book.createdAt.seconds * 1000) : null);
+                return created && !isNaN(created.getTime()) ? created.getTime() : 0;
+            };
+
             const todayBooksList = booksData.filter(book => {
-                if (book.dateKey) return book.dateKey === todayDateKey;
-                const createdAt = book.createdAt?.toDate?.() || (book.createdAt?.seconds ? new Date(book.createdAt.seconds * 1000) : null);
-                return createdAt && createdAt >= today;
-            }).sort((a, b) => {
-                const dateA = a.createdAt?.toDate?.() || (a.createdAt?.seconds ? new Date(a.createdAt.seconds * 1000) : new Date(0));
-                const dateB = b.createdAt?.toDate?.() || (b.createdAt?.seconds ? new Date(b.createdAt.seconds * 1000) : new Date(0));
-                return dateB - dateA;
-            });
+                if (book.dateKey && book.dateKey === todayDateKey) return true;
+                const created = book.createdAt?.toDate?.() || (book.createdAt?.seconds ? new Date(book.createdAt.seconds * 1000) : null);
+                if (created && created >= today) return true;
+                const isSeries = book.isSeries === true || book.category === 'series';
+                if (isSeries && book.episodes && book.episodes.length > 0) {
+                    const lastEp = book.episodes[book.episodes.length - 1];
+                    const epCreated = lastEp.createdAt;
+                    if (epCreated) {
+                        const t = typeof epCreated === 'string' ? new Date(epCreated) : (epCreated?.toDate?.() || (epCreated?.seconds ? new Date(epCreated.seconds * 1000) : null));
+                        if (t && !isNaN(t.getTime()) && t >= today) return true;
+                    }
+                }
+                const updated = book.updatedAt?.toDate?.() || (book.updatedAt?.seconds ? new Date(book.updatedAt.seconds * 1000) : null);
+                if (updated && updated >= today) return true;
+                return false;
+            }).sort((a, b) => getBookActivityTime(b) - getBookActivityTime(a));
             setTodayBooks(todayBooksList);
 
             // 주간 베스트셀러: 전체 기간 누적 점수 기준 (높은 점수의 책은 몇 주든 연속 유지)
@@ -117,6 +142,23 @@ export const useBooks = ({ user, userProfile, setError, deductInk, setShowInkCon
         return () => unsub();
     }, [user, appId]);
 
+    // promotions 구독 (홍보 기능)
+    useEffect(() => {
+        if (!user || !appId) return;
+        const promosRef = collection(db, 'artifacts', appId, 'public', 'data', 'promotions');
+        const unsub = onSnapshot(promosRef, (snap) => {
+            const now = new Date();
+            const promosData = snap.docs
+                .map(d => ({ id: d.id, ...d.data() }))
+                .filter(p => {
+                    const expiresAt = p.expiresAt?.toDate?.() || (p.expiresAt?.seconds ? new Date(p.expiresAt.seconds * 1000) : null);
+                    return expiresAt && expiresAt > now;
+                });
+            setPromotions(promosData);
+        }, (e) => console.warn('[홍보] promotions 구독 오류', e));
+        return () => unsub();
+    }, [user, appId]);
+
     // 작가 프로필 캐시: authorId → { nickname, profileImageUrl }
     useEffect(() => {
         if (!books.length) return;
@@ -131,9 +173,11 @@ export const useBooks = ({ user, userProfile, setError, deductInk, setShowInkCon
                 const profileSnap = await getDoc(profileRef);
                 if (profileSnap.exists()) {
                     const data = profileSnap.data();
-                    return [id, { nickname: data.nickname || '익명', profileImageUrl: data.profileImageUrl || null }];
+                    const level = getLevelFromXp(data.xp ?? 0);
+                    const grade = getGradeInfo(level);
+                    return [id, { nickname: data.nickname || '익명', profileImageUrl: data.profileImageUrl || null, level, gradeIcon: grade.icon, badgeStyle: grade.badgeStyle }];
                 }
-                return [id, { nickname: '익명', profileImageUrl: null }];
+                return [id, { nickname: '익명', profileImageUrl: null, level: 1, gradeIcon: '🌱', badgeStyle: 'bg-green-500' }];
             } catch {
                 return [id, { nickname: '익명', profileImageUrl: null }];
             }
@@ -147,16 +191,21 @@ export const useBooks = ({ user, userProfile, setError, deductInk, setShowInkCon
         return () => { isActive = false; };
     }, [books, appId]);
 
-    // 현재 유저 닉네임 변경 시 즉시 반영
+    // 현재 유저 프로필(닉네임/사진/레벨·칭호) 변경 시 즉시 반영 — 칭호 업그레이드 시 기존 책 표지에도 새 아이콘 적용
     useEffect(() => {
-        if (!user || !userProfile?.nickname) return;
+        if (!user) return;
+        const level = getLevelFromXp(userProfile?.xp ?? 0);
+        const grade = getGradeInfo(level);
         const updated = {
-            nickname: userProfile.nickname,
-            profileImageUrl: userProfile.profileImageUrl || null
+            nickname: userProfile?.nickname || '익명',
+            profileImageUrl: userProfile?.profileImageUrl || null,
+            level,
+            gradeIcon: grade.icon,
+            badgeStyle: grade.badgeStyle
         };
         authorProfilesCacheRef.current[user.uid] = updated;
         setAuthorProfiles(prev => ({ ...prev, [user.uid]: updated }));
-    }, [user, userProfile?.nickname, userProfile?.profileImageUrl]);
+    }, [user, userProfile?.nickname, userProfile?.profileImageUrl, userProfile?.xp]);
 
     // 주간 집필왕 계산
     useEffect(() => {
@@ -404,6 +453,41 @@ export const useBooks = ({ user, userProfile, setError, deductInk, setShowInkCon
         }
     };
 
+    const createPromotion = async (bookId, promoText) => {
+        if (!user) throw new Error('LOGIN_REQUIRED');
+
+        const now = new Date();
+        // 현재 유효한 홍보 목록 확인
+        const promosRef = collection(db, 'artifacts', appId, 'public', 'data', 'promotions');
+        const promosSnap = await getDocs(promosRef);
+        const activePromos = promosSnap.docs
+            .map(d => ({ id: d.id, ...d.data() }))
+            .filter(p => {
+                const expiresAt = p.expiresAt?.toDate?.() || (p.expiresAt?.seconds ? new Date(p.expiresAt.seconds * 1000) : null);
+                return expiresAt && expiresAt > now;
+            });
+
+        if (activePromos.length >= 5) throw new Error('PROMO_FULL');
+        if (activePromos.some(p => p.authorId === user.uid)) throw new Error('PROMO_ALREADY');
+
+        const currentInk = userProfile?.ink || 0;
+        if (currentInk < 10) throw new Error('PROMO_INK_SHORT');
+
+        const deducted = await deductInk(10);
+        if (!deducted) throw new Error('PROMO_INK_SHORT');
+
+        const createdAt = Timestamp.now();
+        const expiresAt = Timestamp.fromMillis(createdAt.toMillis() + 48 * 60 * 60 * 1000);
+
+        await addDoc(promosRef, {
+            bookId,
+            authorId: user.uid,
+            promoText: promoText.slice(0, 50),
+            createdAt,
+            expiresAt
+        });
+    };
+
     return {
         books, setBooks,
         currentBook, setCurrentBook,
@@ -417,6 +501,8 @@ export const useBooks = ({ user, userProfile, setError, deductInk, setShowInkCon
         isWritingInProgress, setIsWritingInProgress,
         showWritingCompleteModal, setShowWritingCompleteModal,
         authorProfiles,
+        promotions,
+        createPromotion,
         handleBookGenerated
     };
 };

@@ -5,7 +5,7 @@ import {
 import { signOut, deleteUser } from 'firebase/auth';
 import { auth, db } from '../firebase';
 import { getTodayDateKey } from '../utils/dateUtils';
-import { getLevelFromXp, getAttendanceInk, getXpToNextLevel, getLevelProgressPercent, DAILY_WRITE_LIMIT } from '../utils/levelUtils';
+import { getLevelFromXp, getGradeInfo, getAttendanceInk, getXpToNextLevel, getLevelProgressPercent, DAILY_WRITE_LIMIT } from '../utils/levelUtils';
 
 const rawAppId = typeof __app_id !== 'undefined' ? __app_id : 'odok-app-default';
 const appId = rawAppId.replace(/\//g, '_');
@@ -405,11 +405,22 @@ export const useUserProfile = ({ user, setView, setError, viewRef }) => {
     INITIAL_INK,
     INK_MAX,
     earnPoints,
-    levelInfo: userProfile ? {
-      level: getLevelFromXp(userProfile.xp ?? 0),
-      nextLevelXp: getXpToNextLevel(userProfile.xp ?? 0),
-      progress: getLevelProgressPercent(userProfile.xp ?? 0)
-    } : { level: 1, nextLevelXp: 100, progress: 0 },
+    levelInfo: userProfile ? (() => {
+      const xp = userProfile.xp ?? 0;
+      const level = getLevelFromXp(xp);
+      const grade = getGradeInfo(level);
+      return {
+        level,
+        nextLevelXp: getXpToNextLevel(xp),
+        progress: getLevelProgressPercent(xp),
+        currentExp: xp,
+        remainingExp: getXpToNextLevel(xp),
+        gradeIcon: grade.icon,
+        title: grade.gradeName,
+        badge: grade.badge,
+        badgeStyle: grade.badgeStyle
+      };
+    })() : { level: 1, nextLevelXp: 100, progress: 0, currentExp: 0, remainingExp: 100, gradeIcon: '🌱', title: '새싹', badge: null, badgeStyle: 'bg-green-500' },
     remainingDailyWrites: userProfile ? Math.max(0, DAILY_WRITE_LIMIT - (userProfile.lastBookCreatedDate === getTodayDateKey() ? (userProfile.dailyWriteCount || 0) : 0)) : 2,
     dailyWriteCount: userProfile && userProfile.lastBookCreatedDate === getTodayDateKey() ? (userProfile.dailyWriteCount || 0) : 0,
     lastBookCreatedDate: userProfile?.lastBookCreatedDate || null,

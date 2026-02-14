@@ -1,7 +1,9 @@
 // src/components/BookDetail.jsx
 // 책 상세/뷰어 페이지 컴포넌트
 import React, { useEffect, useMemo, useState, useRef } from 'react';
-import { ChevronLeft, ChevronRight, Book, Calendar, User, Heart, Send, Bookmark, CheckCircle, PenTool, RefreshCw, Trash2, Eye } from 'lucide-react';
+import { Capacitor } from '@capacitor/core';
+import { KeepAwake } from '@capacitor-community/keep-awake';
+import { ChevronLeft, ChevronRight, Book, Calendar, User, Heart, Send, Bookmark, CheckCircle, PenTool, RefreshCw, Trash2, Eye, Megaphone } from 'lucide-react';
 import { formatDateDetailed } from '../utils/dateUtils';
 import { getCoverImageFromBook } from '../utils/bookCovers';
 import { collection, addDoc, deleteDoc, doc, onSnapshot, serverTimestamp, setDoc, updateDoc, increment, runTransaction, getDoc } from 'firebase/firestore';
@@ -16,7 +18,7 @@ const DAILY_WRITE_LIMIT = 2;
 const DAILY_FREE_WRITES = 1;
 const INK_MAX = 999;
 
-const BookDetail = ({ book, onClose, onBookUpdate, fontSize = 'text-base', user, userProfile, appId, slotStatus, deductInk, t, isAdmin, authorProfiles = {} }) => {
+const BookDetail = ({ book, onClose, onBookUpdate, fontSize = 'text-base', user, userProfile, appId, slotStatus, deductInk, t, isAdmin, authorProfiles = {}, promotions = [], createPromotion }) => {
   if (!book) return null;
 
   // 수정 5: fontSize 값을 Tailwind 클래스로 매핑
@@ -43,6 +45,14 @@ const BookDetail = ({ book, onClose, onBookUpdate, fontSize = 'text-base', user,
   const episodes = (isSeries && book.episodes) ? book.episodes : [];
   const [currentEpisodeIndex, setCurrentEpisodeIndex] = useState(episodes.length > 0 ? episodes.length - 1 : 0);
   const [showContinuationModal, setShowContinuationModal] = useState(false);
+  const [showEndingStyleModal, setShowEndingStyleModal] = useState(false);
+  const endingStyles = [
+    '닫힌 결말 (해피 엔딩)',
+    '닫힌 결말 (비극/새드 엔딩)',
+    '열린 결말 (여운을 남김)',
+    '반전 결말 (충격적인 반전)',
+    '수미상관 (처음과 끝이 연결됨)'
+  ];
   const [isGeneratingEpisode, setIsGeneratingEpisode] = useState(false);
   const [isGeneratingEpisodeModalHidden, setIsGeneratingEpisodeModalHidden] = useState(false);
   const [episodeLoadingMessageIndex, setEpisodeLoadingMessageIndex] = useState(0);
@@ -72,6 +82,29 @@ const BookDetail = ({ book, onClose, onBookUpdate, fontSize = 'text-base', user,
   const [isSendingInk, setIsSendingInk] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [showPromotionModal, setShowPromotionModal] = useState(false);
+  const [promoText, setPromoText] = useState('');
+  const [isPromoting, setIsPromoting] = useState(false);
+
+  // 시리즈 집필 중 화면 꺼짐 방지
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return;
+    const toggleWakeLock = async () => {
+      try {
+        if (isGeneratingEpisode) {
+          await KeepAwake.keepAwake();
+        } else {
+          await KeepAwake.allowSleep();
+        }
+      } catch (err) {
+        console.warn('KeepAwake error:', err);
+      }
+    };
+    toggleWakeLock();
+    return () => {
+      KeepAwake.allowSleep().catch(() => { });
+    };
+  }, [isGeneratingEpisode]);
 
   const handleAdminDeleteBook = async () => {
     if (!isAdmin || !appId || !bookId) return;
@@ -299,7 +332,7 @@ const BookDetail = ({ book, onClose, onBookUpdate, fontSize = 'text-base', user,
     }
     const senderLevel = getLevelFromXp(userProfile?.xp ?? 0);
     if (!canDonate(senderLevel)) {
-      alert('레벨 6부터 선물하기가 가능합니다.');
+      alert('작가 등급(Lv.11)부터 선물하기가 가능합니다.');
       return;
     }
     const amount = Math.min(10, Math.max(1, Number(inkAmount) || 1));
@@ -373,7 +406,7 @@ const BookDetail = ({ book, onClose, onBookUpdate, fontSize = 'text-base', user,
     setReplyTo(null);
   };
 
-  const handleWriteNextEpisode = async (continuationType) => {
+  const handleWriteNextEpisode = async (continuationType, endingStyle = null) => {
     if (!user || !appId || !isSeries) return;
     if (seriesSlotTaken) {
       alert('오늘 시리즈 집필은 마감되었어요.');
@@ -417,6 +450,7 @@ const BookDetail = ({ book, onClose, onBookUpdate, fontSize = 'text-base', user,
     }
 
     setShowContinuationModal(false);
+    setShowEndingStyleModal(false);
     setIsGeneratingEpisode(true);
     setIsGeneratingEpisodeModalHidden(false);
     const dssRef = doc(db, 'artifacts', appId, 'public', 'data', 'daily_series_slot', todayKey);
@@ -450,7 +484,8 @@ const BookDetail = ({ book, onClose, onBookUpdate, fontSize = 'text-base', user,
         characterSheet: book.characterSheet || '',
         settingSheet: book.settingSheet || '',
         continuationType,
-        selectedMood: book.selectedMood || ''
+        selectedMood: book.selectedMood || '',
+        endingStyle
       });
 
       const newEpisode = {
@@ -466,7 +501,8 @@ const BookDetail = ({ book, onClose, onBookUpdate, fontSize = 'text-base', user,
       const bookRef = doc(db, 'artifacts', appId, 'books', book.id);
       const updateData = {
         episodes: [...episodes, newEpisode],
-        summary: result.cumulativeSummary
+        summary: result.cumulativeSummary,
+        updatedAt: serverTimestamp()
       };
       if (result.isFinale) updateData.status = 'completed';
 
@@ -608,7 +644,7 @@ const BookDetail = ({ book, onClose, onBookUpdate, fontSize = 'text-base', user,
               {/* 메타 정보 */}
               <div className="flex items-center gap-3 flex-wrap">
                 <div className="flex items-center gap-1.5 text-xs text-slate-500">
-                  <User className="w-3.5 h-3.5" />
+                  <span>{authorProfiles[book.authorId]?.gradeIcon || '🌱'}</span>
                   <span className="font-bold">{authorProfiles[book.authorId]?.nickname || '익명'}</span>
                 </div>
                 <span className="text-slate-300">•</span>
@@ -618,15 +654,36 @@ const BookDetail = ({ book, onClose, onBookUpdate, fontSize = 'text-base', user,
                 </div>
               </div>
 
-              {/* 카테고리/장르 태그 */}
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="bg-orange-100 text-orange-600 px-3 py-1 rounded-full text-xs font-bold">
-                  {categoryName}
-                </span>
-                {book.subCategory && (
-                  <span className="bg-slate-100 text-slate-600 px-3 py-1 rounded-full text-xs font-bold">
-                    {formatGenreTag(book.subCategory)}
+              {/* 카테고리/장르 태그 + 홍보하기 버튼 (한 줄: 왼쪽 카테고리, 오른쪽 홍보) */}
+              <div className="flex items-center justify-between gap-2 flex-wrap">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="bg-orange-100 text-orange-600 px-3 py-1 rounded-full text-xs font-bold">
+                    {categoryName}
                   </span>
+                  {book.subCategory && (
+                    <span className="bg-slate-100 text-slate-600 px-3 py-1 rounded-full text-xs font-bold">
+                      {formatGenreTag(book.subCategory)}
+                    </span>
+                  )}
+                </div>
+                {book.authorId === user?.uid && (
+                  (() => {
+                    const isAlreadyPromoted = promotions.some(p => p.bookId === book.id);
+                    return isAlreadyPromoted ? (
+                      <span className="inline-flex items-center gap-1.5 bg-emerald-100 text-emerald-600 px-4 py-2 rounded-xl text-xs font-bold shrink-0">
+                        <Megaphone className="w-3.5 h-3.5" />
+                        {t.promo_active}
+                      </span>
+                    ) : (
+                      <button
+                        onClick={() => setShowPromotionModal(true)}
+                        className="inline-flex items-center gap-1.5 bg-violet-100 text-violet-600 hover:bg-violet-200 px-4 py-2 rounded-xl text-xs font-bold transition-colors shrink-0"
+                      >
+                        <Megaphone className="w-3.5 h-3.5" />
+                        {t.promo_button}
+                      </button>
+                    );
+                  })()
                 )}
               </div>
             </div>
@@ -770,7 +827,7 @@ const BookDetail = ({ book, onClose, onBookUpdate, fontSize = 'text-base', user,
           <div className="flex flex-col items-center gap-2 mt-5">
             {!canDonate(getLevelFromXp(userProfile?.xp ?? 0)) ? (
               <div className="text-center py-3 px-4 bg-slate-100 rounded-xl border border-slate-200">
-                <span className="text-sm font-bold text-slate-500">🔒 선물하기는 레벨 6부터 가능해요</span>
+                <span className="text-sm font-bold text-slate-500">🔒 선물하기는 작가 등급(Lv.11)부터 가능해요</span>
               </div>
             ) : (
               <div className="flex items-center justify-center gap-3">
@@ -895,7 +952,7 @@ const BookDetail = ({ book, onClose, onBookUpdate, fontSize = 'text-base', user,
         </div>
 
         {/* 시리즈 이어쓰기 모달 */}
-        {showContinuationModal && (
+        {showContinuationModal && !showEndingStyleModal && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-6">
             <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl space-y-4 animate-in fade-in zoom-in-95 duration-200">
               <div className="text-center space-y-2">
@@ -913,7 +970,7 @@ const BookDetail = ({ book, onClose, onBookUpdate, fontSize = 'text-base', user,
                   {t?.continue_series || "계속 연재 (이야기 확장)"}
                 </button>
                 <button
-                  onClick={() => handleWriteNextEpisode('finalize')}
+                  onClick={() => setShowEndingStyleModal(true)}
                   disabled={isGeneratingEpisode}
                   className="w-full bg-slate-900 text-white py-3 rounded-xl text-sm font-black hover:bg-slate-800 transition-colors disabled:opacity-50"
                 >
@@ -924,6 +981,41 @@ const BookDetail = ({ book, onClose, onBookUpdate, fontSize = 'text-base', user,
                   className="w-full bg-slate-100 text-slate-600 py-2 rounded-xl text-sm font-bold hover:bg-slate-200 transition-colors"
                 >
                   {t?.cancel || "취소"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* 결말 스타일 선택 모달 */}
+        {showEndingStyleModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-6">
+            <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl space-y-4 animate-in fade-in zoom-in-95 duration-200">
+              <div className="text-center space-y-2">
+                <h3 className="text-lg font-black text-slate-800">{t?.ending_style || "결말 스타일"}</h3>
+                <p className="text-sm text-slate-600">
+                  {t?.ending_style_desc || "어떤 결말로 마무리할까요?"}
+                </p>
+              </div>
+              <div className="space-y-2">
+                {endingStyles.map((style) => (
+                  <button
+                    key={style}
+                    onClick={() => {
+                      setShowEndingStyleModal(false);
+                      handleWriteNextEpisode('finalize', style);
+                    }}
+                    disabled={isGeneratingEpisode}
+                    className="w-full bg-slate-900 text-white py-3 rounded-xl text-sm font-bold hover:bg-slate-800 transition-colors disabled:opacity-50"
+                  >
+                    {style}
+                  </button>
+                ))}
+                <button
+                  onClick={() => setShowEndingStyleModal(false)}
+                  className="w-full bg-slate-100 text-slate-600 py-2 rounded-xl text-sm font-bold hover:bg-slate-200 transition-colors"
+                >
+                  {t?.back || "뒤로"}
                 </button>
               </div>
             </div>
@@ -962,6 +1054,64 @@ const BookDetail = ({ book, onClose, onBookUpdate, fontSize = 'text-base', user,
         )}
 
         {/* 운영자: 책 삭제 확인 모달 */}
+        {/* 홍보 모달 */}
+        {showPromotionModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-6">
+            <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl space-y-4">
+              <div className="text-center space-y-1">
+                <Megaphone className="w-8 h-8 text-violet-500 mx-auto" />
+                <h3 className="text-lg font-black text-slate-800">{t.promo_modal_title}</h3>
+              </div>
+              <input
+                type="text"
+                value={promoText}
+                onChange={(e) => setPromoText(e.target.value.slice(0, 50))}
+                placeholder={t.promo_input_placeholder}
+                maxLength={50}
+                className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300"
+              />
+              <p className="text-xs text-slate-400 text-center">{promoText.length}/50</p>
+              <div className="bg-violet-50 rounded-xl p-3 text-center">
+                <p className="text-xs font-bold text-violet-600">{t.promo_cost}</p>
+                {(userProfile?.ink || 0) < 10 && (
+                  <p className="text-xs text-rose-500 mt-1">{t.promo_ink_short}</p>
+                )}
+              </div>
+              <div className="space-y-2">
+                <button
+                  onClick={async () => {
+                    if (!promoText.trim()) return;
+                    setIsPromoting(true);
+                    try {
+                      await createPromotion(book.id, promoText.trim());
+                      setShowPromotionModal(false);
+                      setPromoText('');
+                    } catch (err) {
+                      if (err.message === 'PROMO_FULL') alert(t.promo_full);
+                      else if (err.message === 'PROMO_ALREADY') alert(t.promo_already);
+                      else if (err.message === 'PROMO_INK_SHORT') alert(t.promo_ink_short);
+                      else alert(err.message || t.promo_confirm + ' 실패. 다시 시도해주세요.');
+                    } finally {
+                      setIsPromoting(false);
+                    }
+                  }}
+                  disabled={isPromoting || !promoText.trim() || (userProfile?.ink || 0) < 10}
+                  className="w-full bg-violet-500 text-white py-3 rounded-xl text-sm font-black hover:bg-violet-600 transition-colors disabled:opacity-50"
+                >
+                  {isPromoting ? '...' : t.promo_confirm}
+                </button>
+                <button
+                  onClick={() => { setShowPromotionModal(false); setPromoText(''); }}
+                  disabled={isPromoting}
+                  className="w-full bg-slate-100 text-slate-600 py-2 rounded-xl text-sm font-bold hover:bg-slate-200 transition-colors"
+                >
+                  {t.cancel}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {showDeleteConfirm && isAdmin && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-6">
             <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl space-y-4">
