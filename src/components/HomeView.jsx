@@ -9,6 +9,7 @@ import {
 import { formatDate } from '../utils/dateUtils';
 import { getCoverImageFromBook } from '../utils/bookCovers';
 import { formatCount } from '../utils/numberFormat';
+import { formatGenreTag } from '../utils/formatGenre';
 
 // Skeleton UI 컴포넌트
 const SkeletonCard = () => (
@@ -37,6 +38,7 @@ const HomeView = ({
   setView,
   todayBooks,
   weeklyBestBooks,
+  allTimeBestBooks = [],
   topWriters,
   isLoadingHomeData,
   handleBookClick,
@@ -44,8 +46,8 @@ const HomeView = ({
   promotions = [],
   books = []
 }) => {
-  const getAuthorName = (authorId) => authorProfiles[authorId]?.nickname || '익명';
-  const getAuthorImage = (authorId) => authorProfiles[authorId]?.profileImageUrl || null;
+  const getAuthorName = (book) => (book?.isAnonymous ? '익명' : (authorProfiles[book?.authorId]?.nickname || book?.authorName || '익명'));
+  const getAuthorImage = (book) => (book?.isAnonymous ? null : authorProfiles[book?.authorId]?.profileImageUrl || null);
   // Mock 공지사항 데이터 (슬라이드 배너용)
   const mockBanners = [
     { id: '1', title: '오독오독 오픈!', subtitle: '나만의 책을 만들어보세요.' },
@@ -193,8 +195,8 @@ const HomeView = ({
                 const promoBook = books.find(b => b.id === promo.bookId);
                 if (!promoBook) return null;
                 const coverImage = getCoverImageFromBook(promoBook);
-                const authorName = authorProfiles[promo.authorId]?.nickname || '익명';
-                const authorGrade = authorProfiles[promo.authorId]?.gradeIcon || '🌱';
+                const authorName = promoBook?.isAnonymous ? '익명' : (authorProfiles[promo.authorId]?.nickname || promoBook?.authorName || '익명');
+                const authorGrade = promoBook?.isAnonymous ? '🌱' : (authorProfiles[promo.authorId]?.gradeIcon || '🌱');
                 const remaining = getRemainingTime(promo.expiresAt);
                 const categoryName = {
                   'webnovel': '웹소설', 'novel': '소설', 'essay': '에세이',
@@ -261,60 +263,69 @@ const HomeView = ({
             {todayBooks.slice(0, 5).map((book) => {
               const dateString = formatDate(book.createdAt, book.dateKey);
               const coverImage = getCoverImageFromBook(book);
+              const categoryLabel = book.category === 'webnovel' ? '웹소설' :
+                book.category === 'novel' ? '소설' :
+                  book.category === 'series' ? '시리즈' :
+                    book.category === 'essay' ? '에세이' :
+                      book.category === 'self-improvement' ? '자기계발' :
+                        book.category === 'self-help' ? '자기계발' :
+                          book.category === 'humanities' ? '인문·철학' : book.category;
 
               return (
                 <button
                   key={book.id}
                   onClick={() => handleBookClick(book)}
-                  className="w-full bg-white p-4 rounded-xl border border-slate-100 shadow-sm flex items-center gap-4 hover:bg-orange-50 transition-colors active:scale-[0.98] text-left"
+                  className="w-full px-3 py-2.5 bg-white rounded-xl border border-slate-100 shadow-sm active:bg-slate-50 transition-colors text-left hover:border-orange-200"
                 >
-                  <div className="relative w-16 h-20 rounded-md overflow-hidden shrink-0 bg-slate-100">
-                    <img
-                      src={coverImage}
-                      alt={book.title}
-                      className="w-full h-full object-cover"
-                      onError={(e) => {
-                        // 이미지 로드 실패 시 기본 아이콘으로 대체
-                        e.target.style.display = 'none';
-                        e.target.nextElementSibling.style.display = 'flex';
-                      }}
-                    />
-                    <div className="w-full h-full bg-gradient-to-br from-orange-100 to-orange-200 flex items-center justify-center hidden">
-                      <Book className="w-6 h-6 text-orange-600" />
-                    </div>
-                    {(book.isSeries || book.category === 'series') && book.episodes && (
-                      <div
-                        className={`absolute top-1 right-1 w-8 h-8 rounded-full flex items-center justify-center text-[9px] font-black shadow-md ${book.status === 'ongoing'
-                          ? 'bg-amber-400 text-amber-900'
-                          : 'bg-red-500 text-white'
-                          }`}
-                      >
-                        {book.status === 'ongoing' ? t.ongoing : t.completed}
+                  <div className="flex items-center gap-2.5">
+                    <div className="relative w-11 h-14 rounded-md overflow-hidden shrink-0 bg-slate-100">
+                      <img
+                        src={coverImage}
+                        alt={book.title}
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          e.target.style.display = 'none';
+                          e.target.nextElementSibling.style.display = 'flex';
+                        }}
+                      />
+                      <div className="w-full h-full bg-gradient-to-br from-orange-100 to-orange-200 flex items-center justify-center hidden">
+                        <Book className="w-4 h-4 text-orange-600" />
                       </div>
-                    )}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <h4 className="font-black text-slate-800 text-base mb-1 line-clamp-1">
-                      {book.title}
-                    </h4>
-                    <div className="flex items-center gap-2 text-xs text-slate-500 flex-wrap">
-                      <span className="font-bold">{getAuthorName(book.authorId)}</span>
-                      <span className="bg-slate-100 px-2 py-0.5 rounded-full font-bold text-slate-600">
-                        {book.category === 'webnovel' ? '웹소설' :
-                          book.category === 'novel' ? '소설' :
-                            book.category === 'series' ? '시리즈' :
-                              book.category === 'essay' ? '에세이' :
-                                book.category === 'self-improvement' ? '자기계발' :
-                                  book.category === 'self-help' ? '자기계발' :
-                                    book.category === 'humanities' ? '인문.철학' : book.category}
-                      </span>
-                      <span className="flex items-center gap-1 text-slate-400">
-                        <Calendar className="w-3 h-3" />
-                        {dateString}
-                      </span>
+                      {(book.isSeries || book.category === 'series') && book.episodes && (
+                        <div
+                          className={`absolute top-0.5 right-0.5 w-6 h-6 rounded-full flex items-center justify-center text-[7px] font-black shadow-md ${book.status === 'ongoing'
+                            ? 'bg-amber-400 text-amber-900'
+                            : 'bg-red-500 text-white'
+                            }`}
+                        >
+                          {book.status === 'ongoing' ? t.ongoing : t.completed}
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-black text-slate-800 text-sm mb-1 line-clamp-1">{book.title}</h3>
+                      <div className="flex items-center gap-1.5 text-[10px] text-slate-500 flex-wrap">
+                        <span className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-white text-[10px] font-black shadow-sm ${book?.isAnonymous ? 'bg-green-500' : (authorProfiles[book.authorId]?.badgeStyle || 'bg-green-500')}`}>
+                          <span className="text-[10px]">{book?.isAnonymous ? '🌱' : (authorProfiles[book.authorId]?.gradeIcon || '🌱')}</span>
+                          {getAuthorName(book)}
+                        </span>
+                        <span className="bg-slate-100 px-1.5 py-0.5 rounded-full font-bold text-slate-600">{categoryLabel}</span>
+                        {book.subCategory && (
+                          <span className="bg-slate-100 px-1.5 py-0.5 rounded-full text-slate-600">{formatGenreTag(book.subCategory)}</span>
+                        )}
+                        <span className="flex items-center gap-0.5 text-slate-400 ml-auto">
+                          <Calendar className="w-2.5 h-2.5" />
+                          {dateString}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2.5 text-[10px] text-slate-400 mt-1">
+                        <span className="flex items-center gap-0.5"><Eye className="w-2.5 h-2.5" />{formatCount(book.views)}</span>
+                        <span className="flex items-center gap-0.5"><Heart className="w-2.5 h-2.5" />{formatCount(book.likes)}</span>
+                        <span className="flex items-center gap-0.5"><Bookmark className="w-2.5 h-2.5" />{formatCount(book.favorites)}</span>
+                        <span className="flex items-center gap-0.5"><CheckCircle className="w-2.5 h-2.5" />{formatCount(book.completions)}</span>
+                      </div>
                     </div>
                   </div>
-                  <ArrowRight className="w-4 h-4 text-slate-300 shrink-0" />
                 </button>
               );
             })}
@@ -322,7 +333,7 @@ const HomeView = ({
         )}
       </div>
 
-      {/* 4. 주간 베스트셀러 (TOP 5) */}
+      {/* 4. 주간 베스트셀러 (TOP 3 - 최근 7일 점수) */}
       <div className="space-y-4">
         <div className="flex items-center gap-2 px-1">
           <Crown className="w-5 h-5 text-yellow-500 fill-yellow-500" />
@@ -331,7 +342,7 @@ const HomeView = ({
 
         {isLoadingHomeData ? (
           <div className="space-y-3">
-            {[1, 2, 3, 4, 5].map((i) => (
+            {[1, 2, 3].map((i) => (
               <SkeletonListItem key={i} />
             ))}
           </div>
@@ -390,12 +401,12 @@ const HomeView = ({
                     <div className="flex items-center gap-2 text-xs text-slate-500 flex-wrap">
                       <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-gradient-to-r from-orange-500 to-rose-500 text-white text-[11px] font-black shadow-sm">
                         <Book className="w-3 h-3" />
-                        {getAuthorImage(book.authorId) ? (
-                          <img src={getAuthorImage(book.authorId)} alt="" className="w-4 h-4 rounded-full object-cover" />
+                        {getAuthorImage(book) ? (
+                          <img src={getAuthorImage(book)} alt="" className="w-4 h-4 rounded-full object-cover" />
                         ) : (
                           <User className="w-3 h-3" />
                         )}
-                        {getAuthorName(book.authorId)}
+                        {getAuthorName(book)}
                       </span>
                       {(book.isSeries || book.category === 'series') && book.episodes && (
                         <span className="text-[10px] font-bold text-orange-600">
@@ -493,6 +504,133 @@ const HomeView = ({
                     </div>
                   </div>
                 </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* 6. 누적 베스트셀러 (TOP 3 - 1위 화려한 UI) */}
+      <div className="space-y-4">
+        <div className="flex items-center gap-2 px-1">
+          <Book className="w-5 h-5 text-amber-500" />
+          <h3 className="text-xl font-black text-slate-800">{t.home_alltime_best || '누적 베스트셀러 📚'}</h3>
+        </div>
+
+        {isLoadingHomeData ? (
+          <div className="space-y-3">
+            {[1, 2, 3].map((i) => (
+              <SkeletonListItem key={i} />
+            ))}
+          </div>
+        ) : allTimeBestBooks.length === 0 ? (
+          <div className="bg-white rounded-2xl border border-dashed border-slate-200 p-8 text-center">
+            <Trophy className="w-10 h-10 text-slate-300 mx-auto mb-3" />
+            <p className="text-slate-400 text-sm font-bold mb-1">
+              {t.home_empty_alltime_best || '아직 누적 베스트셀러가 없어요'}
+            </p>
+            <p className="text-slate-300 text-xs">
+              {t.home_empty_alltime_best_desc || '독자들의 사랑을 받은 책이 여기에 올라갑니다'}
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {allTimeBestBooks.map((book, index) => {
+              const rank = index + 1;
+              const isFirst = rank === 1;
+              const coverImage = getCoverImageFromBook(book);
+              const categoryName = {
+                'webnovel': '웹소설', 'novel': '소설', 'essay': '에세이',
+                'self-improvement': '자기계발', 'self-help': '자기계발',
+                'humanities': '인문·철학', 'series': '시리즈'
+              }[book.category] || book.category;
+
+              if (isFirst) {
+                return (
+                  <button
+                    key={book.id}
+                    onClick={() => handleBookClick(book)}
+                    className="w-full text-left group relative overflow-hidden rounded-2xl active:scale-[0.99] transition-all"
+                  >
+                    <div className="absolute inset-0 bg-gradient-to-br from-amber-400 via-orange-400 to-rose-500 opacity-90 group-hover:opacity-95 transition-opacity" />
+                    <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_rgba(255,255,255,0.4)_0%,transparent_50%)]" />
+                    <div className="relative flex flex-col">
+                      {/* 배지: 상단 별도 영역 */}
+                      <div className="pt-4 px-4 pb-2">
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/95 shadow-lg">
+                          <Crown className="w-5 h-5 text-amber-600 fill-amber-500 shrink-0" />
+                          <span className="text-xs font-black text-amber-800">#1 베스트셀러</span>
+                        </span>
+                      </div>
+                      {/* 표지 + 제목/작가/통계: 가로 배치 */}
+                      <div className="px-4 pb-4 flex items-stretch gap-4">
+                        <div className="w-24 h-32 rounded-xl overflow-hidden shrink-0 shadow-xl ring-4 ring-white/50">
+                          <img
+                            src={coverImage}
+                            alt={book.title}
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                              e.target.style.display = 'none';
+                              e.target.nextElementSibling.style.display = 'flex';
+                            }}
+                          />
+                          <div className="w-full h-full bg-gradient-to-br from-amber-100 to-orange-200 flex items-center justify-center hidden">
+                            <Book className="w-10 h-10 text-orange-600" />
+                          </div>
+                        </div>
+                        <div className="flex-1 min-w-0 flex flex-col justify-center py-1">
+                          <h4 className="font-black text-white text-lg drop-shadow-sm mb-2 line-clamp-2">{book.title}</h4>
+                          <p className="text-sm text-white/90 font-bold mb-2 flex items-center gap-1.5">
+                            {getAuthorImage(book) ? (
+                              <img src={getAuthorImage(book)} alt="" className="w-5 h-5 rounded-full object-cover ring-2 ring-white/50 shrink-0" />
+                            ) : (
+                              <User className="w-4 h-4 text-white/80 shrink-0" />
+                            )}
+                            {getAuthorName(book)}
+                          </p>
+                          <span className="inline-block text-[10px] font-bold text-amber-900 bg-white/90 px-2 py-0.5 rounded-full w-fit mb-2">{categoryName}</span>
+                          <div className="flex items-center gap-3 text-[11px] text-white/90 flex-wrap">
+                            <span className="flex items-center gap-0.5"><Eye className="w-3.5 h-3.5 shrink-0" />{formatCount(book.views)}</span>
+                            <span className="flex items-center gap-0.5"><Heart className="w-3.5 h-3.5 shrink-0" />{formatCount(book.likes)}</span>
+                            <span className="flex items-center gap-0.5"><Bookmark className="w-3.5 h-3.5 shrink-0" />{formatCount(book.favorites)}</span>
+                            <span className="flex items-center gap-0.5"><CheckCircle className="w-3.5 h-3.5 shrink-0" />{formatCount(book.completions)}</span>
+                          </div>
+                        </div>
+                        <ArrowRight className="w-6 h-6 text-white/90 shrink-0 self-center" />
+                      </div>
+                    </div>
+                  </button>
+                );
+              }
+
+              const medalConfig = rank === 2
+                ? { bg: 'bg-gradient-to-br from-slate-300 to-slate-400', icon: '🥈' }
+                : { bg: 'bg-gradient-to-br from-orange-300 to-orange-400', icon: '🥉' };
+
+              return (
+                <button
+                  key={book.id}
+                  onClick={() => handleBookClick(book)}
+                  className="w-full bg-white p-4 rounded-xl border border-slate-100 shadow-sm flex items-center gap-4 hover:bg-orange-50 transition-colors active:scale-[0.98] text-left"
+                >
+                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center font-black text-xl shrink-0 shadow-lg ${medalConfig.bg} text-white`}>
+                    {medalConfig.icon}
+                  </div>
+                  <div className="w-14 h-20 rounded-lg overflow-hidden shrink-0 bg-slate-100">
+                    <img src={coverImage} alt={book.title} className="w-full h-full object-cover" onError={(e) => { e.target.style.display = 'none'; e.target.nextElementSibling.style.display = 'flex'; }} />
+                    <div className="w-full h-full bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center hidden"><Book className="w-6 h-6 text-slate-400" /></div>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h4 className="font-bold text-slate-800 truncate mb-1">{book.title}</h4>
+                    <div className="flex items-center gap-2 text-xs text-slate-500 flex-wrap">
+                      <span className="font-bold">{getAuthorName(book)}</span>
+                      <span className="bg-slate-100 px-2 py-0.5 rounded-full text-[10px] font-bold text-slate-600">{categoryName}</span>
+                      <span className="flex items-center gap-1 text-slate-400"><Eye className="w-3 h-3" />{formatCount(book.views)}</span>
+                      <span className="flex items-center gap-1 text-slate-400"><Heart className="w-3 h-3" />{formatCount(book.likes)}</span>
+                    </div>
+                  </div>
+                  <ArrowRight className="w-4 h-4 text-slate-300 shrink-0" />
+                </button>
               );
             })}
           </div>

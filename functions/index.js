@@ -37,30 +37,25 @@ const MODEL_FALLBACK_CHAIN = [
 const NOVEL_BASE_GUIDE = [
   "[CRITICAL RULE] 출력된 content 내부에는 '## 제목', '### 발단', '**[전개]**', '### 결말' 등 그 어떤 마크다운 헤더나 섹션 구분자도 포함하지 마라. 오직 독자가 읽을 순수한 본문 텍스트만 출력하라.",
   "[CRITICAL RULE] [제목], [줄거리], [요약], [브릿지], [전개], [결말], [설정], [캐릭터] 등 대괄호로 감싼 메타 정보를 본문에 절대 출력하지 마라. 너의 내부 추론이나 요약도 출력하지 마라. 오직 '소설의 본문 내용'만 작성하라.",
-  "[CRITICAL RULE] '물리적 상태', '심리적 상태', '미해결 정보', '물리적상태', '심리적상태', '미해결정보' 등 내부 작업용·요약용 라벨을 본문에 절대 표시하지 마라. 이 정보들은 참고용으로만 활용하고, 독자가 보는 본문에는 절대 포함하지 마라.",
-  "[CRITICAL RULE] 장면이 바뀔 때 설명이나 태그 대신 자연스러운 문장이나 '*' 같은 기호로만 구분하라. 불필요한 태그, 괄호, 라벨을 모두 삭제하라. 독자가 읽는 책이라고 생각하라.",
+  "[CRITICAL RULE] '물리적 상태', '심리적 상태', '미해결 정보', '물리적상태', '심리적상태', '미해결정보', 'Story Summary', 'Character Sheet', 'Setting Sheet' 등 내부 작업용 라벨을 본문에 절대 표시하지 마라. 이 정보들은 참고용으로만 활용하고, 독자가 보는 본문에는 절대 포함하지 마라.",
+  "[CRITICAL RULE] 장면이 바뀔 때 설명이나 태그 대신 자연스러운 문장이나 빈 줄로만 구분하라. 불필요한 태그, 괄호, 라벨을 모두 삭제하라. 독자가 읽는 책이라고 생각하라.",
   "[CRITICAL RULE] 소설은 중간에 리셋하거나 앞 내용을 요약 반복하지 말고, 하나의 타임라인으로 쭉 이어가라.",
   "[CRITICAL RULE] 반드시 한국어만 사용하라. 러시아어, 한자, 일본어, 아랍어 등 그 밖의 언어를 절대 사용하지 마라. 오직 한글, 공백, 기본 문장부호, 숫자만 사용하라.",
-  "당신은 100만 부가 팔린 베스트셀러 작가다.",
-  "요약문이 아니라 장면(Scene) 위주로 서술하라.",
+  "당신은 독자를 사로잡는 베스트셀러 작가다. 매 문장이 다음 문장을 읽게 만드는 흡인력을 가져야 한다.",
+  "요약이 아닌 장면(Scene) 위주로 서술하라. 감각적 묘사(시각·청각·촉각)와 인물의 감정을 생생하게 보여주어라.",
+  "인위적이거나 너무 뻔한 전개는 피하라. 예상을 빗나가는 반전과 자연스러운 개연성을 동시에 갖춰라.",
   "전체 소설은 공백 포함 약 4,000자 내외로, 단계별 비율에 맞춰 작성하라.",
   "반드시 [발단-전개-위기-절정-결말]의 5단계 구조를 따른다."
 ].join(" ");
 
-// 장편/연재 시 디테일 유지를 위한 컨텍스트 전략 (서사가 길어질 때의 방지책)
-const NOVEL_LONG_FORM_CONTEXT_GUIDE = [
-  "[컨텍스트 전략 - 서사 디테일 유지]",
-  "A. 정적/동적 메모리 분리:",
-  "• 정적 메모리(불변): 캐릭터 바이블(외모, 성격, 버릇), 세계관 설정은 요약하지 않고 언제나 프롬프트 최상단에 고정한다.",
-  "• 동적 메모리(가변): 사건 진행, 인물 관계 변화, 현재 위치 등은 누적 요약으로 갱신한다.",
-  "B. 계층적 요약:",
-  "• 1단계(장면 요약): 방금 쓴 장면을 5줄로 요약. 2단계(챕터 요약): 장면 요약들이 모이면 챕터 요약으로 압축. 3단계(전체 줄거리): 전체 서사 흐름 유지.",
-  "• 다음 장면 작성 시 [전체 줄거리] + [직전 챕터 요약] + [직전 장면 요약]을 함께 참고하여 거시·미시 맥락을 잡는다.",
-  "C. 장면 브릿지(Scene Bridge):",
-  "• 요약에는 사건만 남기 쉬우므로, 각 장면 끝에 다음 3가지를 추출해 다음 프롬프트에 '다리'로 연결한다:",
-  "  1. 물리적 상태: 캐릭터 현재 위치, 부상 여부, 획득 아이템.",
-  "  2. 심리적 상태: 직전 사건으로 인한 감정 변화(분노, 의심 등).",
-  "  3. 미해결 정보: 캐릭터가 아직 모르는 사실, 오해."
+// 시리즈 연속 집필 시 캐릭터·설정 일관성 유지 지침 (시리즈 전용)
+const NOVEL_SERIES_CONTEXT_GUIDE = [
+  "[시리즈 연속성 지침]",
+  "제공된 Synopsis는 전체 이야기의 방향이므로 반드시 따르고 절대 변경하지 마라.",
+  "Character Sheet의 이름·성격·말투·버릇을 매 화 일관되게 유지하라. 캐릭터가 갑자기 다른 성격으로 바뀌어서는 안 된다.",
+  "Setting Sheet의 시대·장소·세계관 규칙을 절대 바꾸지 마라.",
+  "Story Summary(누적 요약)로 현재까지 일어난 사건을 파악하고, 직전 장면 브릿지 정보를 반드시 참고하여 이야기를 자연스럽게 이어가라.",
+  "앞 화에서 제시된 복선과 미해결 사항을 기억하고 적절히 활용하라."
 ].join(" ");
 
 const NOVEL_GENRE_STYLES = [
@@ -123,15 +118,14 @@ const NOVEL_MOOD_OPTIONS = {
 };
 
 const NONFICTION_BASE_GUIDE = [
-  "[CRITICAL RULE] 출력된 content 내부에는 '## 제목', '### 발단', '**[전개]**', '### 결말' 등 그 어떤 마크다운 헤더나 섹션 구분자도 포함하지 마라. 오직 독자가 읽을 순수한 본문 텍스트만 출력하라.",
-  "[CRITICAL RULE] [제목], [줄거리], [요약], [브릿지], [서론], [본론], [결론], [주제] 등 대괄호로 감싼 메타 정보를 본문에 절대 출력하지 마라. 너의 내부 추론이나 요약도 출력하지 마라. 오직 '글의 본문 내용'만 작성하라.",
-  "[CRITICAL RULE] '물리적 상태', '심리적 상태', '미해결 정보', '물리적상태', '심리적상태', '미해결정보' 등 내부 작업용·요약용 라벨을 본문에 절대 표시하지 마라. 이 정보들은 참고용으로만 활용하고, 독자가 보는 본문에는 절대 포함하지 마라.",
-  "[CRITICAL RULE] 단락이 바뀔 때 태그나 라벨 없이 자연스러운 문장 흐름으로만 전환하라. 독자가 읽는 책이라고 생각하라.",
-  "[CRITICAL RULE] 비소설은 '결론' 같은 소제목 없이 문맥으로 자연스럽게 마무리하라.",
+  "[CRITICAL RULE] 출력된 content 내부에는 '## 서론', '### 본론', '**[결론]**' 등 그 어떤 마크다운 헤더나 섹션 구분자도 포함하지 마라. 오직 독자가 읽을 순수한 본문 텍스트만 출력하라.",
+  "[CRITICAL RULE] [제목], [서론], [본론], [결론], [주제] 등 대괄호로 감싼 메타 정보를 본문에 절대 출력하지 마라. 너의 내부 추론이나 요약도 출력하지 마라. 오직 '글의 본문 내용'만 작성하라.",
+  "[CRITICAL RULE] 단락이 바뀔 때 태그나 라벨 없이 자연스러운 문장 흐름으로만 전환하라. '첫째', '둘째', '결론적으로' 같은 형식적 나열 표현 없이 자연스럽게 이어가라.",
+  "[CRITICAL RULE] '서론입니다', '결론적으로', '마지막으로' 같은 구조 신호 표현을 피하고, 글의 흐름이 자연스럽게 마무리되게 하라.",
   "[CRITICAL RULE] 반드시 한국어만 사용하라. 러시아어, 한자, 일본어, 아랍어 등 그 밖의 언어를 절대 사용하지 마라. 오직 한글, 공백, 기본 문장부호, 숫자만 사용하라.",
-  "당신은 해당 분야의 최고 전문가이자 권위자다.",
-  "입력된 키워드와 책 제목의 분위기/의도를 정확히 반영해 서술하라.",
-  "50자 이내의 주제를 씨앗으로 삼아 깊이 있는 통찰을 제시하라.",
+  "당신은 해당 분야의 최고 전문가이자 탁월한 글쓴이다.",
+  "입력된 키워드와 제목의 분위기를 정확히 반영하되, 독자가 공감할 수 있는 구체적 사례와 통찰을 담아라.",
+  "교과서 같은 딱딱한 설명이 아닌, 독자에게 말을 거는 듯한 살아있는 문체로 써라.",
   "공백 포함 약 3,000자 내외로 핵심 메시지를 명확히 전달하라."
 ].join(" ");
 
@@ -231,33 +225,79 @@ function buildNonfictionToneInstruction(category, selectedTone) {
   return `당신은 ${categoryName} 작가입니다. 사용자가 선택한 키워드를 주제로 글을 쓰되, 반드시 '${tone}' 스타일을 유지하여 서술하십시오. 문장의 어미, 단어 선택, 분위기를 이 스타일에 맞춰야 합니다.`;
 }
 
-function buildSystemPrompt({ isNovel, category, subCategory, genre, endingStyle, selectedTone, selectedMood }) {
+function buildDialogueRatioInstruction(selectedDialogueRatio) {
+  const ratio = (selectedDialogueRatio || "").toString().trim();
+  if (!ratio) return null;
+  const instructions = {
+    dialogue_heavy: [
+      "대화 비중을 높여라. 인물 간 대화창이 전체 분량의 50% 이상을 차지하도록 구성하라.",
+      "짧은 문단, 빠른 템포, 대화 중심의 전개. 독자가 술술 읽을 수 있게 하라.",
+      "설명이나 배경 묘사는 최소한으로, 인물들의 말과 행동으로 스토리를 이끌어라."
+    ].join(" "),
+    description_heavy: [
+      "설명과 묘사 비중을 높여라. 상황 묘사, 심리 묘사, 배경 묘사가 풍부하게 들어가게 하라.",
+      "대화는 중요한 순간에만 사용하고, 전체 분량의 30% 이내로 제한하라.",
+      "긴 문단, 깊이 있는 서술, 정통 소설 스타일의 문단 나누기를 적용하라."
+    ].join(" ")
+  };
+  return instructions[ratio] ? `[대화/설명 비중 Guideline] ${instructions[ratio]}` : null;
+}
+
+function buildSpeechToneInstruction(selectedSpeechTone) {
+  const tone = (selectedSpeechTone || "").toString().trim();
+  if (!tone) return null;
+  const instructions = {
+    friendly: "문장 끝맺음(어미)을 반드시 친근한 말투로 통일하라. '-했어', '-였어', '-였지', '-하네', '-하지' 등 구어체 어미를 일관되게 사용하라. 전혀 다른 말투(했다, 합니다 등)가 섞이지 않도록 주의하라.",
+    formal: "문장 끝맺음(어미)을 반드시 단정한 서술형으로 통일하라. '-했다', '-하였다', '-였다' 등 과거형 서술어를 일관되게 사용하라. 구어체(~했어)나 정중체(~했습니다)가 섞이지 않도록 주의하라.",
+    polite: "문장 끝맺음(어미)을 반드시 정중한 말투로 통일하라. '-했습니다', '-입니다', '-습니다', '-세요' 등 존댓말 어미를 일관되게 사용하라. 전혀 다른 말투(했어, 했다 등)가 섞이지 않도록 주의하라."
+  };
+  return instructions[tone] ? `[말투/문체 Guideline - CRITICAL] ${instructions[tone]}` : null;
+}
+
+function buildPOVInstruction(selectedPOV) {
+  const pov = (selectedPOV || "").toString().trim();
+  if (!pov) return null;
+  const instructions = {
+    first_person: "1인칭 주인공 시점으로 서술하라. 주인공이 '나'로서 자신의 이야기를 생생하게 전달하는 톤을 유지하라. 이 시점에 맞춰서 서술해줘.",
+    third_limited: "3인칭 관찰자 시점으로 서술하라. 주인공의 행동과 말을 옆에서 지켜보는 관찰자처럼 객관적으로 묘사하라. 주인공의 내면은 행동과 대사로만 간접적으로 드러내라. 이 시점에 맞춰서 서술해줘.",
+    omniscient: "전지적 작가 시점으로 서술하라. 모든 등장인물의 생각과 감정, 속마음까지 자유롭게 드러내며 서술하라. 이 시점에 맞춰서 서술해줘."
+  };
+  return instructions[pov] ? `[POV Guideline] ${instructions[pov]}` : null;
+}
+
+function buildSystemPrompt({ isNovel, category, subCategory, genre, isSeries = false, endingStyle, selectedTone, selectedMood, selectedPOV, selectedSpeechTone, selectedDialogueRatio }) {
   if (isNovel) {
     const endingGuide = endingStyle
       ? `결말은 반드시 '${endingStyle}' 형태로 끝내며 그 톤을 유지하라.`
       : "결말은 독자의 여운을 남기는 방식으로 완성하라.";
     const moodGuide = buildNovelMoodInstruction(category, subCategory, genre, selectedMood);
+    const povGuide = buildPOVInstruction(selectedPOV);
+    const speechToneGuide = buildSpeechToneInstruction(selectedSpeechTone);
+    const dialogueRatioGuide = buildDialogueRatioInstruction(selectedDialogueRatio);
     return [
-      `[Genre Guideline]: ${pickGenreGuideline(genre)}`,
+      `당신은 ${genre || "소설"} 분야의 최고 작가입니다.`,
+      `[장르 지침] ${pickGenreGuideline(genre)}`,
       moodGuide,
-      "당신은 [장르] 분야의 최고 작가입니다.",
+      povGuide,
+      speechToneGuide,
+      dialogueRatioGuide,
       NOVEL_BASE_GUIDE,
-      NOVEL_LONG_FORM_CONTEXT_GUIDE,
+      isSeries ? NOVEL_SERIES_CONTEXT_GUIDE : null,
       pickGenreGuide(genre),
       "절정에서는 갈등을 최고조로 끌어올리며, 전체 분량의 약 30%를 할애한다.",
       endingGuide,
       "[출력 형식] 본문에는 책 내용과 무관한 특수문자(예: *, #, -, •, **, 마크다운·불릿 기호 등)를 절대 사용하지 마세요. 독자가 읽는 순수한 글만 출력하세요."
-    ].filter(Boolean).join(" ");
+    ].filter(Boolean).join("\n\n");
   }
 
   const toneInstruction = buildNonfictionToneInstruction(category, selectedTone);
   return [
     "당신은 비소설 분야의 최고 저자입니다.",
-    toneInstruction ? `[지침] ${toneInstruction}` : "[지침] 장르에 맞는 흥미로운 이야기를 쓰세요.",
+    toneInstruction || "독자의 공감을 이끌어내는 흥미롭고 통찰력 있는 글을 쓰세요.",
     NONFICTION_BASE_GUIDE,
     pickNonfictionGuide(category),
     "[출력 형식] 본문에는 책 내용과 무관한 특수문자(예: *, #, -, •, **, 마크다운·불릿 기호 등)를 절대 사용하지 마세요. 독자가 읽는 순수한 글만 출력하세요."
-  ].filter(Boolean).join(" ");
+  ].filter(Boolean).join("\n\n");
 }
 
 function buildStepPrompt({
@@ -359,18 +399,30 @@ function validateOutput(content, language = "ko") {
 function stripMetaTags(content) {
   if (!content) return content;
   let cleaned = content;
-  // 대괄호 메타 태그 제거: [제목], [줄거리], [요약], [브릿지], [전개], [결말], [설정] 등
-  cleaned = cleaned.replace(/\[(?:제목|줄거리|요약|브릿지|전개|결말|설정|캐릭터|서론|본론|결론|주제|발단|위기|절정|시작|사건과 훅|다음 화|완결)[^\]]*\]/g, "");
-  // 물리적상태/심리적상태/미해결정보 등 내부 작업용 라벨 라인 제거 (한 줄 단위)
-  cleaned = cleaned.replace(/\n\s*물리적\s*상태\s*:.*$/gim, "");
-  cleaned = cleaned.replace(/\n\s*심리적\s*상태\s*:.*$/gim, "");
-  cleaned = cleaned.replace(/\n\s*미해결\s*정보\s*:.*$/gim, "");
-  // 마크다운 헤더 제거: ## 제목, ### 발단 등
+
+  // 마크다운 헤더 제거 (우선 처리): ## 제목, ### 발단 등
   cleaned = cleaned.replace(/^#{1,6}\s+.+$/gm, "");
+
+  // 대괄호 메타 태그 제거 (확장 목록)
+  cleaned = cleaned.replace(/\[(?:제목|줄거리|요약|브릿지|전개|결말|설정|캐릭터|서론|본론|결론|주제|발단|위기|절정|시작|사건과 훅|다음 화|완결|장르 지침|Style Guideline|POV Guideline|Genre Guideline|시리즈 연속성 지침|출력 형식|CRITICAL RULE)[^\]]*\]/g, "");
+
   // 볼드 메타 태그 제거: **[전개]**, **발단** 등
   cleaned = cleaned.replace(/\*\*\[?(?:제목|줄거리|요약|브릿지|전개|결말|설정|캐릭터|서론|본론|결론|주제|발단|위기|절정|시작|사건과 훅|다음 화|완결)[^\]]*\]?\*\*/g, "");
+
+  // 내부 작업용 라벨 라인 제거 (줄 시작 위치 포함)
+  cleaned = cleaned.replace(/(?:^|\n)\s*물리적\s*상태\s*:.*$/gim, "");
+  cleaned = cleaned.replace(/(?:^|\n)\s*심리적\s*상태\s*:.*$/gim, "");
+  cleaned = cleaned.replace(/(?:^|\n)\s*미해결\s*정보\s*:.*$/gim, "");
+
+  // 구조 정보 헤더 제거 (본문 혼입 시)
+  cleaned = cleaned.replace(/(?:^|\n)\s*(?:Story Summary|Character Sheet|Setting Sheet|Synopsis|Title)\s*[:：].*$/gim, "");
+
+  // 장르 지침 / 스타일 지침 라인 제거
+  cleaned = cleaned.replace(/(?:^|\n)\s*\[(?:장르|Style|POV|말투|대화)[^\]]*\][^\n]*/gim, "");
+
   // 연속 빈 줄 정리 (3줄 이상 → 2줄)
   cleaned = cleaned.replace(/\n{3,}/g, "\n\n");
+
   return cleaned.trim();
 }
 
@@ -430,14 +482,17 @@ async function extractSceneBridge(content, systemPrompt, isNovel) {
 
 async function generateStaticContext(systemPrompt, topic, title, genre, isNovel, isSeries = false) {
   if (!isNovel) {
-    return { synopsis: "", characterSheet: "", settingSheet: "" };
+    return { title: "", synopsis: "", characterSheet: "", settingSheet: "" };
   }
   const seriesNote = isSeries
     ? " (이 작품은 연재 시리즈이므로, 시놉시스는 전체 서사 골격만 잡고 결말을 드러내지 마라. 1화에서 시작할 이야기의 씨앗과 갈등의 가능성만 제시하라.)"
     : "";
   const prompt = [
     "다음 정보를 바탕으로 소설의 고정 정보를 만들어라.",
-    "출력 형식은 반드시 아래 구조를 지켜라:",
+    "출력 형식은 반드시 아래 구조를 지켜라 (각 항목 이름은 영어로, 내용은 한국어로):",
+    "",
+    "Title:",
+    `- ${title ? `"${title}" (사용자 제공 제목이므로 그대로 사용)` : "독자의 호기심을 자극하는 매력적인 소설 제목 (15자 이내, 장르·주제를 반영)"}`,
     "",
     "Synopsis:",
     `- 5~7문장 분량의 전체 시놉시스${seriesNote}`,
@@ -456,29 +511,28 @@ async function generateStaticContext(systemPrompt, topic, title, genre, isNovel,
     "",
     "한글, 공백, 기본 문장부호, 숫자만 사용하라. 러시아어·한자·일본어 등 다른 언어를 절대 사용하지 마라.",
     `주제: ${topic || ""}`,
-    title ? `책 제목: ${title}` : "",
     genre ? `장르: ${genre}` : ""
   ].filter(Boolean).join("\n");
   for (let attempt = 0; attempt < 2; attempt++) {
     const result = await callGemini(systemPrompt, prompt, 0.6 - attempt * 0.1, true);
     const text = (result.content || "").trim();
     if (validateOutput(text, "ko").valid) {
-      const synopsisMatch = text.match(/Synopsis:\s*([\s\S]*?)(?=\n\s*Character Sheet:|\n\s*Characters:|$)/i);
-      const characterMatch = text.match(/Character Sheet:\s*([\s\S]*?)(?=\n\s*Setting Sheet:|\n\s*배경시트:|$)/i) || text.match(/Characters:\s*([\s\S]*?)(?=\n\s*Setting Sheet:|\n\s*배경시트:|$)/i);
-      const settingMatch = text.match(/Setting Sheet:\s*([\s\S]*)/i) || text.match(/배경시트:\s*([\s\S]*)/i);
-      return {
-        synopsis: (synopsisMatch?.[1] || text).trim(),
-        characterSheet: (characterMatch?.[1] || "").trim(),
-        settingSheet: (settingMatch?.[1] || "").trim()
-      };
+      const parsed = parseStaticContext(text);
+      return parsed;
     }
   }
   const result = await callGemini(systemPrompt, prompt, 0.5, true);
   const text = (result.content || "").trim();
+  return parseStaticContext(text);
+}
+
+function parseStaticContext(text) {
+  const titleMatch = text.match(/Title:\s*[-·]?\s*["「]?([^"「\n」"]+)["」"]?/i);
   const synopsisMatch = text.match(/Synopsis:\s*([\s\S]*?)(?=\n\s*Character Sheet:|\n\s*Characters:|$)/i);
   const characterMatch = text.match(/Character Sheet:\s*([\s\S]*?)(?=\n\s*Setting Sheet:|\n\s*배경시트:|$)/i) || text.match(/Characters:\s*([\s\S]*?)(?=\n\s*Setting Sheet:|\n\s*배경시트:|$)/i);
   const settingMatch = text.match(/Setting Sheet:\s*([\s\S]*)/i) || text.match(/배경시트:\s*([\s\S]*)/i);
   return {
+    title: (titleMatch?.[1] || "").replace(/^[-·\s]+/, "").trim(),
     synopsis: (synopsisMatch?.[1] || text).trim(),
     characterSheet: (characterMatch?.[1] || "").trim(),
     settingSheet: (settingMatch?.[1] || "").trim()
@@ -636,7 +690,7 @@ exports.generateBookAI = onCall(
         throw new HttpsError("failed-precondition", "Gemini API 키가 설정되지 않았습니다.");
       }
 
-      const { category, subCategory, genre, keywords, isSeries, previousContext, endingStyle, title, selectedTone, selectedMood } = request.data;
+      const { category, subCategory, genre, keywords, isSeries, previousContext, endingStyle, title, selectedTone, selectedMood, selectedPOV, selectedSpeechTone, selectedDialogueRatio } = request.data;
 
       // 소설류 여부 확인
       const isNovel = category === "webnovel" || category === "novel" || category === "series";
@@ -648,9 +702,13 @@ exports.generateBookAI = onCall(
         category,
         subCategory,
         genre,
+        isSeries: isSeries || false,
         endingStyle,
         selectedTone,
-        selectedMood
+        selectedMood,
+        selectedPOV,
+        selectedSpeechTone,
+        selectedDialogueRatio
       });
 
       // 단계 정의 (시리즈 1화는 훅으로 끝나게, 단편/비시리즈는 5단계)
@@ -721,7 +779,8 @@ exports.generateBookAI = onCall(
             storySummary = storySummary ? `${storySummary}\n${stepSummary}` : stepSummary;
           }
           lastParagraph = extractLastSentences(stepContent, 5);
-          if (isNovel) {
+          // 마지막 단계는 다음 장면이 없으므로 씬 브릿지 추출 생략
+          if (isNovel && i < steps.length - 1) {
             sceneBridge = await extractSceneBridge(stepContent, systemPrompt, isNovel);
           }
 
@@ -741,12 +800,8 @@ exports.generateBookAI = onCall(
         }
       }
 
-      // 제목 생성
-      const titleMatch = fullContent.match(/^#\s*(.+)$/m);
-      const generatedTitle = titleMatch
-        ? titleMatch[1].trim()
-        : `${keywords || "작품"} - ${genre || category}`;
-      const finalTitle = requestedTitle || generatedTitle;
+      // 제목 결정: 사용자 입력 > AI 생성 > 키워드 기반 fallback
+      const finalTitle = requestedTitle || staticContext.title || `${keywords || "작품"} - ${genre || category}`;
 
       // 요약 생성
       const summary = fullContent.substring(0, 200) + "...";
@@ -803,6 +858,9 @@ exports.generateSeriesEpisode = onCall(
         settingSheet,
         continuationType,
         selectedMood,
+        selectedPOV,
+        selectedSpeechTone,
+        selectedDialogueRatio,
         endingStyle
       } = request.data;
 
@@ -820,9 +878,13 @@ exports.generateSeriesEpisode = onCall(
         category,
         subCategory,
         genre,
+        isSeries: true,
         endingStyle: isFinalize ? (endingStyle || '닫힌 결말 (해피 엔딩)') : null,
         selectedTone: null,
-        selectedMood
+        selectedMood,
+        selectedPOV: selectedPOV || null,
+        selectedSpeechTone: selectedSpeechTone || null,
+        selectedDialogueRatio: selectedDialogueRatio || null
       });
 
       const topic = `${keywords || ""} ${genre || ""}`.trim();
@@ -839,20 +901,22 @@ exports.generateSeriesEpisode = onCall(
         ? {
           name: "완결",
           instruction: [
-            "지금까지 쌓아온 갈등이 터지는 '절정(Climax)'을 묘사하라.",
-            "악당을 물리치거나, 목표를 달성(또는 실패)하는 결과를 보여라.",
-            "등장인물들의 후일담이나 깨달음을 보여주며 이야기를 완전히 종결(Close)지어라.",
-            "떡밥(Clues)을 모두 회수하고 독자에게 여운을 남겨라."
+            "지금까지 쌓아온 모든 갈등과 복선이 터지는 '절정(Climax)'을 묘사하라.",
+            "주인공이 최대 위기를 극복하거나 목표를 달성(또는 비극적으로 실패)하는 순간을 생생하게 그려라.",
+            "복선으로 깔아두었던 모든 떡밥을 자연스럽게 회수하라. 설명하지 말고 사건으로 보여라.",
+            "등장인물들의 변화와 후일담을 짧지만 임팩트 있게 보여주고, 독자에게 깊은 여운을 남기며 완결하라.",
+            "[분량: 공백 포함 약 3,000자 이상]"
           ].join(" ")
         }
         : {
           name: "다음 화",
           instruction: [
-            "[금지] 절대 다시 '자기소개'나 '배경설명'을 하지 마라. 바로 직전 상황에서 이어가라.",
-            "주인공에게 시련, 딜레마, 새로운 적대자를 던져라.",
-            "문제를 쉽게 해결해주지 마라. 상황을 더 꼬이게 만들어라(Complication).",
-            "마지막 문장은 다음 화가 궁금해서 미치게 만드는 '절단신공(Cliffhanger)'으로 끝내라.",
-            "절대 결말을 짓지 마라."
+            "[절대 금지] 다시 자기소개하거나 배경을 처음부터 설명하지 마라. 직전 화의 마지막 장면에서 바로 이어가라.",
+            "이번 화에서 주인공이 맞닥뜨리는 새로운 시련, 딜레마, 예상 밖의 사건을 던져라.",
+            "문제를 너무 쉽게 해결하지 마라. 해결하면 더 큰 문제가 생기도록 상황을 꼬아라.",
+            "이번 화의 사건은 전체 서사에서 의미 있는 진전이어야 한다. 의미 없는 에피소드를 나열하지 마라.",
+            "마지막 문장은 독자가 다음 화를 참을 수 없게 만드는 '절단신공(Cliffhanger)'으로 끝내라.",
+            "[분량: 공백 포함 약 3,000자 이상]"
           ].join(" ")
         };
 
@@ -901,7 +965,9 @@ exports.generateSeriesEpisode = onCall(
   }
 );
 
-/** 운영자 전용: 책 삭제 (본문 + 댓글·좋아요·즐겨찾기·완독 데이터 함께 삭제) */
+/** 책 삭제 (본문 + 댓글·좋아요·즐겨찾기·완독 데이터 함께 삭제)
+ * - 운영자: 모든 책 삭제 가능
+ * - 일반 사용자: 본인이 생성한 책만 삭제 가능 */
 const BATCH_LIMIT = 500;
 
 exports.deleteBookAdmin = onCall(
@@ -910,17 +976,26 @@ exports.deleteBookAdmin = onCall(
     if (!request.auth) {
       throw new HttpsError("unauthenticated", "로그인이 필요합니다.");
     }
-    const email = request.auth.token?.email;
-    if (!isAdminUser(email)) {
-      throw new HttpsError("permission-denied", "운영자만 삭제할 수 있습니다.");
-    }
-
     const { appId, bookId } = request.data || {};
     if (!appId || !bookId) {
       throw new HttpsError("invalid-argument", "appId와 bookId가 필요합니다.");
     }
 
     const rawAppId = (appId || "").toString().replace(/\//g, "_");
+    const bookRef = adminDb.collection("artifacts").doc(rawAppId).collection("books").doc(bookId);
+    const bookSnap = await bookRef.get();
+    if (!bookSnap.exists) {
+      throw new HttpsError("not-found", "해당 책을 찾을 수 없습니다.");
+    }
+    const bookData = bookSnap.data();
+    const bookAuthorId = bookData?.authorId || null;
+    const uid = request.auth.uid;
+    const email = request.auth.token?.email;
+    const isAdmin = isAdminUser(email);
+    if (!isAdmin && bookAuthorId !== uid) {
+      throw new HttpsError("permission-denied", "본인이 작성한 책만 삭제할 수 있습니다.");
+    }
+
     const baseRef = adminDb.collection("artifacts").doc(rawAppId);
     const publicDataRef = baseRef.collection("public").doc("data");
 

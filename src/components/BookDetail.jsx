@@ -21,6 +21,9 @@ const INK_MAX = 999;
 const BookDetail = ({ book, onClose, onBookUpdate, fontSize = 'text-base', user, userProfile, appId, slotStatus, deductInk, t, isAdmin, authorProfiles = {}, promotions = [], createPromotion }) => {
   if (!book) return null;
 
+  // 관리자: 모든 책 수정/삭제 가능. 일반 사용자: 본인 책만 수정/삭제 가능
+  const canEditOrDelete = isAdmin || book.authorId === user?.uid;
+
   // 수정 5: fontSize 값을 Tailwind 클래스로 매핑
   const fontSizeClass = fontSize === 'small' || fontSize === 'text-sm' ? 'text-sm' :
     fontSize === 'medium' || fontSize === 'text-base' ? 'text-base' :
@@ -46,12 +49,12 @@ const BookDetail = ({ book, onClose, onBookUpdate, fontSize = 'text-base', user,
   const [currentEpisodeIndex, setCurrentEpisodeIndex] = useState(episodes.length > 0 ? episodes.length - 1 : 0);
   const [showContinuationModal, setShowContinuationModal] = useState(false);
   const [showEndingStyleModal, setShowEndingStyleModal] = useState(false);
-  const endingStyles = [
-    '닫힌 결말 (해피 엔딩)',
-    '닫힌 결말 (비극/새드 엔딩)',
-    '열린 결말 (여운을 남김)',
-    '반전 결말 (충격적인 반전)',
-    '수미상관 (처음과 끝이 연결됨)'
+  const endingStyleItems = [
+    { id: 'closed_happy', value: '닫힌 결말 (해피 엔딩)' },
+    { id: 'closed_sad', value: '닫힌 결말 (비극/새드 엔딩)' },
+    { id: 'open', value: '열린 결말 (여운을 남김)' },
+    { id: 'twist', value: '반전 결말 (충격적인 반전)' },
+    { id: 'bookend', value: '수미상관 (처음과 끝이 연결됨)' }
   ];
   const [isGeneratingEpisode, setIsGeneratingEpisode] = useState(false);
   const [isGeneratingEpisodeModalHidden, setIsGeneratingEpisodeModalHidden] = useState(false);
@@ -85,6 +88,9 @@ const BookDetail = ({ book, onClose, onBookUpdate, fontSize = 'text-base', user,
   const [showPromotionModal, setShowPromotionModal] = useState(false);
   const [promoText, setPromoText] = useState('');
   const [isPromoting, setIsPromoting] = useState(false);
+  const [isEditingContent, setIsEditingContent] = useState(false);
+  const [editedContent, setEditedContent] = useState('');
+  const [isSavingContent, setIsSavingContent] = useState(false);
 
   // 시리즈 집필 중 화면 꺼짐 방지
   useEffect(() => {
@@ -106,8 +112,51 @@ const BookDetail = ({ book, onClose, onBookUpdate, fontSize = 'text-base', user,
     };
   }, [isGeneratingEpisode]);
 
+  const handleAdminStartEditContent = () => {
+    const content = isSeries && currentEpisode ? currentEpisode.content : (book.content || '');
+    setEditedContent(content);
+    setIsEditingContent(true);
+  };
+
+  const handleAdminCancelEditContent = () => {
+    setIsEditingContent(false);
+    setEditedContent('');
+  };
+
+  const handleAdminSaveContent = async () => {
+    if (!canEditOrDelete || !appId || !bookId || isSavingContent) return;
+    setIsSavingContent(true);
+    try {
+      const bookRef = doc(db, 'artifacts', appId, 'books', bookId);
+      if (isSeries && episodes.length > 0) {
+        const newEpisodes = [...episodes];
+        newEpisodes[currentEpisodeIndex] = { ...newEpisodes[currentEpisodeIndex], content: editedContent.trim() };
+        await updateDoc(bookRef, { episodes: newEpisodes, updatedAt: serverTimestamp() });
+      } else {
+        await updateDoc(bookRef, { content: editedContent.trim(), updatedAt: serverTimestamp() });
+      }
+      const updatedBook = isSeries
+        ? { ...book, episodes: [...episodes], updatedAt: { toDate: () => new Date() } }
+        : { ...book, content: editedContent.trim(), updatedAt: { toDate: () => new Date() } };
+      if (isSeries && episodes.length > 0) {
+        const newEps = [...episodes];
+        newEps[currentEpisodeIndex] = { ...newEps[currentEpisodeIndex], content: editedContent.trim() };
+        updatedBook.episodes = newEps;
+      }
+      if (typeof onBookUpdate === 'function') onBookUpdate(updatedBook);
+      setIsEditingContent(false);
+      setEditedContent('');
+      alert(t?.admin_edit_success || '내용이 저장되었습니다.');
+    } catch (err) {
+      console.error('책 내용 수정 실패:', err);
+      alert(t?.admin_edit_fail || '저장에 실패했습니다. 다시 시도해주세요.');
+    } finally {
+      setIsSavingContent(false);
+    }
+  };
+
   const handleAdminDeleteBook = async () => {
-    if (!isAdmin || !appId || !bookId) return;
+    if (!canEditOrDelete || !appId || !bookId) return;
     setIsDeleting(true);
     try {
       await deleteBookAdmin({ appId, bookId });
@@ -260,7 +309,7 @@ const BookDetail = ({ book, onClose, onBookUpdate, fontSize = 'text-base', user,
       await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'book_comments'), {
         bookId,
         userId: user.uid,
-        authorName: userProfile?.nickname || '익명',
+        authorName: userProfile?.anonymousActivity ? '익명' : (userProfile?.nickname || '익명'),
         text,
         parentId: replyTo?.id || null,
         parentAuthorName: replyTo?.authorName || null,
@@ -463,7 +512,8 @@ const BookDetail = ({ book, onClose, onBookUpdate, fontSize = 'text-base', user,
         tx.set(dssRef, {
           bookId: book.id,
           authorId: user.uid,
-          authorName: userProfile?.nickname || '익명',
+          authorName: userProfile?.anonymousActivity ? '익명' : (userProfile?.nickname || '익명'),
+          isAnonymous: !!userProfile?.anonymousActivity,
           type: 'episode',
           createdAt: serverTimestamp()
         });
@@ -485,6 +535,9 @@ const BookDetail = ({ book, onClose, onBookUpdate, fontSize = 'text-base', user,
         settingSheet: book.settingSheet || '',
         continuationType,
         selectedMood: book.selectedMood || '',
+        selectedPOV: book.selectedPOV || null,
+        selectedSpeechTone: book.selectedSpeechTone || null,
+        selectedDialogueRatio: book.selectedDialogueRatio || null,
         endingStyle
       });
 
@@ -493,7 +546,8 @@ const BookDetail = ({ book, onClose, onBookUpdate, fontSize = 'text-base', user,
         title: result.isFinale ? `${book.title} [완결]` : `${book.title} ${episodes.length + 1}화`,
         content: result.content,
         writer: user.uid,
-        writerName: userProfile?.nickname || '익명',
+        writerName: userProfile?.anonymousActivity ? '익명' : (userProfile?.nickname || '익명'),
+        isAnonymous: !!userProfile?.anonymousActivity,
         createdAt: new Date().toISOString(),
         summary: result.summary
       };
@@ -607,14 +661,24 @@ const BookDetail = ({ book, onClose, onBookUpdate, fontSize = 'text-base', user,
             >
               <ChevronLeft className="w-6 h-6 text-slate-600" />
             </button>
-            {isAdmin && (
-              <button
-                onClick={() => setShowDeleteConfirm(true)}
-                className="p-2 rounded-full hover:bg-rose-50 text-slate-400 hover:text-rose-500 transition-colors"
-                title={t?.admin_delete_book || '책 삭제'}
-              >
-                <Trash2 className="w-5 h-5" />
-              </button>
+            {canEditOrDelete && (
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={handleAdminStartEditContent}
+                  disabled={isEditingContent}
+                  className="p-2 rounded-full hover:bg-amber-50 text-slate-400 hover:text-amber-600 transition-colors disabled:opacity-50"
+                  title={t?.admin_edit_content || '내용 수정'}
+                >
+                  <PenTool className="w-5 h-5" />
+                </button>
+                <button
+                  onClick={() => setShowDeleteConfirm(true)}
+                  className="p-2 rounded-full hover:bg-rose-50 text-slate-400 hover:text-rose-500 transition-colors"
+                  title={t?.admin_delete_book || '책 삭제'}
+                >
+                  <Trash2 className="w-5 h-5" />
+                </button>
+              </div>
             )}
           </div>
 
@@ -644,8 +708,8 @@ const BookDetail = ({ book, onClose, onBookUpdate, fontSize = 'text-base', user,
               {/* 메타 정보 */}
               <div className="flex items-center gap-3 flex-wrap">
                 <div className="flex items-center gap-1.5 text-xs text-slate-500">
-                  <span>{authorProfiles[book.authorId]?.gradeIcon || '🌱'}</span>
-                  <span className="font-bold">{authorProfiles[book.authorId]?.nickname || '익명'}</span>
+                  <span>{book?.isAnonymous ? '🌱' : (authorProfiles[book.authorId]?.gradeIcon || '🌱')}</span>
+                  <span className="font-bold">{book?.isAnonymous ? '익명' : (authorProfiles[book.authorId]?.nickname || book?.authorName || '익명')}</span>
                 </div>
                 <span className="text-slate-300">•</span>
                 <div className="flex items-center gap-1.5 text-xs text-slate-500">
@@ -695,7 +759,7 @@ const BookDetail = ({ book, onClose, onBookUpdate, fontSize = 'text-base', user,
           <div className="mb-4 flex items-center justify-between bg-orange-50 px-4 py-2 rounded-xl">
             <button
               onClick={() => setCurrentEpisodeIndex(Math.max(0, currentEpisodeIndex - 1))}
-              disabled={currentEpisodeIndex === 0}
+              disabled={currentEpisodeIndex === 0 || isEditingContent}
               className="p-2 rounded-lg hover:bg-orange-100 disabled:opacity-30 disabled:cursor-not-allowed"
             >
               <ChevronLeft className="w-5 h-5 text-orange-600" />
@@ -705,7 +769,7 @@ const BookDetail = ({ book, onClose, onBookUpdate, fontSize = 'text-base', user,
             </div>
             <button
               onClick={() => setCurrentEpisodeIndex(Math.min(episodes.length - 1, currentEpisodeIndex + 1))}
-              disabled={currentEpisodeIndex === episodes.length - 1}
+              disabled={currentEpisodeIndex === episodes.length - 1 || isEditingContent}
               className="p-2 rounded-lg hover:bg-orange-100 disabled:opacity-30 disabled:cursor-not-allowed"
             >
               <ChevronRight className="w-5 h-5 text-orange-600" />
@@ -713,21 +777,48 @@ const BookDetail = ({ book, onClose, onBookUpdate, fontSize = 'text-base', user,
           </div>
         )}
 
-        {/* 본문 내용 */}
+        {/* 본문 내용 - 관리자 수정 모드 */}
         <div ref={contentAreaRef} className="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm">
-          <div className="prose prose-slate max-w-none mb-6">
-            {/* 수정 5: fontSize를 동적으로 적용 */}
-            <div className={`${fontSizeClass} leading-relaxed text-slate-700 whitespace-pre-line`}>
-              {displayContent || book.summary || (t?.no_content || '내용이 없습니다.')}
+          {isEditingContent ? (
+            <div className="space-y-3">
+              <textarea
+                value={editedContent}
+                onChange={(e) => setEditedContent(e.target.value)}
+                className={`w-full min-h-[300px] p-4 rounded-xl border border-slate-200 ${fontSizeClass} text-slate-700 leading-relaxed resize-y focus:ring-2 focus:ring-amber-500 focus:border-amber-500`}
+                placeholder={t?.no_content || '내용이 없습니다.'}
+              />
+              <div className="flex gap-2">
+                <button
+                  onClick={handleAdminSaveContent}
+                  disabled={isSavingContent}
+                  className="px-4 py-2 rounded-xl text-sm font-bold bg-amber-500 text-white hover:bg-amber-600 disabled:opacity-50"
+                >
+                  {isSavingContent ? (t?.saving || '저장 중...') : (t?.admin_save_content || '저장')}
+                </button>
+                <button
+                  onClick={handleAdminCancelEditContent}
+                  disabled={isSavingContent}
+                  className="px-4 py-2 rounded-xl text-sm font-bold bg-slate-100 text-slate-600 hover:bg-slate-200"
+                >
+                  {t?.admin_cancel_edit || '취소'}
+                </button>
+              </div>
             </div>
-          </div>
+          ) : (
+            <div className="prose prose-slate max-w-none mb-6">
+              {/* 수정 5: fontSize를 동적으로 적용 */}
+              <div className={`${fontSizeClass} leading-relaxed text-slate-700 whitespace-pre-line`}>
+                {displayContent || book.summary || (t?.no_content || '내용이 없습니다.')}
+              </div>
+            </div>
+          )}
 
           {/* 시리즈 회차 이동 (본문 직하단) - 소설 끝나자마자 바로 다음 화로 이동 가능 */}
           {isSeries && episodes.length > 0 && (
             <div className="mb-4 flex items-center justify-between bg-orange-50 px-4 py-2 rounded-xl">
               <button
                 onClick={() => setCurrentEpisodeIndex(Math.max(0, currentEpisodeIndex - 1))}
-                disabled={currentEpisodeIndex === 0}
+                disabled={currentEpisodeIndex === 0 || isEditingContent}
                 className="p-2 rounded-lg hover:bg-orange-100 disabled:opacity-30 disabled:cursor-not-allowed"
               >
                 <ChevronLeft className="w-5 h-5 text-orange-600" />
@@ -737,7 +828,7 @@ const BookDetail = ({ book, onClose, onBookUpdate, fontSize = 'text-base', user,
               </div>
               <button
                 onClick={() => setCurrentEpisodeIndex(Math.min(episodes.length - 1, currentEpisodeIndex + 1))}
-                disabled={currentEpisodeIndex === episodes.length - 1}
+                disabled={currentEpisodeIndex === episodes.length - 1 || isEditingContent}
                 className="p-2 rounded-lg hover:bg-orange-100 disabled:opacity-30 disabled:cursor-not-allowed"
               >
                 <ChevronRight className="w-5 h-5 text-orange-600" />
@@ -806,7 +897,7 @@ const BookDetail = ({ book, onClose, onBookUpdate, fontSize = 'text-base', user,
               <div className="w-full bg-slate-100 text-slate-500 py-3 rounded-xl text-sm font-bold text-center">
                 {t?.series_limit_reached || "오늘 시리즈 집필 마감"}
                 {slotStatus?.series?.authorId && (
-                  <span className="block text-xs text-slate-400 mt-0.5">By. {authorProfiles[slotStatus.series.authorId]?.nickname || '익명'}</span>
+                  <span className="block text-xs text-slate-400 mt-0.5">By. {slotStatus.series.authorName || (slotStatus.series.book?.isAnonymous ? '익명' : (authorProfiles[slotStatus.series.authorId]?.nickname || '익명'))}</span>
                 )}
               </div>
             ) : (
@@ -998,17 +1089,17 @@ const BookDetail = ({ book, onClose, onBookUpdate, fontSize = 'text-base', user,
                 </p>
               </div>
               <div className="space-y-2">
-                {endingStyles.map((style) => (
+                {endingStyleItems.map((item) => (
                   <button
-                    key={style}
+                    key={item.id}
                     onClick={() => {
                       setShowEndingStyleModal(false);
-                      handleWriteNextEpisode('finalize', style);
+                      handleWriteNextEpisode('finalize', item.value);
                     }}
                     disabled={isGeneratingEpisode}
                     className="w-full bg-slate-900 text-white py-3 rounded-xl text-sm font-bold hover:bg-slate-800 transition-colors disabled:opacity-50"
                   >
-                    {style}
+                    {t?.['ending_' + item.id] || item.value}
                   </button>
                 ))}
                 <button
@@ -1112,7 +1203,7 @@ const BookDetail = ({ book, onClose, onBookUpdate, fontSize = 'text-base', user,
           </div>
         )}
 
-        {showDeleteConfirm && isAdmin && (
+        {showDeleteConfirm && canEditOrDelete && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-6">
             <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl space-y-4">
               <div className="text-center space-y-2">

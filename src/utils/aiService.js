@@ -17,6 +17,9 @@ import { functions } from '../firebase';
  * @param {string|null} options.title - 사용자 입력 제목
  * @param {string|null} options.selectedTone - 비소설 문체 선택값
  * @param {string|null} options.selectedMood - 소설 분위기 선택값
+ * @param {string|null} options.selectedPOV - 소설 시점 선택값 (first_person|third_limited|omniscient)
+ * @param {string|null} options.selectedSpeechTone - 소설 말투 선택값 (friendly|formal|polite)
+ * @param {string|null} options.selectedDialogueRatio - 대화 비중 (dialogue_heavy|description_heavy)
  * @returns {Promise<{title: string, content: string, summary: string}>}
  */
 export const generateBook = async ({ 
@@ -29,7 +32,10 @@ export const generateBook = async ({
   endingStyle = null,
   title = null,
   selectedTone = null,
-  selectedMood = null
+  selectedMood = null,
+  selectedPOV = null,
+  selectedSpeechTone = null,
+  selectedDialogueRatio = null
 }) => {
   try {
     const generateBookAI = httpsCallable(functions, 'generateBookAI', {
@@ -46,7 +52,10 @@ export const generateBook = async ({
       endingStyle: endingStyle || null,
       title: title || null,
       selectedTone: selectedTone || null,
-      selectedMood: selectedMood || null
+      selectedMood: selectedMood || null,
+      selectedPOV: selectedPOV || null,
+      selectedSpeechTone: selectedSpeechTone || null,
+      selectedDialogueRatio: selectedDialogueRatio || null
     });
     
     const bookData = result.data;
@@ -108,6 +117,9 @@ export const generateSeriesEpisode = async ({
   settingSheet,
   continuationType,
   selectedMood,
+  selectedPOV,
+  selectedSpeechTone,
+  selectedDialogueRatio,
   endingStyle
 }) => {
   try {
@@ -129,6 +141,9 @@ export const generateSeriesEpisode = async ({
       settingSheet,
       continuationType,
       selectedMood,
+      selectedPOV: selectedPOV || null,
+      selectedSpeechTone: selectedSpeechTone || null,
+      selectedDialogueRatio: selectedDialogueRatio || null,
       endingStyle
     });
     
