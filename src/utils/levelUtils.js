@@ -29,13 +29,13 @@ export const getXpPerInk = () => XP_PER_INK;
  * badgeStyle: 책 목록에서 작가 뱃지 색상
  */
 const LEVEL_TIERS = [
-  { minLevel: 1,  maxLevel: 10, gradeName: '새싹',      icon: '🌱', badge: null,      badgeStyle: 'bg-green-500' },
-  { minLevel: 11, maxLevel: 20, gradeName: '작가',      icon: '✏️', badge: null,      badgeStyle: 'bg-orange-500' },
-  { minLevel: 21, maxLevel: 40, gradeName: '숙련 작가',  icon: '🪶', badge: null,      badgeStyle: 'bg-orange-600' },
-  { minLevel: 41, maxLevel: 60, gradeName: '베스트 작가', icon: '🖊️', badge: 'bronze',  badgeStyle: 'bg-amber-700' },
-  { minLevel: 61, maxLevel: 80, gradeName: '스타 작가',  icon: '✒️', badge: 'silver',  badgeStyle: 'bg-slate-400' },
-  { minLevel: 81, maxLevel: 98, gradeName: '거장',      icon: '🖋️', badge: 'gold',    badgeStyle: 'bg-amber-500' },
-  { minLevel: 99, maxLevel: 99, gradeName: '마스터',     icon: '🌈', badge: 'rainbow', badgeStyle: 'bg-gradient-to-r from-red-500 via-yellow-500 to-blue-500' }
+  { minLevel: 1,  maxLevel: 10, gradeName: '새싹',      gradeKey: 'sprout',  icon: '🌱', badge: null,      badgeStyle: 'bg-green-500' },
+  { minLevel: 11, maxLevel: 20, gradeName: '작가',      gradeKey: 'author',  icon: '✏️', badge: null,      badgeStyle: 'bg-orange-500' },
+  { minLevel: 21, maxLevel: 40, gradeName: '숙련 작가',  gradeKey: 'skilled', icon: '🪶', badge: null,      badgeStyle: 'bg-orange-600' },
+  { minLevel: 41, maxLevel: 60, gradeName: '베스트 작가', gradeKey: 'best',   icon: '🖊️', badge: 'bronze',  badgeStyle: 'bg-amber-700' },
+  { minLevel: 61, maxLevel: 80, gradeName: '스타 작가',  gradeKey: 'star',   icon: '✒️', badge: 'silver',  badgeStyle: 'bg-slate-400' },
+  { minLevel: 81, maxLevel: 98, gradeName: '거장',      gradeKey: 'grand',   icon: '🖋️', badge: 'gold',    badgeStyle: 'bg-amber-500' },
+  { minLevel: 99, maxLevel: 99, gradeName: '마스터',     gradeKey: 'master', icon: '🌈', badge: 'rainbow', badgeStyle: 'bg-gradient-to-r from-red-500 via-yellow-500 to-blue-500' }
 ];
 
 /**

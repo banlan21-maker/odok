@@ -16,6 +16,7 @@ const INITIAL_INK = 10;
 export const useUserProfile = ({ user, setView, setError, viewRef }) => {
   const [userProfile, setUserProfile] = useState(null);
   const [tempNickname, setTempNickname] = useState("");
+  const [tempAnonymousActivity, setTempAnonymousActivity] = useState(false);
   const [language, setLanguage] = useState('ko');
   const [fontSize, setFontSize] = useState('text-base');
   const [showAttendanceModal, setShowAttendanceModal] = useState(false);
@@ -132,6 +133,7 @@ export const useUserProfile = ({ user, setView, setError, viewRef }) => {
 
         setUserProfile(data);
         setTempNickname(data.nickname || '');
+        setTempAnonymousActivity(!!data.anonymousActivity);
         if (data.language) setLanguage(data.language);
         if (data.fontSize) setFontSize(data.fontSize);
 
@@ -167,6 +169,7 @@ export const useUserProfile = ({ user, setView, setError, viewRef }) => {
         if (data.nickname) {
           setTempNickname(data.nickname);
         }
+        setTempAnonymousActivity(!!data.anonymousActivity);
         if (data.language) setLanguage(data.language);
         if (data.fontSize) setFontSize(data.fontSize);
 
@@ -249,6 +252,7 @@ export const useUserProfile = ({ user, setView, setError, viewRef }) => {
       const updateData = {
         language: language,
         fontSize: fontSize,
+        anonymousActivity: tempAnonymousActivity,
         updatedAt: serverTimestamp()
       };
 
@@ -271,7 +275,8 @@ export const useUserProfile = ({ user, setView, setError, viewRef }) => {
       setUserProfile((prev) => ({
         ...prev,
         ...updateData,
-        nickname: newNickname
+        nickname: newNickname,
+        anonymousActivity: tempAnonymousActivity
       }));
 
       if (viewRef.current === 'profile_setup') {
@@ -388,6 +393,8 @@ export const useUserProfile = ({ user, setView, setError, viewRef }) => {
     setUserProfile,
     tempNickname,
     setTempNickname,
+    tempAnonymousActivity,
+    setTempAnonymousActivity,
     language,
     setLanguage,
     fontSize,
@@ -417,10 +424,11 @@ export const useUserProfile = ({ user, setView, setError, viewRef }) => {
         remainingExp: getXpToNextLevel(xp),
         gradeIcon: grade.icon,
         title: grade.gradeName,
+        titleKey: grade.gradeKey,
         badge: grade.badge,
         badgeStyle: grade.badgeStyle
       };
-    })() : { level: 1, nextLevelXp: 100, progress: 0, currentExp: 0, remainingExp: 100, gradeIcon: '🌱', title: '새싹', badge: null, badgeStyle: 'bg-green-500' },
+    })() : { level: 1, nextLevelXp: 100, progress: 0, currentExp: 0, remainingExp: 100, gradeIcon: '🌱', title: '새싹', titleKey: 'sprout', badge: null, badgeStyle: 'bg-green-500' },
     remainingDailyWrites: userProfile ? Math.max(0, DAILY_WRITE_LIMIT - (userProfile.lastBookCreatedDate === getTodayDateKey() ? (userProfile.dailyWriteCount || 0) : 0)) : 2,
     dailyWriteCount: userProfile && userProfile.lastBookCreatedDate === getTodayDateKey() ? (userProfile.dailyWriteCount || 0) : 0,
     lastBookCreatedDate: userProfile?.lastBookCreatedDate || null,

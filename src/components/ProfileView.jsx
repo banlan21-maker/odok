@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import imageCompression from 'browser-image-compression';
-import { LogOut, Trophy, Droplets, Save, Trash2, AlertTriangle, X, Camera, Video } from 'lucide-react';
+import { LogOut, Droplets, Save, Trash2, AlertTriangle, X, Camera, Video } from 'lucide-react';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { showRewardVideoAd } from '../utils/admobService';
 import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
@@ -13,6 +13,8 @@ const ProfileView = ({
   levelInfo,
   tempNickname,
   setTempNickname,
+  tempAnonymousActivity,
+  setTempAnonymousActivity,
   language,
   setLanguage,
   fontSize,
@@ -24,7 +26,8 @@ const ProfileView = ({
   handleDeleteAccount,
   error,
   setError,
-  appId
+  appId,
+  onOpenHelp
 }) => {
   const [isCharging, setIsCharging] = useState(false);
   const [showChargeSuccess, setShowChargeSuccess] = useState(false);
@@ -139,69 +142,34 @@ const ProfileView = ({
           {/* 1. 상단 정보: 레벨 & 경험치 바 */}
           {userProfile && (
             <div className="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm">
-              <div className="flex items-stretch gap-4">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between mb-2">
-                    <div>
-                      {levelInfo.title && (
-                        <div className="flex items-center gap-1 mb-1">
-                          <span className="text-base">{levelInfo.gradeIcon}</span>
-                          <span className={`text-xs font-black ${levelInfo.badge === 'rainbow' ? 'bg-gradient-to-r from-red-500 via-yellow-500 to-blue-500 bg-clip-text text-transparent' : levelInfo.badge === 'gold' ? 'text-amber-500' : levelInfo.badge === 'silver' ? 'text-slate-400' : levelInfo.badge === 'bronze' ? 'text-amber-700' : 'text-orange-500'}`}>
-                            {levelInfo.title}
-                          </span>
-                        </div>
-                      )}
-                      <div className="text-xl font-black text-slate-800 leading-none flex items-center gap-1">
-                        Lv.{levelInfo.level}
-                      </div>
+              <div className="flex items-center justify-between mb-2">
+                <div>
+                  {levelInfo.title && (
+                    <div className="flex items-center gap-1 mb-1">
+                      <span className="text-base">{levelInfo.gradeIcon}</span>
+                      <span className={`text-xs font-black ${levelInfo.badge === 'rainbow' ? 'bg-gradient-to-r from-red-500 via-yellow-500 to-blue-500 bg-clip-text text-transparent' : levelInfo.badge === 'gold' ? 'text-amber-500' : levelInfo.badge === 'silver' ? 'text-slate-400' : levelInfo.badge === 'bronze' ? 'text-amber-700' : 'text-orange-500'}`}>
+                        {levelInfo.titleKey ? (t?.['title_grade_' + levelInfo.titleKey] || levelInfo.title) : levelInfo.title}
+                      </span>
                     </div>
-                    <div className="text-xs font-bold text-orange-500">{levelInfo.progress}%</div>
-                  </div>
-                  <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden mb-1">
-                    <div
-                      className="h-full bg-gradient-to-r from-orange-400 to-orange-600 rounded-full transition-all duration-500"
-                      style={{ width: `${levelInfo.progress}%` }}
-                    />
-                  </div>
-                  <div className="flex justify-between items-center text-[10px] text-slate-400">
-                    <span>
-                      {t?.next_level || "다음 레벨까지"} <span className="text-orange-600 font-black">{levelInfo.remainingExp} XP</span>
-                    </span>
-                    <span>{levelInfo.currentExp} XP · {t?.next || "다음"} {levelInfo.remainingExp} XP</span>
+                  )}
+                  <div className="text-xl font-black text-slate-800 leading-none flex items-center gap-1">
+                    Lv.{levelInfo.level}
                   </div>
                 </div>
-                <div className="w-24 flex flex-col items-center justify-center gap-2 border-l border-slate-100 pl-4">
-                  <div className={`w-16 h-16 rounded-full bg-slate-100 overflow-hidden flex items-center justify-center ${levelInfo.badge === 'rainbow' ? 'ring-2 ring-offset-1 ring-purple-400 border-0' : 'border border-slate-200'}`}>
-                    {profileImageUrl ? (
-                      <img
-                        src={profileImageUrl}
-                        alt="프로필 이미지"
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <Camera className="w-6 h-6 text-slate-400" />
-                    )}
-                  </div>
-                  <label className={`text-[10px] font-bold px-2 py-1 rounded-full border transition-colors cursor-pointer ${isUploadingImage
-                    ? 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed'
-                    : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
-                    }`}>
-                    {isUploadingImage ? (t?.uploading || '업로드 중...') : (t?.change_photo || '사진 변경')}
-                    <input
-                      type="file"
-                      accept="image/*"
-                      className="hidden"
-                      onChange={handleProfileImageChange}
-                      disabled={isUploadingImage}
-                    />
-                  </label>
-                </div>
+                <div className="text-xs font-bold text-orange-500">{levelInfo.progress}%</div>
               </div>
-              {isUploadingImage && (
-                <div className="mt-2 text-[10px] text-slate-400 font-bold">
-                  이미지 압축 및 업로드 중입니다...
-                </div>
-              )}
+              <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden mb-1">
+                <div
+                  className="h-full bg-gradient-to-r from-orange-400 to-orange-600 rounded-full transition-all duration-500"
+                  style={{ width: `${levelInfo.progress}%` }}
+                />
+              </div>
+              <div className="flex justify-between items-center text-[10px] text-slate-400">
+                <span>
+                  {t?.next_level || "다음 레벨까지"} <span className="text-orange-600 font-black">{levelInfo.remainingExp} XP</span>
+                </span>
+                <span>{levelInfo.currentExp} XP · {t?.next || "다음"} {levelInfo.remainingExp} XP</span>
+              </div>
             </div>
           )}
 
@@ -242,34 +210,89 @@ const ProfileView = ({
             </div>
           )}
 
-          {/* 3. 닉네임 변경 (최초 1회 자유, 이후 한 달에 한 번) */}
+          {/* 3. 닉네임(필수) + 프로필 사진 (50:50 배치, 사용 설명서는 닉네임 영역 하단) */}
           <div className="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm">
-            <label className="text-xs font-bold text-slate-500 mb-2 block">{t?.nickname_label || "닉네임"}</label>
-            <div className="space-y-2">
-              <input
-                type="text"
-                maxLength={6}
-                placeholder={t?.nickname_placeholder || "닉네임 입력 (최대 6글자)"}
-                value={tempNickname}
-                onChange={(e) => setTempNickname(e.target.value)}
-                className="w-full bg-slate-50 border-2 border-slate-200 rounded-xl py-2.5 px-4 text-sm font-bold focus:border-orange-500 focus:bg-white outline-none transition-colors"
-              />
-              {!canChange && nicknameChangeInfo && (
-                <p className="text-[10px] text-orange-600 font-bold">
-                  닉네임 변경 가능까지 {nicknameChangeInfo.remainingDays}일 남음
-                </p>
-              )}
-              {canChange && userProfile?.nickname && (
-                <p className="text-[10px] text-slate-400">
-                  {t?.nickname_hint || "최초 1회는 자유롭게 변경 가능합니다"}
-                </p>
-              )}
-              {!userProfile?.nickname && (
-                <p className="text-[10px] text-slate-400">
-                  한글/영어/숫자/공백 포함 최대 6글자
-                </p>
-              )}
+            <div className="flex gap-4">
+              {/* 왼쪽: 닉네임 + 익명활동 체크박스 + 사용 설명서 버튼 */}
+              <div className="flex-1 min-w-0 flex flex-col">
+                <div className="flex items-center justify-between gap-2 mb-2">
+                  <label className="text-xs font-bold text-slate-500">{t?.nickname_label_required || "닉네임(필수)"}</label>
+                  <label className="flex items-center gap-1.5 cursor-pointer shrink-0">
+                    <input
+                      type="checkbox"
+                      checked={tempAnonymousActivity}
+                      onChange={(e) => setTempAnonymousActivity(e.target.checked)}
+                      className="w-4 h-4 rounded border-slate-300 text-orange-500 focus:ring-orange-500"
+                    />
+                    <span className="text-xs font-bold text-slate-600">{t?.anonymous_activity || "익명으로 활동"}</span>
+                  </label>
+                </div>
+                <input
+                  type="text"
+                  maxLength={6}
+                  placeholder={t?.nickname_placeholder || "닉네임 입력 (최대 6글자)"}
+                  value={tempNickname}
+                  onChange={(e) => setTempNickname(e.target.value)}
+                  className="w-full bg-slate-50 border-2 border-slate-200 rounded-xl py-2.5 px-4 text-sm font-bold focus:border-orange-500 focus:bg-white outline-none transition-colors"
+                />
+                {!canChange && nicknameChangeInfo && (
+                  <p className="text-[10px] text-orange-600 font-bold mt-1">
+                    닉네임 변경 가능까지 {nicknameChangeInfo.remainingDays}일 남음
+                  </p>
+                )}
+                {canChange && userProfile?.nickname && (
+                  <p className="text-[10px] text-slate-400 mt-1">
+                    {t?.nickname_hint || "최초 1회는 자유롭게 변경 가능합니다"}
+                  </p>
+                )}
+                {!userProfile?.nickname && (
+                  <p className="text-[10px] text-slate-400 mt-1">
+                    한글/영어/숫자/공백 포함 최대 6글자
+                  </p>
+                )}
+                {onOpenHelp && (
+                  <button
+                    onClick={onOpenHelp}
+                    className="w-full mt-3 py-3 rounded-xl font-bold text-sm bg-slate-100 text-slate-700 hover:bg-slate-200 transition-colors flex items-center justify-center gap-2 active:scale-[0.98]"
+                  >
+                    <span>{t?.help_btn || "사용 설명서"}</span>
+                  </button>
+                )}
+              </div>
+              {/* 오른쪽: 프로필 사진 */}
+              <div className="flex-1 min-w-0 flex flex-col items-center justify-start">
+                <label className="text-xs font-bold text-slate-500 mb-2 block w-full text-center">{t?.profile_photo || "프로필 사진"}</label>
+                <div className={`w-20 h-20 rounded-full bg-slate-200 overflow-hidden flex items-center justify-center shrink-0 border border-slate-200 ${levelInfo?.badge === 'rainbow' ? 'ring-2 ring-offset-1 ring-purple-400' : ''}`}>
+                  {profileImageUrl ? (
+                    <img
+                      src={profileImageUrl}
+                      alt="프로필 이미지"
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <Camera className="w-8 h-8 text-slate-400" />
+                  )}
+                </div>
+                <label className={`text-[10px] font-bold px-2 py-1 rounded-full border border-slate-200 mt-2 transition-colors cursor-pointer ${isUploadingImage
+                  ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
+                  : 'bg-white text-slate-600 hover:bg-slate-50'
+                  }`}>
+                  {isUploadingImage ? (t?.uploading || '업로드 중...') : (t?.change_photo || '사진 변경')}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handleProfileImageChange}
+                    disabled={isUploadingImage}
+                  />
+                </label>
+              </div>
             </div>
+            {isUploadingImage && (
+              <div className="mt-2 text-[10px] text-slate-400 font-bold">
+                이미지 압축 및 업로드 중입니다...
+              </div>
+            )}
           </div>
 
           {/* 4. 환경 설정: 언어 설정 */}
