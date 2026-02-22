@@ -259,7 +259,7 @@ const HomeView = ({
         ) : (
           <div className="space-y-2">
             {todayBooks.slice(0, 5).map((book) => {
-              const dateString = formatDate(book.createdAt);
+              const dateString = formatDate(book.createdAt, book.dateKey);
               const coverImage = getCoverImageFromBook(book);
 
               return (

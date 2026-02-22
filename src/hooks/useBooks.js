@@ -422,8 +422,9 @@ export const useBooks = ({ user, userProfile, setError, deductInk, setShowInkCon
                 bookDocumentData.content = '';
             }
 
-            const sanitizeData = (data) => JSON.parse(JSON.stringify(data, (k, v) => v === undefined ? null : v));
+            const sanitizeData = (data) => JSON.parse(JSON.stringify(data, (k, v) => (k === 'createdAt' || v === undefined) ? (k === 'createdAt' ? undefined : null) : v));
             const cleanBookData = sanitizeData(bookDocumentData);
+            cleanBookData.createdAt = serverTimestamp();
 
             const bookRef = await addDoc(collection(db, 'artifacts', appId, 'books'), cleanBookData);
             const savedBook = { id: bookRef.id, ...bookDocumentData };

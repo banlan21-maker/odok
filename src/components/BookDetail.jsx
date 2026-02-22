@@ -28,7 +28,7 @@ const BookDetail = ({ book, onClose, onBookUpdate, fontSize = 'text-base', user,
         fontSize === 'xlarge' || fontSize === 'text-xl' ? 'text-xl' :
           'text-base';  // 기본값
 
-  const dateString = formatDateDetailed(book.createdAt);
+  const dateString = formatDateDetailed(book.createdAt, book.dateKey);
   const coverImage = getCoverImageFromBook(book);
 
   const categoryName = {

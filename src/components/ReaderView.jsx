@@ -3,6 +3,7 @@ import {
   ChevronLeft, Book, Share2, AlertTriangle, Languages, Star, MessageCircle, Send, Heart, MoreHorizontal, X, ThumbsUp, ThumbsDown
 } from 'lucide-react';
 import { formatGenreTag } from '../utils/formatGenre';
+import { formatDate } from '../utils/dateUtils';
 
 const ReaderView = (props) => {
   // Mode 1: Simple Book Reader (User Generated)
@@ -25,7 +26,7 @@ const ReaderView = (props) => {
             {(book.genre || book.subCategory) && <span className="text-xs font-bold text-slate-500 bg-slate-100 px-2 py-1 rounded-full">{formatGenreTag(book.genre || book.subCategory)}</span>}
           </div>
           <h2 className="text-2xl font-black text-slate-800 leading-tight">{book.title}</h2>
-          <p className="text-xs text-slate-400">{book.authorNickname || '익명'} · {book.createdAt?.toDate?.()?.toLocaleDateString('ko-KR') || '날짜 없음'}</p>
+          <p className="text-xs text-slate-400">{book.authorNickname || '익명'} · {formatDate(book.createdAt, book.dateKey)}</p>
         </div>
         <div className={`prose prose-slate max-w-none ${fontSize} leading-relaxed text-slate-700 whitespace-pre-line bg-white rounded-2xl p-6 border border-slate-100 shadow-sm`}>
           {book.content}

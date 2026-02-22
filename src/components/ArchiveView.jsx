@@ -46,7 +46,7 @@ const ArchiveView = ({ books, user, onBookClick, favoriteBookIds = [], t, author
         ) : (
           <div className="space-y-2">
             {myBooks.map((book) => {
-              const dateString = formatDate(book.createdAt);
+              const dateString = formatDate(book.createdAt, book.dateKey);
               const coverImage = getCoverImageFromBook(book);
 
               return (
@@ -155,7 +155,7 @@ const ArchiveView = ({ books, user, onBookClick, favoriteBookIds = [], t, author
         ) : (
           <div className="space-y-2">
             {favoriteBooks.map((book) => {
-              const dateString = formatDate(book.createdAt);
+              const dateString = formatDate(book.createdAt, book.dateKey);
               const coverImage = getCoverImageFromBook(book);
 
               return (
