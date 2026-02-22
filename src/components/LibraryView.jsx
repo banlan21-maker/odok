@@ -288,7 +288,7 @@ const LibraryView = ({ books, onBookClick, filter = 'all', onFilterChange, t, au
 const BookList = ({ books, onBookClick, t, authorProfiles }) => (
   <div className="space-y-2">
     {books.map((book) => {
-      const dateString = formatDate(book.createdAt);
+      const dateString = formatDate(book.createdAt, book.dateKey);
       const coverImage = getCoverImageFromBook(book);
 
       return (
