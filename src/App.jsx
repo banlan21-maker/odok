@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import {
   BookOpen, Coffee, Lightbulb, ChevronLeft,
   RefreshCw, Book, Calendar, List, ArrowRight, User, PenTool, Save,
-  Star, MessageCircle, Reply, Send, MoreHorizontal, Bookmark, Heart, Globe, Home, Edit2, Flag, X, Library, Vote, Trophy, CheckCircle, HelpCircle, Smile, Zap, Brain, Sparkles, LogOut, Lock, Droplets, Video
+  Star, MessageCircle, Reply, Send, MoreHorizontal, Bookmark, Heart, Globe, Home, Edit2, Flag, X, Library, Vote, Trophy, CheckCircle, Smile, Zap, Brain, Sparkles, LogOut, Lock, Droplets, Video
 } from 'lucide-react';
 
 // Hooks
@@ -63,7 +63,7 @@ const App = () => {
   // 2. User Profile Hook
   const {
     userProfile, setUserProfile,
-    tempNickname, setTempNickname,
+    tempNickname, setTempNickname, tempAnonymousActivity, setTempAnonymousActivity,
     language, setLanguage,
     fontSize, setFontSize,
     isNoticeAdmin, saveProfile,
@@ -98,7 +98,7 @@ const App = () => {
     books,
     libraryFilter, setLibraryFilter,
     slotStatus,
-    todayBooks, weeklyBestBooks, topWriters,
+    todayBooks, weeklyBestBooks, allTimeBestBooks, topWriters,
     isLoadingHomeData,
     isWritingInProgress, setIsWritingInProgress,
     showWritingCompleteModal, setShowWritingCompleteModal,
@@ -245,7 +245,6 @@ const App = () => {
                   <Droplets className="w-3.5 h-3.5 fill-blue-500 text-blue-500" />
                   <span className="text-xs font-bold">{userProfile.ink || 0}</span>
                 </div>
-                <button onClick={() => storyReaderHook.setIsHelpModalOpen(true)} className="p-1.5 rounded-full bg-slate-100 text-slate-400 hover:bg-slate-200"><HelpCircle className="w-4 h-4" /></button>
               </div>
             )}
           </div>
@@ -411,11 +410,13 @@ const App = () => {
             <ProfileView
               user={user} userProfile={userProfile} t={t} levelInfo={levelInfo}
               tempNickname={tempNickname} setTempNickname={setTempNickname}
+              tempAnonymousActivity={tempAnonymousActivity} setTempAnonymousActivity={setTempAnonymousActivity}
               language={language} setLanguage={setLanguage}
               fontSize={fontSize} setFontSize={setFontSize}
               handleGoogleLogin={handleGoogleLogin} saveProfile={saveProfile}
               handleLogout={handleLogout} addInk={addInk} handleDeleteAccount={handleDeleteAccount}
               error={error} setError={setError} appId={appId}
+              onOpenHelp={() => storyReaderHook.setIsHelpModalOpen(true)}
             />
           )}
 
@@ -424,7 +425,7 @@ const App = () => {
               {view === 'home' && (
                 <HomeView
                   userProfile={userProfile} t={t} levelInfo={levelInfo} notices={notices}
-                  setView={setView} todayBooks={todayBooks} weeklyBestBooks={weeklyBestBooks}
+                  setView={setView} todayBooks={todayBooks} weeklyBestBooks={weeklyBestBooks} allTimeBestBooks={allTimeBestBooks}
                   topWriters={topWriters} isLoadingHomeData={isLoadingHomeData}
                   handleBookClick={handleBookClick} authorProfiles={authorProfiles}
                   promotions={promotions} books={books}
@@ -525,6 +526,7 @@ const App = () => {
                   language={language} setLanguage={setLanguage} fontSize={fontSize} setFontSize={setFontSize}
                   handleGoogleLogin={handleGoogleLogin} saveProfile={saveProfile} handleLogout={handleLogout}
                   addInk={addInk} handleDeleteAccount={handleDeleteAccount} error={error} setError={setError} appId={appId}
+                  onOpenHelp={() => storyReaderHook.setIsHelpModalOpen(true)}
                 />
               )}
             </>

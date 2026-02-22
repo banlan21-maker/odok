@@ -35,7 +35,7 @@ function computeSlotStatus(booksData, todayDateKey, dssData) {
         else if ((category === 'self-improvement' || category === 'self-help') && !st['self-help']) st['self-help'] = slotData;
         else if (category === 'humanities' && !st.humanities) st.humanities = slotData;
     });
-    if (!st.series && dssData) st.series = { book: { id: dssData.bookId }, authorId: dssData.authorId || null };
+    if (!st.series && dssData) st.series = { book: { id: dssData.bookId, isAnonymous: dssData.isAnonymous }, authorId: dssData.authorId || null, authorName: dssData.authorName || null };
     return st;
 }
 
@@ -49,6 +49,7 @@ export const useBooks = ({ user, userProfile, setError, deductInk, setShowInkCon
     });
     const [todayBooks, setTodayBooks] = useState([]);
     const [weeklyBestBooks, setWeeklyBestBooks] = useState([]);
+    const [allTimeBestBooks, setAllTimeBestBooks] = useState([]);
     const [topWriters, setTopWriters] = useState([]);
     const [isLoadingHomeData, setIsLoadingHomeData] = useState(true);
     const [isWritingInProgress, setIsWritingInProgress] = useState(false);
@@ -107,12 +108,50 @@ export const useBooks = ({ user, userProfile, setError, deductInk, setShowInkCon
             }).sort((a, b) => getBookActivityTime(b) - getBookActivityTime(a));
             setTodayBooks(todayBooksList);
 
-            // 주간 베스트셀러: 전체 기간 누적 점수 기준 (높은 점수의 책은 몇 주든 연속 유지)
-            const bestBooks = booksData.map(book => ({
-                ...book,
-                score: (book.views || 0) + (book.likes || 0) + (book.favorites || 0) + (book.completions || 0)
-            })).sort((a, b) => b.score - a.score).slice(0, 5);
-            setWeeklyBestBooks(bestBooks);
+            // 누적 베스트셀러: views + likes*2 + favorites*2 + completions*3 점수 기준 (상위 3권)
+            const allTimeScore = (b) => (b.views || 0) + (b.likes || 0) * 2 + (b.favorites || 0) * 2 + (b.completions || 0) * 3;
+            const allTimeBest = booksData
+                .map((book) => ({ ...book, allTimeScore: allTimeScore(book) }))
+                .sort((a, b) => b.allTimeScore - a.allTimeScore)
+                .slice(0, 3);
+            setAllTimeBestBooks(allTimeBest);
+
+            // 주간 베스트셀러: 최근 7일간 좋아요/즐겨찾기/완독 점수 기준 (3권)
+            const weekAgo = new Date();
+            weekAgo.setDate(weekAgo.getDate() - 7);
+            const weekAgoTs = Timestamp.fromDate(weekAgo);
+            const likesRef = collection(db, 'artifacts', appId, 'public', 'data', 'book_likes');
+            const favRef = collection(db, 'artifacts', appId, 'public', 'data', 'book_favorites');
+            const compRef = collection(db, 'artifacts', appId, 'public', 'data', 'book_completions');
+            Promise.all([
+                getDocs(query(likesRef, where('createdAt', '>=', weekAgoTs))),
+                getDocs(query(favRef, where('createdAt', '>=', weekAgoTs))),
+                getDocs(query(compRef, where('createdAt', '>=', weekAgoTs)))
+            ]).then(([likesSnap, favSnap, compSnap]) => {
+                const weeklyByBook = {};
+                const add = (snap) => {
+                    snap.docs.forEach((d) => {
+                        const bid = d.data().bookId;
+                        if (bid) weeklyByBook[bid] = (weeklyByBook[bid] || 0) + 1;
+                    });
+                };
+                add(likesSnap);
+                add(favSnap);
+                add(compSnap);
+                const bestBooks = booksData
+                    .map((book) => ({ ...book, weeklyScore: weeklyByBook[book.id] || 0 }))
+                    .filter((b) => (b.weeklyScore || 0) > 0)
+                    .sort((a, b) => (b.weeklyScore || 0) - (a.weeklyScore || 0))
+                    .slice(0, 3);
+                setWeeklyBestBooks(bestBooks);
+            }).catch((err) => {
+                console.warn('[주간 베스트] 최근 7일 조회 실패, 누적 점수로 대체', err);
+                const fallback = booksData.map((book) => ({
+                    ...book,
+                    score: (book.views || 0) + (book.likes || 0) + (book.favorites || 0) + (book.completions || 0)
+                })).sort((a, b) => b.score - a.score).slice(0, 3);
+                setWeeklyBestBooks(fallback);
+            });
 
             const dssRef = doc(db, 'artifacts', appId, 'public', 'data', 'daily_series_slot', todayDateKey);
             getDoc(dssRef).then((dssSnap) => {
@@ -237,7 +276,7 @@ export const useBooks = ({ user, userProfile, setError, deductInk, setShowInkCon
                 }, {});
 
                 // 누적 집필수 계산 (전체 books에서)
-                const totalCounts = booksData.reduce((acc, book) => {
+                const totalCounts = books.reduce((acc, book) => {
                     const authorId = book.authorId;
                     if (!authorId) return acc;
                     acc[authorId] = (acc[authorId] || 0) + 1;
@@ -375,7 +414,8 @@ export const useBooks = ({ user, userProfile, setError, deductInk, setShowInkCon
                 throw queryErr;
             }
 
-            const authorName = userProfile?.nickname || '익명';
+            const isAnonymousMode = !!userProfile?.anonymousActivity;
+            const authorName = isAnonymousMode ? '익명' : (userProfile?.nickname || '익명');
             const isSeries = bookData.isSeries || false;
 
             const bookDocumentData = {
@@ -387,9 +427,13 @@ export const useBooks = ({ user, userProfile, setError, deductInk, setShowInkCon
                 genre: bookData.genre || bookData.subCategory || null,
                 keywords: bookData.keywords || null,
                 selectedMood: bookData.selectedMood || null,
+                selectedPOV: bookData.selectedPOV || null,
+                selectedSpeechTone: bookData.selectedSpeechTone || null,
+                selectedDialogueRatio: bookData.selectedDialogueRatio || null,
                 endingStyle: bookData.endingStyle || null,
                 authorId: user.uid,
                 authorName: authorName,
+                isAnonymous: isAnonymousMode,
                 createdAt: serverTimestamp(),
                 dateKey: todayDateKey,
                 views: 0,
@@ -497,6 +541,7 @@ export const useBooks = ({ user, userProfile, setError, deductInk, setShowInkCon
         slotStatus, setSlotStatus,
         todayBooks, setTodayBooks,
         weeklyBestBooks, setWeeklyBestBooks,
+        allTimeBestBooks, setAllTimeBestBooks,
         topWriters, setTopWriters,
         isLoadingHomeData, setIsLoadingHomeData,
         isWritingInProgress, setIsWritingInProgress,

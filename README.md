@@ -98,7 +98,8 @@ npm run dev
 | 대상 | 방법 |
 |------|------|
 | **웹** | `npm run build` → `dist/` |
-| **Android APK** | 1) `npm run build` 2) `npx cap sync android` 3) `android/gradlew.bat -p android assembleDebug` (Windows) → `android/app/build/outputs/apk/debug/app-debug.apk` |
+| **Android APK (디버그)** | 1) `npm run build` 2) `npx cap sync android` 3) `android/gradlew.bat -p android assembleDebug` (Windows) → `android/app/build/outputs/apk/debug/app-debug.apk` |
+| **Android AAB (Play Store)** | 1) `npm run build` 2) `npx cap sync android` 3) `android/gradlew.bat -p android bundleRelease` → `android/app/build/outputs/bundle/release/app-release.aab` ※ 키스토어 필요 (`android/keystore.properties`) |
 
 ---
 

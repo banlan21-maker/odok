@@ -74,7 +74,7 @@ const LibraryView = ({ books, onBookClick, filter = 'all', onFilterChange, t, au
       const query = searchQuery.trim().toLowerCase();
       filtered = filtered.filter(book =>
         book.title?.toLowerCase().includes(query) ||
-        (authorProfiles[book.authorId]?.nickname || '').toLowerCase().includes(query)
+        (book?.isAnonymous ? '익명' : (authorProfiles[book.authorId]?.nickname || book?.authorName || '')).toLowerCase().includes(query)
       );
     }
 
@@ -327,9 +327,9 @@ const BookList = ({ books, onBookClick, t, authorProfiles }) => (
                 {book.title}
               </h3>
               <div className="flex items-center gap-1.5 text-[10px] text-slate-500 flex-wrap">
-                <span className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-white text-[10px] font-black shadow-sm ${authorProfiles[book.authorId]?.badgeStyle || 'bg-green-500'}`}>
-                  <span className="text-[10px]">{authorProfiles[book.authorId]?.gradeIcon || '🌱'}</span>
-                  {authorProfiles[book.authorId]?.nickname || (t?.anonymous || '익명')}
+                <span className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-white text-[10px] font-black shadow-sm ${book?.isAnonymous ? 'bg-green-500' : (authorProfiles[book.authorId]?.badgeStyle || 'bg-green-500')}`}>
+                  <span className="text-[10px]">{book?.isAnonymous ? '🌱' : (authorProfiles[book.authorId]?.gradeIcon || '🌱')}</span>
+                  {book?.isAnonymous ? '익명' : (authorProfiles[book.authorId]?.nickname || book?.authorName || (t?.anonymous || '익명'))}
                 </span>
                 <span className="bg-slate-100 px-1.5 py-0.5 rounded-full font-bold text-slate-600">
                   {book.category === 'webnovel' ? (t?.cat_webnovel || '웹소설') :
