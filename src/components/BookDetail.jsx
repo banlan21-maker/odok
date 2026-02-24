@@ -1022,7 +1022,7 @@ const BookDetail = ({ book, onClose, onBookUpdate, fontSize = 'text-base', user,
             <input
               value={commentInput}
               onChange={(e) => setCommentInput(e.target.value)}
-              placeholder={replyTo ? (t?.reply_to || "{name}에게 답글 작성").replace('{name}', replyTo.authorName) : (t?.comment_placeholder || '댓글을 입력하세요')}
+              placeholder={replyTo ? (t?.reply_to || "{name}에게 답글 작성").replace('{name}', replyTo.authorName) : (t?.reader_comment_ph || '댓글을 입력하세요')}
               className="flex-1 px-3 py-2 text-sm border border-slate-200 dark:border-slate-600 rounded-xl focus:outline-none focus:border-orange-400 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500"
               maxLength={200}
             />

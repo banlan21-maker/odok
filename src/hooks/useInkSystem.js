@@ -133,6 +133,8 @@ export const useInkSystem = ({ user, userProfile, setView, setError, setSelected
         await updateDoc(doc(db, 'artifacts', appId, 'books', pendingBook.id), {
           views: increment(1)
         });
+        const profileRef = doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'info');
+        await updateDoc(profileRef, { totalReadCount: increment(1) });
       } catch (viewErr) {
         console.error('조회수 증가 실패:', viewErr);
       }

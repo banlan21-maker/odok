@@ -1070,7 +1070,7 @@ const WriteView = ({ user, userProfile, t, onBookGenerated, slotStatus, setView,
                       type="text"
                       value={bookTitle}
                       onChange={(e) => setBookTitle(e.target.value)}
-                      placeholder={t?.title_placeholder || "15자 이내로 제목을 입력하세요"}
+                      placeholder={t?.book_title_ph || "15자 이내로 제목을 입력하세요"}
                       className="w-full bg-slate-50 dark:bg-slate-700 border-2 border-slate-200 dark:border-slate-600 rounded-xl py-3 px-4 text-sm focus:border-orange-500 focus:bg-white dark:focus:bg-slate-700 outline-none transition-colors text-slate-800 dark:text-slate-100"
                       maxLength={15}
                     />
@@ -1297,7 +1297,7 @@ const WriteView = ({ user, userProfile, t, onBookGenerated, slotStatus, setView,
                       type="text"
                       value={bookTitle}
                       onChange={(e) => setBookTitle(e.target.value)}
-                      placeholder={t?.title_placeholder || "15자 이내로 제목을 입력하세요"}
+                      placeholder={t?.book_title_ph || "15자 이내로 제목을 입력하세요"}
                       className="w-full bg-slate-50 dark:bg-slate-700 border-2 border-slate-200 dark:border-slate-600 rounded-xl py-3 px-4 text-sm focus:border-orange-500 focus:bg-white dark:focus:bg-slate-700 outline-none transition-colors text-slate-800 dark:text-slate-100"
                       maxLength={15}
                     />
