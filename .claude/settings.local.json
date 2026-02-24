@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(powershell:*)",
+      "Bash(git -C E:/projects/odok-app add README.md android/.gitignore android/app/build.gradle android/app/src/main/AndroidManifest.xml android/GOOGLE_SIGNIN_SHA1.md android/PLAY_STORE_RELEASE.md android/keystore.properties.example docs/.bkit-memory.json docs/.pdca-status.json \"docs/.pdca-snapshots/\" firestore.rules functions/index.js src/App.jsx src/components/ArchiveView.jsx src/components/BookDetail.jsx src/components/HomeView.jsx src/components/LibraryView.jsx src/components/ProfileView.jsx src/data.jsx src/hooks/useBooks.js src/hooks/useUserProfile.js src/utils/aiService.js src/utils/levelUtils.js build-debug.bat)",
+      "Bash(git -C E:/projects/odok-app push)",
+      "Bash(cd /e/projects/odok-app && node --input-type=module -e \"\nimport { readFileSync } from 'fs';\nconst code = readFileSync\\('functions/index.js', 'utf-8'\\);\n// join 확인 \\(다른 방식\\)\nconst joinCheck = \\(code.match\\(/\\\\.join\\\\\\(['\\\\\"]\\\\\\\\n\\\\\\\\n['\\\\\"]\\\\\\)/g\\) || []\\).length;\nconsole.log\\('\\\\\\\\n\\\\\\\\n join 횟수:', joinCheck\\);\n\" 2>&1)",
+      "Bash(cd:*)",
+      "Bash(tail:*)",
+      "Bash(python3:*)"
+    ]
+  }
+}

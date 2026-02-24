@@ -174,7 +174,7 @@ const ReaderView = (props) => {
           <textarea
             value={commentInput}
             onChange={(e) => setCommentInput(e.target.value)}
-            placeholder={replyTo ? `${replyTo.nickname}${t.replying_to}...` : t.comment_placeholder}
+            placeholder={replyTo ? `${replyTo.nickname}${t.replying_to}...` : t.ach_comment_ph}
             className="flex-1 bg-transparent resize-none outline-none text-sm font-medium py-1 placeholder:text-slate-300 dark:placeholder:text-slate-600 text-slate-800 dark:text-slate-100"
             rows={1}
           />

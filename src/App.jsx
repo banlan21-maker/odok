@@ -349,7 +349,7 @@ const App = () => {
                     type="text"
                     value={noticeTitle}
                     onChange={(e) => setNoticeTitle(e.target.value)}
-                    placeholder={t.title_placeholder}
+                    placeholder={t.notice_title_ph}
                     className="w-full p-3 border border-slate-200 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 rounded-xl font-bold outline-none focus:border-orange-500"
                   />
                   <textarea

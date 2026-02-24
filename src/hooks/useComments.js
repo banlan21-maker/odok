@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import {
-    collection, query, where, onSnapshot, addDoc, serverTimestamp, doc, getDoc, getDocs, setDoc, updateDoc
+    collection, query, where, onSnapshot, addDoc, serverTimestamp, doc, getDoc, getDocs, setDoc, updateDoc, increment
 } from 'firebase/firestore';
 import { db } from '../firebase';
 
@@ -126,6 +126,12 @@ export const useComments = ({ user, userProfile, currentStory, view, setError, e
 
                 if (isParentComment && saved) {
                     setTimeout(() => checkAndGiveReward(currentStory.id), 800);
+                    try {
+                        const profileRef = doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'info');
+                        await updateDoc(profileRef, { totalCommentCount: increment(1) });
+                    } catch (profileErr) {
+                        console.error('댓글 카운트 업데이트 실패:', profileErr);
+                    }
                 }
             }
         } catch (err) {
