@@ -127,10 +127,10 @@ const LibraryView = ({ books, onBookClick, filter = 'all', onFilterChange, t, au
       <div className="space-y-5 animate-in slide-in-from-bottom-2 fade-in pb-20">
         {/* 헤더 */}
         <div className="space-y-2">
-          <h2 className="text-2xl font-black text-slate-800 leading-tight">
+          <h2 className="text-2xl font-black text-slate-800 dark:text-slate-100 leading-tight">
             {t?.library_title || "서재"}
           </h2>
-          <p className="text-sm text-slate-500">
+          <p className="text-sm text-slate-500 dark:text-slate-400">
             {t?.library_desc || "모든 유저가 생성한 책들을 모아둔 곳입니다."}
           </p>
         </div>
@@ -144,7 +144,7 @@ const LibraryView = ({ books, onBookClick, filter = 'all', onFilterChange, t, au
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder={t?.search_placeholder || "책 제목 또는 작가로 검색..."}
-              className="w-full bg-white border-2 border-slate-200 rounded-xl py-2.5 pl-10 pr-4 text-sm focus:border-orange-500 focus:outline-none transition-colors"
+              className="w-full bg-white dark:bg-slate-700 dark:text-slate-100 dark:border-slate-600 border-2 border-slate-200 rounded-xl py-2.5 pl-10 pr-4 text-sm focus:border-orange-500 focus:outline-none transition-colors"
             />
           </div>
           <div className="relative">
@@ -152,7 +152,7 @@ const LibraryView = ({ books, onBookClick, filter = 'all', onFilterChange, t, au
             <select
               value={selectedMonth}
               onChange={(e) => setSelectedMonth(e.target.value)}
-              className="w-full bg-white border-2 border-slate-200 rounded-xl py-2.5 pl-10 pr-10 text-sm font-bold text-slate-700 appearance-none focus:border-orange-500 focus:outline-none transition-colors cursor-pointer"
+              className="w-full bg-white dark:bg-slate-700 dark:text-slate-100 dark:border-slate-600 border-2 border-slate-200 rounded-xl py-2.5 pl-10 pr-10 text-sm font-bold text-slate-700 appearance-none focus:border-orange-500 focus:outline-none transition-colors cursor-pointer"
             >
               <option value="">{t?.all_months || "전체 기간"}</option>
               {availableMonths.map(m => (
@@ -167,7 +167,7 @@ const LibraryView = ({ books, onBookClick, filter = 'all', onFilterChange, t, au
         {(searchQuery.trim() || selectedMonth) ? (
           <div>
             <div className="flex items-center justify-between mb-3">
-              <h3 className="text-sm font-bold text-slate-600">
+              <h3 className="text-sm font-bold text-slate-600 dark:text-slate-300">
                 {t?.search_results || "검색 결과"} ({sortedBooks.length})
               </h3>
               <button
@@ -178,7 +178,7 @@ const LibraryView = ({ books, onBookClick, filter = 'all', onFilterChange, t, au
               </button>
             </div>
             {sortedBooks.length === 0 ? (
-              <div className="bg-white rounded-2xl border border-dashed border-slate-200 p-8 text-center">
+              <div className="bg-white dark:bg-slate-800 rounded-2xl border border-dashed border-slate-200 dark:border-slate-600 p-8 text-center">
                 <Search className="w-10 h-10 text-slate-200 mx-auto mb-2" />
                 <p className="text-slate-400 text-sm font-bold">
                   {t?.no_search_results || "검색 결과가 없습니다"}
@@ -201,17 +201,17 @@ const LibraryView = ({ books, onBookClick, filter = 'all', onFilterChange, t, au
 
             {/* 카테고리 카드 */}
             <div className="space-y-3">
-              <h3 className="text-sm font-bold text-slate-500 px-1">{t?.category_label || "카테고리 선택"}</h3>
+              <h3 className="text-sm font-bold text-slate-500 dark:text-slate-400 px-1">{t?.category_label || "카테고리 선택"}</h3>
               <div className="grid grid-cols-2 gap-3">
                 {categories.map((category) => (
                   <button
                     key={category.id}
                     onClick={() => setSelectedCategory(category.id)}
-                    className="p-4 rounded-2xl border-2 bg-white border-slate-100 shadow-sm hover:border-orange-200 active:scale-95 transition-all text-center"
+                    className="p-4 rounded-2xl border-2 bg-white dark:bg-slate-800 border-slate-100 dark:border-slate-700 shadow-sm hover:border-orange-200 active:scale-95 transition-all text-center"
                   >
                     <div className="text-3xl mb-2">{category.icon}</div>
-                    <h3 className="font-bold text-sm text-slate-800 mb-0.5">{category.name}</h3>
-                    <p className="text-[10px] text-slate-400 font-bold">{categoryCounts[category.id] || 0}{t?.book_count_suffix || '권'}</p>
+                    <h3 className="font-bold text-sm text-slate-800 dark:text-slate-100 mb-0.5">{category.name}</h3>
+                    <p className="text-[10px] text-slate-400 dark:text-slate-500 font-bold">{categoryCounts[category.id] || 0}{t?.book_count_suffix || '권'}</p>
                   </button>
                 ))}
               </div>
@@ -229,13 +229,13 @@ const LibraryView = ({ books, onBookClick, filter = 'all', onFilterChange, t, au
       <div className="flex items-center gap-2">
         <button
           onClick={() => { setSelectedCategory(null); setSearchQuery(''); setSelectedMonth(''); }}
-          className="w-9 h-9 flex items-center justify-center rounded-xl bg-slate-100 hover:bg-slate-200 transition-colors shrink-0"
+          className="w-9 h-9 flex items-center justify-center rounded-xl bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors shrink-0"
         >
-          <ChevronLeft className="w-5 h-5 text-slate-600" />
+          <ChevronLeft className="w-5 h-5 text-slate-600 dark:text-slate-300" />
         </button>
         <div className="flex-1 min-w-0">
-          <h2 className="text-lg font-black text-slate-800 truncate">{currentCategoryName}</h2>
-          <p className="text-xs text-slate-400">{sortedBooks.length}{t?.book_count_suffix || '권'}</p>
+          <h2 className="text-lg font-black text-slate-800 dark:text-slate-100 truncate">{currentCategoryName}</h2>
+          <p className="text-xs text-slate-400 dark:text-slate-500">{sortedBooks.length}{t?.book_count_suffix || '권'}</p>
         </div>
       </div>
 
@@ -248,14 +248,14 @@ const LibraryView = ({ books, onBookClick, filter = 'all', onFilterChange, t, au
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder={t?.search_placeholder || "책 제목 또는 작가로 검색..."}
-            className="w-full bg-white border-2 border-slate-200 rounded-xl py-2 pl-9 pr-3 text-sm focus:border-orange-500 focus:outline-none transition-colors"
+            className="w-full bg-white dark:bg-slate-700 dark:text-slate-100 dark:border-slate-600 border-2 border-slate-200 rounded-xl py-2 pl-9 pr-3 text-sm focus:border-orange-500 focus:outline-none transition-colors"
           />
         </div>
         <div className="relative shrink-0">
           <select
             value={selectedMonth}
             onChange={(e) => setSelectedMonth(e.target.value)}
-            className="h-full bg-white border-2 border-slate-200 rounded-xl py-2 pl-3 pr-8 text-xs font-bold text-slate-600 appearance-none focus:border-orange-500 focus:outline-none transition-colors cursor-pointer"
+            className="h-full bg-white dark:bg-slate-700 dark:text-slate-100 dark:border-slate-600 border-2 border-slate-200 rounded-xl py-2 pl-3 pr-8 text-xs font-bold text-slate-600 appearance-none focus:border-orange-500 focus:outline-none transition-colors cursor-pointer"
           >
             <option value="">{t?.all_period || "전체"}</option>
             {availableMonths.map(m => (
@@ -268,7 +268,7 @@ const LibraryView = ({ books, onBookClick, filter = 'all', onFilterChange, t, au
 
       {/* 책 목록 */}
       {sortedBooks.length === 0 ? (
-        <div className="bg-white rounded-2xl border border-dashed border-slate-200 p-12 text-center">
+        <div className="bg-white dark:bg-slate-800 rounded-2xl border border-dashed border-slate-200 dark:border-slate-600 p-12 text-center">
           <Book className="w-12 h-12 text-slate-200 mx-auto mb-3" />
           <p className="text-slate-400 text-sm font-bold mb-1">
             {t?.library_empty || "아직 등록된 책이 없습니다"}
@@ -295,7 +295,7 @@ const BookList = ({ books, onBookClick, t, authorProfiles }) => (
         <button
           key={book.id}
           onClick={() => onBookClick(book)}
-          className="w-full px-3 py-2.5 bg-white rounded-xl border border-slate-100 shadow-sm active:bg-slate-50 transition-colors text-left hover:border-orange-200"
+          className="w-full px-3 py-2.5 bg-white dark:bg-slate-800 rounded-xl border border-slate-100 dark:border-slate-700 shadow-sm active:bg-slate-50 dark:active:bg-slate-700 transition-colors text-left hover:border-orange-200"
         >
           <div className="flex items-center gap-2.5">
             <div className="relative w-11 h-14 rounded-md overflow-hidden shrink-0 bg-slate-100">
@@ -323,15 +323,15 @@ const BookList = ({ books, onBookClick, t, authorProfiles }) => (
               )}
             </div>
             <div className="flex-1 min-w-0">
-              <h3 className="font-black text-slate-800 text-sm mb-1 line-clamp-1">
+              <h3 className="font-black text-slate-800 dark:text-slate-100 text-sm mb-1 line-clamp-1">
                 {book.title}
               </h3>
-              <div className="flex items-center gap-1.5 text-[10px] text-slate-500 flex-wrap">
+              <div className="flex items-center gap-1.5 text-[10px] text-slate-500 dark:text-slate-400 flex-wrap">
                 <span className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-white text-[10px] font-black shadow-sm ${book?.isAnonymous ? 'bg-green-500' : (authorProfiles[book.authorId]?.badgeStyle || 'bg-green-500')}`}>
                   <span className="text-[10px]">{book?.isAnonymous ? '🌱' : (authorProfiles[book.authorId]?.gradeIcon || '🌱')}</span>
                   {book?.isAnonymous ? '익명' : (authorProfiles[book.authorId]?.nickname || book?.authorName || (t?.anonymous || '익명'))}
                 </span>
-                <span className="bg-slate-100 px-1.5 py-0.5 rounded-full font-bold text-slate-600">
+                <span className="bg-slate-100 dark:bg-slate-700 px-1.5 py-0.5 rounded-full font-bold text-slate-600 dark:text-slate-300">
                   {book.category === 'webnovel' ? (t?.cat_webnovel || '웹소설') :
                     book.category === 'novel' ? (t?.cat_novel || '소설') :
                       book.category === 'series' ? (t?.cat_series || '시리즈') :

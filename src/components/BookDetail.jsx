@@ -621,17 +621,17 @@ const BookDetail = ({ book, onClose, onBookUpdate, fontSize = 'text-base', user,
 
   const EpisodeGeneratingNotice = () => (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-6">
-      <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl space-y-4 animate-in fade-in zoom-in-95 duration-200 text-center">
+      <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 w-full max-w-sm shadow-xl space-y-4 animate-in fade-in zoom-in-95 duration-200 text-center">
         <div className="flex items-center justify-center">
           <RefreshCw className="w-6 h-6 text-orange-500 animate-spin" />
         </div>
-        <p className="text-sm text-slate-700 font-bold">
+        <p className="text-sm text-slate-700 dark:text-slate-200 font-bold">
           집필 중입니다…
         </p>
-        <p className="text-xs text-slate-500">
+        <p className="text-xs text-slate-500 dark:text-slate-400">
           다음 화 생성에는 약 2~3분이 소요될 수 있어요.
         </p>
-        <p className="text-xs text-slate-400">
+        <p className="text-xs text-slate-400 dark:text-slate-500">
           숨기면 다른 화면을 보면서 기다릴 수 있어요.
         </p>
         {episodeLoadingMessages[episodeLoadingMessageIndex] && (
@@ -657,9 +657,9 @@ const BookDetail = ({ book, onClose, onBookUpdate, fontSize = 'text-base', user,
           <div className="flex items-center justify-between">
             <button
               onClick={onClose}
-              className="p-2 -ml-2 rounded-full hover:bg-slate-50 transition-colors"
+              className="p-2 -ml-2 rounded-full hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
             >
-              <ChevronLeft className="w-6 h-6 text-slate-600" />
+              <ChevronLeft className="w-6 h-6 text-slate-600 dark:text-slate-300" />
             </button>
             {canEditOrDelete && (
               <div className="flex items-center gap-1">
@@ -684,7 +684,7 @@ const BookDetail = ({ book, onClose, onBookUpdate, fontSize = 'text-base', user,
 
           {/* 표지 이미지 및 기본 정보 */}
           <div className="flex gap-4">
-            <div className="w-24 h-32 rounded-lg overflow-hidden shrink-0 bg-slate-100 shadow-md">
+            <div className="w-24 h-32 rounded-lg overflow-hidden shrink-0 bg-slate-100 dark:bg-slate-700 shadow-md">
               <img
                 src={coverImage}
                 alt={book.title}
@@ -701,18 +701,18 @@ const BookDetail = ({ book, onClose, onBookUpdate, fontSize = 'text-base', user,
             </div>
 
             <div className="flex-1 min-w-0 space-y-3">
-              <h1 className="text-2xl font-black text-slate-800 leading-tight">
+              <h1 className="text-2xl font-black text-slate-800 dark:text-slate-100 leading-tight">
                 {book.title}
               </h1>
 
               {/* 메타 정보 */}
               <div className="flex items-center gap-3 flex-wrap">
-                <div className="flex items-center gap-1.5 text-xs text-slate-500">
+                <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
                   <span>{book?.isAnonymous ? '🌱' : (authorProfiles[book.authorId]?.gradeIcon || '🌱')}</span>
                   <span className="font-bold">{book?.isAnonymous ? '익명' : (authorProfiles[book.authorId]?.nickname || book?.authorName || '익명')}</span>
                 </div>
                 <span className="text-slate-300">•</span>
-                <div className="flex items-center gap-1.5 text-xs text-slate-500">
+                <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
                   <Calendar className="w-3.5 h-3.5" />
                   <span>{dateString}</span>
                 </div>
@@ -725,7 +725,7 @@ const BookDetail = ({ book, onClose, onBookUpdate, fontSize = 'text-base', user,
                     {categoryName}
                   </span>
                   {book.subCategory && (
-                    <span className="bg-slate-100 text-slate-600 px-3 py-1 rounded-full text-xs font-bold">
+                    <span className="bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 px-3 py-1 rounded-full text-xs font-bold">
                       {formatGenreTag(book.subCategory)}
                     </span>
                   )}
@@ -778,13 +778,13 @@ const BookDetail = ({ book, onClose, onBookUpdate, fontSize = 'text-base', user,
         )}
 
         {/* 본문 내용 - 관리자 수정 모드 */}
-        <div ref={contentAreaRef} className="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm">
+        <div ref={contentAreaRef} className="bg-white dark:bg-slate-800 rounded-2xl p-6 border border-slate-100 dark:border-slate-700 shadow-sm">
           {isEditingContent ? (
             <div className="space-y-3">
               <textarea
                 value={editedContent}
                 onChange={(e) => setEditedContent(e.target.value)}
-                className={`w-full min-h-[300px] p-4 rounded-xl border border-slate-200 ${fontSizeClass} text-slate-700 leading-relaxed resize-y focus:ring-2 focus:ring-amber-500 focus:border-amber-500`}
+                className={`w-full min-h-[300px] p-4 rounded-xl border border-slate-200 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 ${fontSizeClass} text-slate-700 leading-relaxed resize-y focus:ring-2 focus:ring-amber-500 focus:border-amber-500`}
                 placeholder={t?.no_content || '내용이 없습니다.'}
               />
               <div className="flex gap-2">
@@ -798,7 +798,7 @@ const BookDetail = ({ book, onClose, onBookUpdate, fontSize = 'text-base', user,
                 <button
                   onClick={handleAdminCancelEditContent}
                   disabled={isSavingContent}
-                  className="px-4 py-2 rounded-xl text-sm font-bold bg-slate-100 text-slate-600 hover:bg-slate-200"
+                  className="px-4 py-2 rounded-xl text-sm font-bold bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-600"
                 >
                   {t?.admin_cancel_edit || '취소'}
                 </button>
@@ -807,7 +807,7 @@ const BookDetail = ({ book, onClose, onBookUpdate, fontSize = 'text-base', user,
           ) : (
             <div className="prose prose-slate max-w-none mb-6">
               {/* 수정 5: fontSize를 동적으로 적용 */}
-              <div className={`${fontSizeClass} leading-relaxed text-slate-700 whitespace-pre-line`}>
+              <div className={`${fontSizeClass} leading-relaxed text-slate-700 dark:text-slate-200 whitespace-pre-line`}>
                 {displayContent || book.summary || (t?.no_content || '내용이 없습니다.')}
               </div>
             </div>
@@ -837,7 +837,7 @@ const BookDetail = ({ book, onClose, onBookUpdate, fontSize = 'text-base', user,
           )}
 
           {/* 하단 통계 (옵션) */}
-          <div className="flex items-center justify-around pt-4 border-t border-slate-100 text-xs text-slate-400">
+          <div className="flex items-center justify-around pt-4 border-t border-slate-100 dark:border-slate-700 text-xs text-slate-400 dark:text-slate-500">
             <div className="flex items-center gap-1">
               <Eye className="w-3.5 h-3.5" />
               <span>{book.views || 0}</span>
@@ -861,7 +861,7 @@ const BookDetail = ({ book, onClose, onBookUpdate, fontSize = 'text-base', user,
         <div className="flex items-stretch justify-around">
           <button
             onClick={toggleLike}
-            className={`flex flex-col items-center gap-1 px-5 py-2.5 rounded-2xl text-xs font-bold border transition-colors ${isLiked ? 'bg-rose-50 border-rose-200 text-rose-600' : 'bg-white border-slate-200 text-slate-600'
+            className={`flex flex-col items-center gap-1 px-5 py-2.5 rounded-2xl text-xs font-bold border transition-colors ${isLiked ? 'bg-rose-50 border-rose-200 text-rose-600' : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300'
               }`}
           >
             <Heart className={`w-5 h-5 ${isLiked ? 'fill-rose-500 text-rose-500' : ''}`} />
@@ -870,8 +870,8 @@ const BookDetail = ({ book, onClose, onBookUpdate, fontSize = 'text-base', user,
           <button
             onClick={submitCompletion}
             disabled={!canComplete || isCompleted}
-            className={`flex flex-col items-center gap-1 px-5 py-2.5 rounded-2xl text-xs font-bold border transition-colors ${isCompleted ? 'bg-emerald-50 border-emerald-200 text-emerald-600' : 'bg-white border-slate-200 text-slate-600'
-              } disabled:bg-slate-100 disabled:text-slate-400`}
+            className={`flex flex-col items-center gap-1 px-5 py-2.5 rounded-2xl text-xs font-bold border transition-colors ${isCompleted ? 'bg-emerald-50 border-emerald-200 text-emerald-600' : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300'
+              } disabled:bg-slate-100 dark:disabled:bg-slate-700 disabled:text-slate-400`}
             title={!canComplete ? (t?.read_more_time || '3분 이상 머문 뒤 완독 가능합니다') : undefined}
           >
             <CheckCircle className={`w-5 h-5 ${isCompleted ? 'fill-emerald-400 text-emerald-600' : ''}`} />
@@ -881,7 +881,7 @@ const BookDetail = ({ book, onClose, onBookUpdate, fontSize = 'text-base', user,
           </button>
           <button
             onClick={toggleFavorite}
-            className={`flex flex-col items-center gap-1 px-5 py-2.5 rounded-2xl text-xs font-bold border transition-colors ${isBookFavorited ? 'bg-amber-50 border-amber-200 text-amber-700' : 'bg-white border-slate-200 text-slate-600'
+            className={`flex flex-col items-center gap-1 px-5 py-2.5 rounded-2xl text-xs font-bold border transition-colors ${isBookFavorited ? 'bg-amber-50 border-amber-200 text-amber-700' : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300'
               }`}
           >
             <Bookmark className={`w-5 h-5 ${isBookFavorited ? 'fill-amber-400 text-amber-600' : ''}`} />
@@ -894,7 +894,7 @@ const BookDetail = ({ book, onClose, onBookUpdate, fontSize = 'text-base', user,
         {isSeries && book.status === 'ongoing' && isLastEpisode && user && (
           <div className="mt-4">
             {seriesSlotTaken ? (
-              <div className="w-full bg-slate-100 text-slate-500 py-3 rounded-xl text-sm font-bold text-center">
+              <div className="w-full bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400 py-3 rounded-xl text-sm font-bold text-center">
                 {t?.series_limit_reached || "오늘 시리즈 집필 마감"}
                 {slotStatus?.series?.authorId && (
                   <span className="block text-xs text-slate-400 mt-0.5">By. {slotStatus.series.authorName || (slotStatus.series.book?.isAnonymous ? '익명' : (authorProfiles[slotStatus.series.authorId]?.nickname || '익명'))}</span>
@@ -917,8 +917,8 @@ const BookDetail = ({ book, onClose, onBookUpdate, fontSize = 'text-base', user,
         {book.authorId !== user?.uid && (
           <div className="flex flex-col items-center gap-2 mt-5">
             {!canDonate(getLevelFromXp(userProfile?.xp ?? 0)) ? (
-              <div className="text-center py-3 px-4 bg-slate-100 rounded-xl border border-slate-200">
-                <span className="text-sm font-bold text-slate-500">🔒 선물하기는 작가 등급(Lv.11)부터 가능해요</span>
+              <div className="text-center py-3 px-4 bg-slate-100 dark:bg-slate-700 rounded-xl border border-slate-200 dark:border-slate-600">
+                <span className="text-sm font-bold text-slate-500 dark:text-slate-400">🔒 선물하기는 작가 등급(Lv.11)부터 가능해요</span>
               </div>
             ) : (
               <div className="flex items-center justify-center gap-3">
@@ -950,11 +950,11 @@ const BookDetail = ({ book, onClose, onBookUpdate, fontSize = 'text-base', user,
         )}
 
         {/* 댓글 */}
-        <div className="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm space-y-4">
-          <h3 className="text-sm font-bold text-slate-700">{(t?.comment_count || "댓글 {count}개").replace('{count}', comments.length)}</h3>
+        <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 border border-slate-100 dark:border-slate-700 shadow-sm space-y-4">
+          <h3 className="text-sm font-bold text-slate-700 dark:text-slate-200">{(t?.comment_count || "댓글 {count}개").replace('{count}', comments.length)}</h3>
           <div className="space-y-3 max-h-80 overflow-auto pr-1">
             {comments.length === 0 ? (
-              <p className="text-xs text-slate-400">{t?.first_comment || "첫 댓글을 남겨보세요."}</p>
+              <p className="text-xs text-slate-400 dark:text-slate-500">{t?.first_comment || "첫 댓글을 남겨보세요."}</p>
             ) : (
               comments.map((c) => {
                 const isMine = user && c.userId === user.uid;
@@ -963,12 +963,12 @@ const BookDetail = ({ book, onClose, onBookUpdate, fontSize = 'text-base', user,
                 return (
                   <div
                     key={c.id}
-                    className={`text-sm ${isMine ? 'bg-amber-50/60 border border-amber-100 rounded-xl p-3' : 'text-slate-700'
-                      } ${isReply ? 'ml-6 border-l-2 border-slate-100 pl-3' : ''}`}
+                    className={`text-sm ${isMine ? 'bg-amber-50/60 dark:bg-amber-900/20 border border-amber-100 dark:border-amber-800 rounded-xl p-3' : 'text-slate-700 dark:text-slate-300'
+                      } ${isReply ? 'ml-6 border-l-2 border-slate-100 dark:border-slate-600 pl-3' : ''}`}
                   >
-                    <div className="text-xs text-slate-400 mb-1 space-y-0.5">
+                    <div className="text-xs text-slate-400 dark:text-slate-500 mb-1 space-y-0.5">
                       <div className="flex items-center gap-2">
-                        <span className="font-bold text-slate-600">{c.authorName || (t?.anonymous || '익명')}</span>
+                        <span className="font-bold text-slate-600 dark:text-slate-300">{c.authorName || (t?.anonymous || '익명')}</span>
                         <span>·</span>
                         <span>{c.createdAt?.toDate?.()?.toLocaleString('ko-KR') || (t?.just_now || '방금 전')}</span>
                         {c.editedAt && <span>· {t?.edited || "수정됨"}</span>}
@@ -977,7 +977,7 @@ const BookDetail = ({ book, onClose, onBookUpdate, fontSize = 'text-base', user,
                         <div className="flex items-center gap-2">
                           {isMine && <span className="text-[10px] font-bold text-amber-600 bg-amber-100 px-2 py-0.5 rounded-full">{t?.my_comment || "내 댓글"}</span>}
                           {isReply && (
-                            <span className="text-[10px] font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full">
+                            <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-700 px-2 py-0.5 rounded-full">
                               ↳ {(t?.reply_to || "{name}에게 답글").replace('{name}', c.parentAuthorName || (t?.anonymous || '익명'))}
                             </span>
                           )}
@@ -989,7 +989,7 @@ const BookDetail = ({ book, onClose, onBookUpdate, fontSize = 'text-base', user,
                         <input
                           value={editingText}
                           onChange={(e) => setEditingText(e.target.value)}
-                          className="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl focus:outline-none focus:border-orange-400"
+                          className="w-full px-3 py-2 text-sm border border-slate-200 dark:border-slate-600 rounded-xl focus:outline-none focus:border-orange-400 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100"
                           maxLength={200}
                         />
                         <div className="flex items-center gap-2 text-xs">
@@ -1001,8 +1001,8 @@ const BookDetail = ({ book, onClose, onBookUpdate, fontSize = 'text-base', user,
                       <div className="whitespace-pre-line">{c.text}</div>
                     )}
                     {!isEditing && (
-                      <div className="flex items-center gap-2 mt-2 text-xs text-slate-500">
-                        <button onClick={() => startReply(c)} className="hover:text-slate-700">{t?.reply || "답글"}</button>
+                      <div className="flex items-center gap-2 mt-2 text-xs text-slate-500 dark:text-slate-400">
+                        <button onClick={() => startReply(c)} className="hover:text-slate-700 dark:hover:text-slate-200">{t?.reply || "답글"}</button>
                         {isMine && (
                           <>
                             <span>·</span>
@@ -1023,7 +1023,7 @@ const BookDetail = ({ book, onClose, onBookUpdate, fontSize = 'text-base', user,
               value={commentInput}
               onChange={(e) => setCommentInput(e.target.value)}
               placeholder={replyTo ? (t?.reply_to || "{name}에게 답글 작성").replace('{name}', replyTo.authorName) : (t?.comment_placeholder || '댓글을 입력하세요')}
-              className="flex-1 px-3 py-2 text-sm border border-slate-200 rounded-xl focus:outline-none focus:border-orange-400"
+              className="flex-1 px-3 py-2 text-sm border border-slate-200 dark:border-slate-600 rounded-xl focus:outline-none focus:border-orange-400 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500"
               maxLength={200}
             />
             <button
@@ -1035,20 +1035,20 @@ const BookDetail = ({ book, onClose, onBookUpdate, fontSize = 'text-base', user,
             </button>
           </div>
           {replyTo && (
-            <div className="text-xs text-slate-500">
-              {(t?.reply_to || "{name}에게 답글 작성 중").replace('{name}', replyTo.authorName)} · <button onClick={cancelReply} className="text-slate-600 hover:text-slate-800">{t?.cancel || "취소"}</button>
+            <div className="text-xs text-slate-500 dark:text-slate-400">
+              {(t?.reply_to || "{name}에게 답글 작성 중").replace('{name}', replyTo.authorName)} · <button onClick={cancelReply} className="text-slate-600 dark:text-slate-300 hover:text-slate-800 dark:hover:text-slate-100">{t?.cancel || "취소"}</button>
             </div>
           )}
-          <p className="text-xs text-slate-400">{t?.comment_limit || "댓글은 200자 이내로 작성하세요."}</p>
+          <p className="text-xs text-slate-400 dark:text-slate-500">{t?.comment_limit || "댓글은 200자 이내로 작성하세요."}</p>
         </div>
 
         {/* 시리즈 이어쓰기 모달 */}
         {showContinuationModal && !showEndingStyleModal && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-6">
-            <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl space-y-4 animate-in fade-in zoom-in-95 duration-200">
+            <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 w-full max-w-sm shadow-xl space-y-4 animate-in fade-in zoom-in-95 duration-200">
               <div className="text-center space-y-2">
-                <h3 className="text-lg font-black text-slate-800">{t?.series_continue_title || "다음 화 전개 방식"}</h3>
-                <p className="text-sm text-slate-600">
+                <h3 className="text-lg font-black text-slate-800 dark:text-slate-100">{t?.series_continue_title || "다음 화 전개 방식"}</h3>
+                <p className="text-sm text-slate-600 dark:text-slate-300">
                   {t?.series_continue_desc || "이야기를 어떻게 이어갈까요?"}
                 </p>
               </div>
@@ -1063,13 +1063,13 @@ const BookDetail = ({ book, onClose, onBookUpdate, fontSize = 'text-base', user,
                 <button
                   onClick={() => setShowEndingStyleModal(true)}
                   disabled={isGeneratingEpisode}
-                  className="w-full bg-slate-900 text-white py-3 rounded-xl text-sm font-black hover:bg-slate-800 transition-colors disabled:opacity-50"
+                  className="w-full bg-slate-900 dark:bg-slate-700 text-white py-3 rounded-xl text-sm font-black hover:bg-slate-800 dark:hover:bg-slate-600 transition-colors disabled:opacity-50"
                 >
                   {t?.finalize_series || "완결 짓기 (결말)"}
                 </button>
                 <button
                   onClick={() => setShowContinuationModal(false)}
-                  className="w-full bg-slate-100 text-slate-600 py-2 rounded-xl text-sm font-bold hover:bg-slate-200 transition-colors"
+                  className="w-full bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 py-2 rounded-xl text-sm font-bold hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors"
                 >
                   {t?.cancel || "취소"}
                 </button>
@@ -1081,10 +1081,10 @@ const BookDetail = ({ book, onClose, onBookUpdate, fontSize = 'text-base', user,
         {/* 결말 스타일 선택 모달 */}
         {showEndingStyleModal && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-6">
-            <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl space-y-4 animate-in fade-in zoom-in-95 duration-200">
+            <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 w-full max-w-sm shadow-xl space-y-4 animate-in fade-in zoom-in-95 duration-200">
               <div className="text-center space-y-2">
-                <h3 className="text-lg font-black text-slate-800">{t?.ending_style || "결말 스타일"}</h3>
-                <p className="text-sm text-slate-600">
+                <h3 className="text-lg font-black text-slate-800 dark:text-slate-100">{t?.ending_style || "결말 스타일"}</h3>
+                <p className="text-sm text-slate-600 dark:text-slate-300">
                   {t?.ending_style_desc || "어떤 결말로 마무리할까요?"}
                 </p>
               </div>
@@ -1097,14 +1097,14 @@ const BookDetail = ({ book, onClose, onBookUpdate, fontSize = 'text-base', user,
                       handleWriteNextEpisode('finalize', item.value);
                     }}
                     disabled={isGeneratingEpisode}
-                    className="w-full bg-slate-900 text-white py-3 rounded-xl text-sm font-bold hover:bg-slate-800 transition-colors disabled:opacity-50"
+                    className="w-full bg-slate-900 dark:bg-slate-700 text-white py-3 rounded-xl text-sm font-bold hover:bg-slate-800 dark:hover:bg-slate-600 transition-colors disabled:opacity-50"
                   >
                     {t?.['ending_' + item.id] || item.value}
                   </button>
                 ))}
                 <button
                   onClick={() => setShowEndingStyleModal(false)}
-                  className="w-full bg-slate-100 text-slate-600 py-2 rounded-xl text-sm font-bold hover:bg-slate-200 transition-colors"
+                  className="w-full bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 py-2 rounded-xl text-sm font-bold hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors"
                 >
                   {t?.back || "뒤로"}
                 </button>
@@ -1119,8 +1119,8 @@ const BookDetail = ({ book, onClose, onBookUpdate, fontSize = 'text-base', user,
         {/* 시리즈 집필 완료 모달 */}
         {showSeriesCompleteModal && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-6">
-            <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl space-y-4 animate-in fade-in zoom-in-95 duration-200 text-center">
-              <p className="text-sm font-bold text-slate-700">
+            <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 w-full max-w-sm shadow-xl space-y-4 animate-in fade-in zoom-in-95 duration-200 text-center">
+              <p className="text-sm font-bold text-slate-700 dark:text-slate-200">
                 {showSeriesCompleteModal.isFinale ? (t?.series_finalized || '시리즈가 완결되었습니다!') : (t?.episode_added || '다음 화가 추가되었습니다!')}
               </p>
               <div className="flex gap-2">
@@ -1135,7 +1135,7 @@ const BookDetail = ({ book, onClose, onBookUpdate, fontSize = 'text-base', user,
                 </button>
                 <button
                   onClick={() => setShowSeriesCompleteModal(null)}
-                  className="flex-1 py-3 rounded-xl text-sm font-black bg-slate-100 text-slate-600 hover:bg-slate-200"
+                  className="flex-1 py-3 rounded-xl text-sm font-black bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600"
                 >
                   {t?.stay || "머물기"}
                 </button>
@@ -1148,10 +1148,10 @@ const BookDetail = ({ book, onClose, onBookUpdate, fontSize = 'text-base', user,
         {/* 홍보 모달 */}
         {showPromotionModal && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-6">
-            <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl space-y-4">
+            <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 w-full max-w-sm shadow-xl space-y-4">
               <div className="text-center space-y-1">
                 <Megaphone className="w-8 h-8 text-violet-500 mx-auto" />
-                <h3 className="text-lg font-black text-slate-800">{t.promo_modal_title}</h3>
+                <h3 className="text-lg font-black text-slate-800 dark:text-slate-100">{t.promo_modal_title}</h3>
               </div>
               <input
                 type="text"
@@ -1159,11 +1159,11 @@ const BookDetail = ({ book, onClose, onBookUpdate, fontSize = 'text-base', user,
                 onChange={(e) => setPromoText(e.target.value.slice(0, 50))}
                 placeholder={t.promo_input_placeholder}
                 maxLength={50}
-                className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300"
+                className="w-full border border-slate-200 dark:border-slate-600 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100"
               />
-              <p className="text-xs text-slate-400 text-center">{promoText.length}/50</p>
-              <div className="bg-violet-50 rounded-xl p-3 text-center">
-                <p className="text-xs font-bold text-violet-600">{t.promo_cost}</p>
+              <p className="text-xs text-slate-400 dark:text-slate-500 text-center">{promoText.length}/50</p>
+              <div className="bg-violet-50 dark:bg-violet-900/30 rounded-xl p-3 text-center">
+                <p className="text-xs font-bold text-violet-600 dark:text-violet-400">{t.promo_cost}</p>
                 {(userProfile?.ink || 0) < 10 && (
                   <p className="text-xs text-rose-500 mt-1">{t.promo_ink_short}</p>
                 )}
@@ -1194,7 +1194,7 @@ const BookDetail = ({ book, onClose, onBookUpdate, fontSize = 'text-base', user,
                 <button
                   onClick={() => { setShowPromotionModal(false); setPromoText(''); }}
                   disabled={isPromoting}
-                  className="w-full bg-slate-100 text-slate-600 py-2 rounded-xl text-sm font-bold hover:bg-slate-200 transition-colors"
+                  className="w-full bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 py-2 rounded-xl text-sm font-bold hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors"
                 >
                   {t.cancel}
                 </button>
@@ -1205,10 +1205,10 @@ const BookDetail = ({ book, onClose, onBookUpdate, fontSize = 'text-base', user,
 
         {showDeleteConfirm && canEditOrDelete && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-6">
-            <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl space-y-4">
+            <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 w-full max-w-sm shadow-xl space-y-4">
               <div className="text-center space-y-2">
-                <h3 className="text-lg font-black text-slate-800">{t?.admin_delete_confirm_title || "책 삭제"}</h3>
-                <p className="text-sm text-slate-600">
+                <h3 className="text-lg font-black text-slate-800 dark:text-slate-100">{t?.admin_delete_confirm_title || "책 삭제"}</h3>
+                <p className="text-sm text-slate-600 dark:text-slate-300">
                   {t?.admin_delete_confirm_desc || "이 책을 삭제하면 복구할 수 없습니다. 신고된 불순 콘텐츠나 문제가 있는 책일 때만 삭제해주세요."}
                 </p>
               </div>
@@ -1223,7 +1223,7 @@ const BookDetail = ({ book, onClose, onBookUpdate, fontSize = 'text-base', user,
                 <button
                   onClick={() => setShowDeleteConfirm(false)}
                   disabled={isDeleting}
-                  className="w-full bg-slate-100 text-slate-600 py-2 rounded-xl text-sm font-bold hover:bg-slate-200 transition-colors disabled:opacity-50"
+                  className="w-full bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 py-2 rounded-xl text-sm font-bold hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors disabled:opacity-50"
                 >
                   {t?.cancel || "취소"}
                 </button>

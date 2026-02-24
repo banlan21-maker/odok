@@ -213,5 +213,31 @@ firebase emulators:start --only functions
 6. **프로필 탭 레벨 칭호** (2025-02-22)  
    - 새싹·작가·숙련 작가·베스트 작가·스타 작가·거장·마스터 → Sprout, Author, Skilled Author 등 영문 표시
 
-7. **레벨 게이지 "다음"**  
+7. **레벨 게이지 "다음"**
    - "1920 XP · 다음 40 XP" → "1920 XP · Next 40 XP" 영문 표시
+
+---
+
+## 최근 업데이트 (2026-02-24)
+
+### 다크 모드 추가
+
+야간 독서를 위한 다크 모드를 전체 앱에 적용했습니다.
+
+- **토글 위치**: 프로필 탭 → 어플 설정 → 테마 (🌞 라이트 / 🌙 다크)
+- **저장 방식**: 언어·글자크기와 동일하게 저장 버튼 적용, Firestore에 영구 저장
+- **적용 범위**: 전체 화면 (홈·서재·보관함·집필·책 상세·독서·프로필)
+- **기술**: Tailwind `darkMode: 'class'` 전략, 루트 div에 `dark` 클래스 토글
+
+**수정 파일**: `tailwind.config.js`, `useUserProfile.js`, `App.jsx`, `data.jsx`, `ProfileView.jsx`, `HomeView.jsx`, `LibraryView.jsx`, `ArchiveView.jsx`, `BookDetail.jsx`, `WriteView.jsx`, `ReaderView.jsx`
+
+---
+
+### 업적 해제 모달 중복 표시 버그 수정
+
+페이지를 새로고침할 때마다 "첫 집필" 등 이미 해제된 업적 모달이 반복 표시되는 버그를 수정했습니다.
+
+- **원인**: `useAchievements.js`에서 `userProfile`이 `null`인 초기 상태(로딩 전)를 실제 업적 없음과 동일하게 처리하여 기준선을 빈 Set으로 설정한 뒤, 실제 데이터가 도착하면 모든 기존 업적이 "신규"로 감지됨
+- **수정**: `userProfile`이 null일 때는 기준선 설정을 건너뛰고 실제 데이터 도착 후에만 초기 기준선을 설정하도록 변경
+
+**수정 파일**: `src/hooks/useAchievements.js`

@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import imageCompression from 'browser-image-compression';
-import { LogOut, Droplets, Save, Trash2, AlertTriangle, X, Camera, Video } from 'lucide-react';
+import { LogOut, Droplets, Save, Trash2, AlertTriangle, X, Camera, Video, Lock } from 'lucide-react';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { showRewardVideoAd } from '../utils/admobService';
 import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { db, storage } from '../firebase';
+import { ACHIEVEMENTS } from '../utils/achievementUtils';
 
 const ProfileView = ({
   user,
@@ -19,6 +20,8 @@ const ProfileView = ({
   setLanguage,
   fontSize,
   setFontSize,
+  darkMode,
+  setDarkMode,
   handleGoogleLogin,
   saveProfile,
   handleLogout,
@@ -134,14 +137,14 @@ const ProfileView = ({
   };
 
   return (
-    <div className="flex flex-col bg-slate-50 -mx-5 px-5">
+    <div className="flex flex-col bg-slate-50 dark:bg-slate-900 -mx-5 px-5">
       {/* Part 2: Single View - 스크롤 없이 한 화면에 모든 정보 배치 (모바일에서는 스크롤 가능) */}
       <div className="">
         <div className="space-y-3 pb-10 pt-4">
 
           {/* 1. 광고 보고 잉크 얻기 버튼 (최상단) */}
           {userProfile && (
-            <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-2xl p-4 border-2 border-blue-200 shadow-sm">
+            <div className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950 dark:to-blue-900 rounded-2xl p-4 border-2 border-blue-200 dark:border-blue-800 shadow-sm">
               <button
                 onClick={handleChargeInk}
                 disabled={isCharging}
@@ -169,7 +172,7 @@ const ProfileView = ({
 
           {/* 2. 상단 정보: 레벨 & 경험치 바 (광고 버튼 아래) */}
           {userProfile && (
-            <div className="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm">
+            <div className="bg-white dark:bg-slate-800 rounded-2xl p-4 border border-slate-100 dark:border-slate-700 shadow-sm">
               <div className="flex items-center justify-between mb-2">
                 <div>
                   {levelInfo.title && (
@@ -180,19 +183,19 @@ const ProfileView = ({
                       </span>
                     </div>
                   )}
-                  <div className="text-xl font-black text-slate-800 leading-none flex items-center gap-1">
+                  <div className="text-xl font-black text-slate-800 dark:text-slate-100 leading-none flex items-center gap-1">
                     Lv.{levelInfo.level}
                   </div>
                 </div>
                 <div className="text-xs font-bold text-orange-500">{levelInfo.progress}%</div>
               </div>
-              <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden mb-1">
+              <div className="w-full h-2 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden mb-1">
                 <div
                   className="h-full bg-gradient-to-r from-orange-400 to-orange-600 rounded-full transition-all duration-500"
                   style={{ width: `${levelInfo.progress}%` }}
                 />
               </div>
-              <div className="flex justify-between items-center text-[10px] text-slate-400">
+              <div className="flex justify-between items-center text-[10px] text-slate-400 dark:text-slate-500">
                 <span>
                   {t?.next_level || "다음 레벨까지"} <span className="text-orange-600 font-black">{levelInfo.remainingExp} XP</span>
                 </span>
@@ -201,15 +204,57 @@ const ProfileView = ({
             </div>
           )}
 
-          {/* 3. 어플 설정 그룹 */}
-          <div className="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm space-y-4">
-            <h3 className="text-sm font-black text-slate-800 border-b border-slate-50 pb-2">{t?.app_settings || "어플 설정"}</h3>
+          {/* 3. 내 업적 섹션 */}
+          {userProfile && (() => {
+            const unlockedAchievements = userProfile.achievements || [];
+            const unlockedIds = new Set(unlockedAchievements.map(a => a.id));
+            const unlockedCount = unlockedAchievements.length;
+            const totalCount = ACHIEVEMENTS.length;
+            return (
+              <div className="bg-white dark:bg-slate-800 rounded-2xl p-4 border border-slate-100 dark:border-slate-700 shadow-sm">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-sm font-black text-slate-800 dark:text-slate-100">{t?.achievement_title || '🏆 내 업적'}</h3>
+                  <span className="text-xs font-bold text-orange-500">{unlockedCount}/{totalCount}</span>
+                </div>
+                <div className="grid grid-cols-3 gap-2">
+                  {ACHIEVEMENTS.map((ach) => {
+                    const isUnlocked = unlockedIds.has(ach.id);
+                    const unlockedEntry = unlockedAchievements.find(a => a.id === ach.id);
+                    const title = t?.[`ach_${ach.id}_title`] || ach.title_ko;
+                    return (
+                      <div
+                        key={ach.id}
+                        className={`rounded-xl p-2 border text-center ${isUnlocked
+                          ? 'bg-orange-50 dark:bg-orange-950 border-orange-200 dark:border-orange-800'
+                          : 'bg-slate-50 dark:bg-slate-700 border-slate-100 dark:border-slate-600 opacity-50'
+                        }`}
+                      >
+                        <div className="text-2xl mb-1">
+                          {isUnlocked ? ach.emoji : <Lock className="w-5 h-5 text-slate-400 mx-auto" />}
+                        </div>
+                        <div className="text-[10px] font-bold text-slate-700 dark:text-slate-200 leading-tight">{title}</div>
+                        {isUnlocked && unlockedEntry?.unlockedAt && (
+                          <div className="text-[9px] text-slate-400 mt-0.5">
+                            {new Date(unlockedEntry.unlockedAt).toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' })}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })()}
+
+          {/* 4. 어플 설정 그룹 */}
+          <div className="bg-white dark:bg-slate-800 rounded-2xl p-4 border border-slate-100 dark:border-slate-700 shadow-sm space-y-4">
+            <h3 className="text-sm font-black text-slate-800 dark:text-slate-100 border-b border-slate-50 dark:border-slate-700 pb-2">{t?.app_settings || "어플 설정"}</h3>
 
             <div className="flex gap-4">
               {/* 왼쪽: 닉네임 + 익명활동 체크박스 + 사용 설명서 */}
               <div className="flex-1 min-w-0 flex flex-col">
                 <div className="flex items-center justify-between gap-2 mb-2">
-                  <label className="text-xs font-bold text-slate-500">{t?.nickname_label_required || "닉네임(필수)"}</label>
+                  <label className="text-xs font-bold text-slate-500 dark:text-slate-400">{t?.nickname_label_required || "닉네임(필수)"}</label>
                   <label className="flex items-center gap-1.5 cursor-pointer shrink-0">
                     <input
                       type="checkbox"
@@ -217,7 +262,7 @@ const ProfileView = ({
                       onChange={(e) => setTempAnonymousActivity(e.target.checked)}
                       className="w-4 h-4 rounded border-slate-300 text-orange-500 focus:ring-orange-500"
                     />
-                    <span className="text-xs font-bold text-slate-600">{t?.anonymous_activity || "익명으로 활동"}</span>
+                    <span className="text-xs font-bold text-slate-600 dark:text-slate-300">{t?.anonymous_activity || "익명으로 활동"}</span>
                   </label>
                 </div>
                 <input
@@ -226,7 +271,7 @@ const ProfileView = ({
                   placeholder={t?.nickname_placeholder || "닉네임 입력 (최대 6글자)"}
                   value={tempNickname}
                   onChange={(e) => setTempNickname(e.target.value)}
-                  className="w-full bg-slate-50 border-2 border-slate-200 rounded-xl py-2.5 px-4 text-sm font-bold focus:border-orange-500 focus:bg-white outline-none transition-colors"
+                  className="w-full bg-slate-50 dark:bg-slate-700 dark:text-slate-100 border-2 border-slate-200 dark:border-slate-600 rounded-xl py-2.5 px-4 text-sm font-bold focus:border-orange-500 focus:bg-white dark:focus:bg-slate-700 outline-none transition-colors"
                 />
                 {!canChange && nicknameChangeInfo && (
                   <p className="text-[10px] text-orange-600 font-bold mt-1 mb-3">
@@ -234,7 +279,7 @@ const ProfileView = ({
                   </p>
                 )}
                 {canChange && userProfile?.nickname && (
-                  <p className="text-[10px] text-slate-400 mt-1 mb-3">
+                  <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-1 mb-3">
                     {t?.nickname_hint || "최초 1회는 자유롭게 변경 가능합니다"}
                   </p>
                 )}
@@ -243,7 +288,7 @@ const ProfileView = ({
                 {onOpenHelp && (
                   <button
                     onClick={onOpenHelp}
-                    className="w-full py-3 rounded-xl font-bold text-sm bg-slate-100 text-slate-700 hover:bg-slate-200 transition-colors flex items-center justify-center gap-2 active:scale-[0.98]"
+                    className="w-full py-3 rounded-xl font-bold text-sm bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors flex items-center justify-center gap-2 active:scale-[0.98]"
                   >
                     <span>{t?.help_btn || "사용 설명서"}</span>
                   </button>
@@ -252,8 +297,8 @@ const ProfileView = ({
 
               {/* 오른쪽: 프로필 사진 */}
               <div className="flex-1 min-w-0 flex flex-col items-center justify-start">
-                <label className="text-xs font-bold text-slate-500 mb-2 block w-full text-center">{t?.profile_photo || "프로필 사진"}</label>
-                <div className={`w-20 h-20 rounded-full bg-slate-200 overflow-hidden flex items-center justify-center shrink-0 border border-slate-200 ${levelInfo?.badge === 'rainbow' ? 'ring-2 ring-offset-1 ring-purple-400' : ''}`}>
+                <label className="text-xs font-bold text-slate-500 dark:text-slate-400 mb-2 block w-full text-center">{t?.profile_photo || "프로필 사진"}</label>
+                <div className={`w-20 h-20 rounded-full bg-slate-200 dark:bg-slate-600 overflow-hidden flex items-center justify-center shrink-0 border border-slate-200 dark:border-slate-600 ${levelInfo?.badge === 'rainbow' ? 'ring-2 ring-offset-1 ring-purple-400' : ''}`}>
                   {profileImageUrl ? (
                     <img
                       src={profileImageUrl}
@@ -264,9 +309,9 @@ const ProfileView = ({
                     <Camera className="w-8 h-8 text-slate-400" />
                   )}
                 </div>
-                <label className={`text-[10px] font-bold px-2 py-1 rounded-full border border-slate-200 mt-2 transition-colors cursor-pointer ${isUploadingImage
-                  ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
-                  : 'bg-white text-slate-600 hover:bg-slate-50'
+                <label className={`text-[10px] font-bold px-2 py-1 rounded-full border border-slate-200 dark:border-slate-600 mt-2 transition-colors cursor-pointer ${isUploadingImage
+                  ? 'bg-slate-100 dark:bg-slate-700 text-slate-400 cursor-not-allowed'
+                  : 'bg-white dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-600'
                   }`}>
                   {isUploadingImage ? (t?.uploading || '업로드 중...') : (t?.change_photo || '사진 변경')}
                   <input
@@ -282,7 +327,7 @@ const ProfileView = ({
 
             {/* 언어 설정 */}
             <div className="space-y-2">
-              <label className="text-xs font-bold text-slate-500 block">{t?.language_label || "언어 설정"}</label>
+              <label className="text-xs font-bold text-slate-500 dark:text-slate-400 block">{t?.language_label || "언어 설정"}</label>
               <div className="grid grid-cols-2 gap-2">
                 {[
                   { code: 'ko', label: '한국어' },
@@ -293,7 +338,7 @@ const ProfileView = ({
                     onClick={() => setLanguage(lang.code)}
                     className={`py-2.5 rounded-xl text-xs font-bold transition-all ${language === lang.code
                       ? 'bg-orange-500 text-white shadow-md'
-                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200 active:scale-95'
+                      : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600 active:scale-95'
                       }`}
                   >
                     {lang.label}
@@ -304,7 +349,7 @@ const ProfileView = ({
 
             {/* 글자 크기 설정 */}
             <div className="space-y-2">
-              <label className="text-xs font-bold text-slate-500 block">{t?.font_size_label || "글자 크기 (본문 용)"}</label>
+              <label className="text-xs font-bold text-slate-500 dark:text-slate-400 block">{t?.font_size_label || "글자 크기 (본문 용)"}</label>
               <div className="grid grid-cols-4 gap-2">
                 {[
                   { size: 'text-sm', label: t?.font_small || '작게' },
@@ -316,11 +361,35 @@ const ProfileView = ({
                     key={fs.size}
                     onClick={() => setFontSize(fs.size)}
                     className={`py-2 rounded-xl text-[10px] font-bold transition-all ${fontSize === fs.size
-                      ? 'bg-slate-800 text-white shadow-md'
-                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200 active:scale-95'
+                      ? 'bg-slate-800 dark:bg-slate-200 text-white dark:text-slate-900 shadow-md'
+                      : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600 active:scale-95'
                       }`}
                   >
                     {fs.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* 테마 설정 */}
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-slate-500 dark:text-slate-400 block">
+                {t?.theme_label || "테마"}
+              </label>
+              <div className="grid grid-cols-2 gap-2">
+                {[
+                  { val: false, label: t?.theme_light || '🌞 라이트' },
+                  { val: true,  label: t?.theme_dark  || '🌙 다크'  }
+                ].map((th) => (
+                  <button
+                    key={String(th.val)}
+                    onClick={() => setDarkMode(th.val)}
+                    className={`py-2.5 rounded-xl text-xs font-bold transition-all ${darkMode === th.val
+                      ? 'bg-slate-800 text-white shadow-md dark:bg-slate-200 dark:text-slate-900'
+                      : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600 active:scale-95'
+                    }`}
+                  >
+                    {th.label}
                   </button>
                 ))}
               </div>
@@ -331,8 +400,8 @@ const ProfileView = ({
               onClick={saveProfile}
               disabled={!tempNickname.trim()}
               className={`w-full py-3 rounded-xl font-black text-sm transition-all flex items-center justify-center gap-2 ${!tempNickname.trim()
-                ? 'bg-slate-300 text-slate-500 cursor-not-allowed'
-                : 'bg-slate-900 text-white hover:bg-slate-800 active:scale-95'
+                ? 'bg-slate-300 dark:bg-slate-600 text-slate-500 dark:text-slate-400 cursor-not-allowed'
+                : 'bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 hover:bg-slate-800 dark:hover:bg-slate-200 active:scale-95'
                 }`}
             >
               <Save className="w-5 h-5" />
@@ -340,15 +409,15 @@ const ProfileView = ({
             </button>
           </div>
 
-          {/* 4. 계정 관리 그룹 */}
-          <div className="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm space-y-2">
-            <h3 className="text-sm font-black text-slate-800 border-b border-slate-50 pb-2 mb-1">{t?.account_management || "계정 관리"}</h3>
+          {/* 5. 계정 관리 그룹 */}
+          <div className="bg-white dark:bg-slate-800 rounded-2xl p-4 border border-slate-100 dark:border-slate-700 shadow-sm space-y-2">
+            <h3 className="text-sm font-black text-slate-800 dark:text-slate-100 border-b border-slate-50 dark:border-slate-700 pb-2 mb-1">{t?.account_management || "계정 관리"}</h3>
 
             {/* 로그아웃 버튼 */}
             {!user?.isAnonymous && (
               <button
                 onClick={handleLogout}
-                className="w-full py-3 rounded-xl font-bold text-sm text-slate-600 hover:bg-slate-100 transition-colors flex items-center justify-center gap-2 active:scale-95"
+                className="w-full py-3 rounded-xl font-bold text-sm text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors flex items-center justify-center gap-2 active:scale-95"
               >
                 <LogOut className="w-4 h-4" />
                 {t?.logout || "로그아웃"}
@@ -386,13 +455,13 @@ const ProfileView = ({
       {/* 계정 탈퇴 확인 모달 */}
       {showDeleteConfirm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-6">
-          <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl space-y-4">
+          <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 w-full max-w-sm shadow-xl space-y-4">
             <div className="text-center space-y-2">
-              <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-2">
+              <div className="w-16 h-16 bg-red-100 dark:bg-red-950 rounded-full flex items-center justify-center mx-auto mb-2">
                 <AlertTriangle className="w-8 h-8 text-red-500" />
               </div>
-              <h3 className="text-lg font-black text-slate-800">{t?.delete_confirm_title || "계정 탈퇴"}</h3>
-              <p className="text-sm text-slate-600 leading-relaxed">
+              <h3 className="text-lg font-black text-slate-800 dark:text-slate-100">{t?.delete_confirm_title || "계정 탈퇴"}</h3>
+              <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
                 {t?.delete_confirm_desc || "정말로 계정을 탈퇴하시겠습니까?\n모든 데이터가 삭제되며 복구할 수 없습니다."}
               </p>
             </div>
@@ -410,7 +479,7 @@ const ProfileView = ({
               </button>
               <button
                 onClick={() => setShowDeleteConfirm(false)}
-                className="w-full bg-slate-100 text-slate-600 py-3 rounded-xl font-bold hover:bg-slate-200 transition-colors"
+                className="w-full bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-200 py-3 rounded-xl font-bold hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors"
               >
                 {t?.cancel || "취소"}
               </button>

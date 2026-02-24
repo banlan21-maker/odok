@@ -13,6 +13,7 @@ import { useInkSystem } from './hooks/useInkSystem';
 import { useBooks } from './hooks/useBooks';
 import { useComments } from './hooks/useComments';
 import { useStoryReader } from './hooks/useStoryReader';
+import { useAchievements } from './hooks/useAchievements';
 
 // Utils & Data
 import { T, genres } from './data';
@@ -66,6 +67,7 @@ const App = () => {
     tempNickname, setTempNickname, tempAnonymousActivity, setTempAnonymousActivity,
     language, setLanguage,
     fontSize, setFontSize,
+    darkMode, setDarkMode,
     isNoticeAdmin, saveProfile,
     showSaveSuccessModal, setShowSaveSuccessModal,
     showAttendanceModal, setShowAttendanceModal,
@@ -153,6 +155,13 @@ const App = () => {
     await commentsHook.checkAndGiveReward(storyReaderHook.currentStory.id);
   };
 
+  // 8. Achievements Hook
+  const {
+    achievementToShow,
+    showAchievementModal,
+    setShowAchievementModal
+  } = useAchievements({ userProfile });
+
   const t = T[language] || T.ko;
 
   // Android 뒤로가기 버튼 처리
@@ -184,9 +193,9 @@ const App = () => {
   const isSeriesLimitReached = (userProfile?.lastSeriesGeneratedDate === getTodayDateKey());
 
   return (
-    <div className="bg-gray-100 min-h-screen flex justify-center items-center">
+    <div className={`${darkMode ? 'dark' : ''} bg-gray-100 dark:bg-slate-950 min-h-screen flex justify-center items-center`}>
       <style>{`@import url('https://fonts.googleapis.com/css2?family=Jua&display=swap'); .font-jua { font-family: 'Jua', sans-serif; } .scrollbar-hide::-webkit-scrollbar { display: none; }`}</style>
-      <div className="w-full max-w-md bg-slate-50 h-[100dvh] flex flex-col shadow-2xl relative overflow-hidden text-slate-900 font-sans selection:bg-orange-200" style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}>
+      <div className="w-full max-w-md bg-slate-50 dark:bg-slate-900 h-[100dvh] flex flex-col shadow-2xl relative overflow-hidden text-slate-900 dark:text-slate-50 font-sans selection:bg-orange-200" style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}>
 
         {/* In-App Browser Warning */}
         {showInAppBrowserWarning && (
@@ -201,7 +210,7 @@ const App = () => {
         )}
 
         {/* Header */}
-        <header className="flex-none bg-white/90 backdrop-blur-md border-b border-slate-100 z-40 px-4 h-14 flex items-center justify-between">
+        <header className="flex-none bg-white/90 dark:bg-slate-800/90 backdrop-blur-md border-b border-slate-100 dark:border-slate-700 z-40 px-4 h-14 flex items-center justify-between">
           <div className="flex items-center gap-2">
             {(view === 'write' || view === 'library' || view === 'archive' || view === 'profile' || view === 'book_detail' || (view === 'reader' && currentBook)) ? (
               <button onClick={() => {
@@ -215,7 +224,7 @@ const App = () => {
                 } else {
                   setView('home');
                 }
-              }} className="p-2 -ml-2 rounded-full hover:bg-slate-50"><ChevronLeft className="w-6 h-6 text-slate-600" /></button>
+              }} className="p-2 -ml-2 rounded-full hover:bg-slate-50 dark:hover:bg-slate-700"><ChevronLeft className="w-6 h-6 text-slate-600 dark:text-slate-300" /></button>
             ) : view !== 'home' && view !== 'profile_setup' ? (
               <button onClick={() => {
                 if (view === 'reader') setView('list');
@@ -226,22 +235,22 @@ const App = () => {
                 else if (view === 'genre_select') setView('library_main');
                 else if (view === 'notice_list') setView('home');
                 else setView('home');
-              }} className="p-2 -ml-2 rounded-full hover:bg-slate-50"><ChevronLeft className="w-6 h-6 text-slate-600" /></button>
+              }} className="p-2 -ml-2 rounded-full hover:bg-slate-50 dark:hover:bg-slate-700"><ChevronLeft className="w-6 h-6 text-slate-600 dark:text-slate-300" /></button>
             ) : <Book className="w-6 h-6 text-orange-600" />}
-            <h1 className="text-sm font-jua text-slate-800 leading-3 whitespace-pre-line text-center pt-1">{t.app_name}</h1>
+            <h1 className="text-sm font-jua text-slate-800 dark:text-slate-100 leading-3 whitespace-pre-line text-center pt-1">{t.app_name}</h1>
           </div>
           <div className="flex items-center gap-3">
             {userProfile && (
               <div className="flex items-center gap-2">
-                <div className="flex items-center gap-1 bg-blue-50 text-blue-700 px-2 py-1 rounded-lg">
+                <div className="flex items-center gap-1 bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300 px-2 py-1 rounded-lg">
                   <PenTool className="w-3.5 h-3.5" />
                   <span className="text-xs font-bold">{remainingDailyWrites}</span>
                 </div>
-                <div className="flex items-center gap-1 bg-blue-50 px-2 py-1 rounded-lg">
+                <div className="flex items-center gap-1 bg-blue-50 dark:bg-blue-950 px-2 py-1 rounded-lg">
                   <span className="text-red-600 font-black text-xs">↑</span>
                   <span className="text-xs font-black text-red-600">Lv.{levelInfo.level}</span>
                 </div>
-                <div className="flex items-center gap-1 bg-blue-50 text-blue-700 px-2 py-1 rounded-lg">
+                <div className="flex items-center gap-1 bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300 px-2 py-1 rounded-lg">
                   <Droplets className="w-3.5 h-3.5 fill-blue-500 text-blue-500" />
                   <span className="text-xs font-bold">{userProfile.ink || 0}</span>
                 </div>
@@ -255,9 +264,9 @@ const App = () => {
 
           {storyReaderHook.isHelpModalOpen && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-6">
-              <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl">
-                <div className="flex justify-between items-center mb-4"><h3 className="font-bold text-lg">사용 설명서</h3><button onClick={() => storyReaderHook.setIsHelpModalOpen(false)}><X className="w-5 h-5 text-slate-400" /></button></div>
-                <div className="text-sm text-slate-600 space-y-4 max-h-[60vh] overflow-y-auto pr-2">
+              <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 w-full max-w-md shadow-xl">
+                <div className="flex justify-between items-center mb-4"><h3 className="font-bold text-lg dark:text-slate-100">사용 설명서</h3><button onClick={() => storyReaderHook.setIsHelpModalOpen(false)}><X className="w-5 h-5 text-slate-400" /></button></div>
+                <div className="text-sm text-slate-600 dark:text-slate-300 space-y-4 max-h-[60vh] overflow-y-auto pr-2">
                   <section>
                     <h4 className="font-bold text-slate-800 mb-1">1. 🖊️ 집필 시스템</h4>
                     <ul className="list-disc list-inside space-y-1 text-xs text-slate-600">
@@ -307,23 +316,23 @@ const App = () => {
                     </ul>
                   </section>
                 </div>
-                <div className="pt-4 mt-2 border-t border-slate-100 text-right text-xs text-slate-400">Ver {APP_VERSION}</div>
+                <div className="pt-4 mt-2 border-t border-slate-100 dark:border-slate-700 text-right text-xs text-slate-400">Ver {APP_VERSION}</div>
               </div>
             </div>
           )}
 
           {storyReaderHook.isUnlockModalOpen && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60"><div className="bg-white p-6 rounded-2xl w-full max-w-sm"><h3 className="font-bold mb-3">{t.unlock_title}</h3><div className="space-y-2"><button onClick={() => storyReaderHook.processUnlock('free', t)} className="w-full bg-orange-500 text-white py-3 rounded-xl font-bold">{t.unlock_btn_free}</button><button onClick={() => storyReaderHook.processUnlock('point', t)} className="w-full bg-slate-800 text-white py-3 rounded-xl font-bold">{t.unlock_btn_paid}</button><button onClick={() => storyReaderHook.setIsUnlockModalOpen(false)} className="w-full bg-slate-100 py-3 rounded-xl font-bold">{t.cancel}</button></div></div></div>
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60"><div className="bg-white dark:bg-slate-800 p-6 rounded-2xl w-full max-w-sm"><h3 className="font-bold mb-3 dark:text-slate-100">{t.unlock_title}</h3><div className="space-y-2"><button onClick={() => storyReaderHook.processUnlock('free', t)} className="w-full bg-orange-500 text-white py-3 rounded-xl font-bold">{t.unlock_btn_free}</button><button onClick={() => storyReaderHook.processUnlock('point', t)} className="w-full bg-slate-800 text-white py-3 rounded-xl font-bold">{t.unlock_btn_paid}</button><button onClick={() => storyReaderHook.setIsUnlockModalOpen(false)} className="w-full bg-slate-100 py-3 rounded-xl font-bold">{t.cancel}</button></div></div></div>
           )}
 
           {selectedNotice && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-6">
-              <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl space-y-4">
-                <div className="flex items-center justify-between"><div className="text-lg font-black text-slate-800">{t.notice_title}</div><button onClick={() => setSelectedNotice(null)} className="p-1.5 rounded-full bg-slate-100 text-slate-500"><X className="w-4 h-4" /></button></div>
-                <div className="space-y-2"><div className="text-lg font-black text-slate-800">{selectedNotice.title}</div><div className="text-sm text-slate-600 whitespace-pre-line">{selectedNotice.content}</div></div>
+              <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 w-full max-w-md shadow-xl space-y-4">
+                <div className="flex items-center justify-between"><div className="text-lg font-black text-slate-800 dark:text-slate-100">{t.notice_title}</div><button onClick={() => setSelectedNotice(null)} className="p-1.5 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-500"><X className="w-4 h-4" /></button></div>
+                <div className="space-y-2"><div className="text-lg font-black text-slate-800 dark:text-slate-100">{selectedNotice.title}</div><div className="text-sm text-slate-600 dark:text-slate-300 whitespace-pre-line">{selectedNotice.content}</div></div>
                 {isNoticeAdmin && (
-                  <div className="flex gap-2 pt-2 border-t border-slate-100 mt-2">
-                    <button onClick={() => { openNoticeEditor(selectedNotice); setSelectedNotice(null); }} className="flex-1 py-2 bg-slate-100 text-slate-700 rounded-xl font-bold text-xs">{t.edit}</button>
+                  <div className="flex gap-2 pt-2 border-t border-slate-100 dark:border-slate-700 mt-2">
+                    <button onClick={() => { openNoticeEditor(selectedNotice); setSelectedNotice(null); }} className="flex-1 py-2 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-xl font-bold text-xs">{t.edit}</button>
                     <button onClick={() => deleteNotice(selectedNotice.id)} className="flex-1 py-2 bg-red-50 text-red-600 rounded-xl font-bold text-xs">{t.delete || "삭제"}</button>
                   </div>
                 )}
@@ -333,21 +342,21 @@ const App = () => {
 
           {isNoticeEditorOpen && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-6">
-              <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl space-y-4">
-                <div className="flex items-center justify-between"><div className="text-lg font-black text-slate-800">{t.notice_write_title}</div><button onClick={() => setIsNoticeEditorOpen(false)} className="p-1.5 rounded-full bg-slate-100 text-slate-500"><X className="w-4 h-4" /></button></div>
+              <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 w-full max-w-md shadow-xl space-y-4">
+                <div className="flex items-center justify-between"><div className="text-lg font-black text-slate-800 dark:text-slate-100">{t.notice_write_title}</div><button onClick={() => setIsNoticeEditorOpen(false)} className="p-1.5 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-500"><X className="w-4 h-4" /></button></div>
                 <div className="space-y-3">
                   <input
                     type="text"
                     value={noticeTitle}
                     onChange={(e) => setNoticeTitle(e.target.value)}
                     placeholder={t.title_placeholder}
-                    className="w-full p-3 border border-slate-200 rounded-xl font-bold outline-none focus:border-orange-500"
+                    className="w-full p-3 border border-slate-200 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 rounded-xl font-bold outline-none focus:border-orange-500"
                   />
                   <textarea
                     value={noticeContent}
                     onChange={(e) => setNoticeContent(e.target.value)}
                     placeholder={t.content_placeholder}
-                    className="w-full p-3 border border-slate-200 rounded-xl text-sm h-40 resize-none outline-none focus:border-orange-500"
+                    className="w-full p-3 border border-slate-200 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 rounded-xl text-sm h-40 resize-none outline-none focus:border-orange-500"
                   />
                   <button
                     onClick={saveNotice}
@@ -363,18 +372,18 @@ const App = () => {
 
           {showInkConfirmModal && pendingBook && !pendingBookData && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-6">
-              <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl space-y-4">
-                <div className="text-center space-y-2"><h3 className="text-lg font-black text-slate-800">{t.ink_confirm_title}</h3><p className="text-sm text-slate-600">{(t.ink_confirm_desc || "").replace('{amount}', getReadInkCost(levelInfo.level))}</p></div>
-                <div className="space-y-3"><button onClick={handleWatchAdForRead} className="w-full bg-blue-500 text-white py-3 rounded-xl font-black flex items-center justify-center gap-2"><Video className="w-5 h-5" />{t.watch_ad_read}</button><button onClick={() => confirmOpenBook(false)} className="w-full bg-slate-100 text-slate-700 py-3 rounded-xl font-bold">{t.use_my_ink}</button><button onClick={() => { setShowInkConfirmModal(false); setPendingBook(null); }} className="w-full text-slate-400 py-2 text-xs font-bold underline">{t.close}</button></div>
+              <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 w-full max-w-sm shadow-xl space-y-4">
+                <div className="text-center space-y-2"><h3 className="text-lg font-black text-slate-800 dark:text-slate-100">{t.ink_confirm_title}</h3><p className="text-sm text-slate-600 dark:text-slate-300">{(t.ink_confirm_desc || "").replace('{amount}', getReadInkCost(levelInfo.level))}</p></div>
+                <div className="space-y-3"><button onClick={handleWatchAdForRead} className="w-full bg-blue-500 text-white py-3 rounded-xl font-black flex items-center justify-center gap-2"><Video className="w-5 h-5" />{t.watch_ad_read}</button><button onClick={() => confirmOpenBook(false)} className="w-full bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 py-3 rounded-xl font-bold">{t.use_my_ink}</button><button onClick={() => { setShowInkConfirmModal(false); setPendingBook(null); }} className="w-full text-slate-400 py-2 text-xs font-bold underline">{t.close}</button></div>
               </div>
             </div>
           )}
 
           {showInkConfirmModal && pendingBookData && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-6">
-              <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl space-y-4">
-                <div className="text-center space-y-2"><h3 className="text-xl font-black text-slate-800">{t.extra_write_title}</h3><p className="text-sm text-slate-600">{(t.extra_write_desc || "").replace('{amount}', getExtraWriteInkCost(levelInfo.level))}</p></div>
-                <div className="flex gap-3"><button onClick={() => { setShowInkConfirmModal(false); setPendingBookData(null); }} className="flex-1 bg-slate-100 text-slate-600 py-3 rounded-xl font-bold">{t.cancel}</button><button onClick={async () => { setShowInkConfirmModal(false); const bookData = pendingBookData; setPendingBookData(null); await handleBookGenerated(bookData, true); }} className="flex-1 bg-orange-500 text-white py-3 rounded-xl font-black">{t.write_btn}</button></div>
+              <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 w-full max-w-sm shadow-xl space-y-4">
+                <div className="text-center space-y-2"><h3 className="text-xl font-black text-slate-800 dark:text-slate-100">{t.extra_write_title}</h3><p className="text-sm text-slate-600 dark:text-slate-300">{(t.extra_write_desc || "").replace('{amount}', getExtraWriteInkCost(levelInfo.level))}</p></div>
+                <div className="flex gap-3"><button onClick={() => { setShowInkConfirmModal(false); setPendingBookData(null); }} className="flex-1 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-200 py-3 rounded-xl font-bold">{t.cancel}</button><button onClick={async () => { setShowInkConfirmModal(false); const bookData = pendingBookData; setPendingBookData(null); await handleBookGenerated(bookData, true); }} className="flex-1 bg-orange-500 text-white py-3 rounded-xl font-black">{t.write_btn}</button></div>
               </div>
             </div>
           )}
@@ -399,6 +408,25 @@ const App = () => {
             </div>
           )}
 
+          {showAchievementModal && achievementToShow && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-6">
+              <div className="bg-gradient-to-br from-amber-50 to-amber-100 rounded-2xl p-8 w-full max-w-sm shadow-xl space-y-4 text-center">
+                <div className="text-6xl mb-2">{achievementToShow.emoji}</div>
+                <h2 className="text-xl font-black text-amber-700">{t.achievement_unlocked || '업적 해제!'}</h2>
+                <p className="text-2xl font-black text-slate-800">
+                  {t[`ach_${achievementToShow.id}_title`] || achievementToShow.title_ko}
+                </p>
+                <p className="text-sm text-slate-600">
+                  {t[`ach_${achievementToShow.id}_desc`] || achievementToShow.desc_ko}
+                </p>
+                <button
+                  onClick={() => setShowAchievementModal(false)}
+                  className="w-full bg-slate-900 text-white py-3 rounded-xl font-black mt-4"
+                >{t.confirm || '확인'}</button>
+              </div>
+            </div>
+          )}
+
           {!user && (
             <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-8 animate-in fade-in">
               <div className="text-center space-y-4"><img src="/logo.png" alt="오독오독" className="w-32 h-32 mx-auto mb-2" /><h1 className="text-3xl font-black text-slate-800 mb-2">오독오독</h1><p className="text-slate-600 font-bold">{t.app_slogan}</p></div>
@@ -413,6 +441,7 @@ const App = () => {
               tempAnonymousActivity={tempAnonymousActivity} setTempAnonymousActivity={setTempAnonymousActivity}
               language={language} setLanguage={setLanguage}
               fontSize={fontSize} setFontSize={setFontSize}
+              darkMode={darkMode} setDarkMode={setDarkMode}
               handleGoogleLogin={handleGoogleLogin} saveProfile={saveProfile}
               handleLogout={handleLogout} addInk={addInk} handleDeleteAccount={handleDeleteAccount}
               error={error} setError={setError} appId={appId}
@@ -434,10 +463,10 @@ const App = () => {
 
               {view === 'notice_list' && (
                 <div className="space-y-4 p-4">
-                  <div className="flex items-center justify-between"><h2 className="text-xl font-black text-slate-800">{t.notice_title}</h2><span className="text-xs text-slate-400">{(t.items_count || "").replace('{count}', notices.length)}</span></div>
+                  <div className="flex items-center justify-between"><h2 className="text-xl font-black text-slate-800 dark:text-slate-100">{t.notice_title}</h2><span className="text-xs text-slate-400">{(t.items_count || "").replace('{count}', notices.length)}</span></div>
                   {notices.map(notice => (
-                    <button key={notice.id} onClick={() => setSelectedNotice(notice)} className="w-full text-left p-4 bg-white rounded-2xl border border-slate-100 shadow-sm mb-2">
-                      <div className="font-bold text-slate-800">{notice.title}</div>
+                    <button key={notice.id} onClick={() => setSelectedNotice(notice)} className="w-full text-left p-4 bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm mb-2">
+                      <div className="font-bold text-slate-800 dark:text-slate-100">{notice.title}</div>
                     </button>
                   ))}
                   {isNoticeAdmin && (
@@ -525,6 +554,7 @@ const App = () => {
                   tempNickname={tempNickname} setTempNickname={setTempNickname}
                   tempAnonymousActivity={tempAnonymousActivity} setTempAnonymousActivity={setTempAnonymousActivity}
                   language={language} setLanguage={setLanguage} fontSize={fontSize} setFontSize={setFontSize}
+                  darkMode={darkMode} setDarkMode={setDarkMode}
                   handleGoogleLogin={handleGoogleLogin} saveProfile={saveProfile} handleLogout={handleLogout}
                   addInk={addInk} handleDeleteAccount={handleDeleteAccount} error={error} setError={setError} appId={appId}
                   onOpenHelp={() => storyReaderHook.setIsHelpModalOpen(true)}
@@ -536,14 +566,14 @@ const App = () => {
 
         {showWritingCompleteModal && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-6">
-            <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl space-y-4 text-center">
-              <p className="text-sm font-bold text-slate-700">{t.writing_complete_title}</p>
+            <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 w-full max-w-sm shadow-xl space-y-4 text-center">
+              <p className="text-sm font-bold text-slate-700 dark:text-slate-200">{t.writing_complete_title}</p>
               <div className="flex gap-2">
                 <button onClick={() => {
                   const book = books.find(b => b.id === showWritingCompleteModal.book.id) || showWritingCompleteModal.book;
                   setSelectedBook(book); setView('book_detail'); setShowWritingCompleteModal(null);
                 }} className="flex-1 py-3 rounded-xl text-sm font-black bg-orange-500 text-white">{t.view_book_now}</button>
-                <button onClick={() => setShowWritingCompleteModal(null)} className="flex-1 py-3 rounded-xl text-sm font-black bg-slate-100 text-slate-600">{t.stay}</button>
+                <button onClick={() => setShowWritingCompleteModal(null)} className="flex-1 py-3 rounded-xl text-sm font-black bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-200">{t.stay}</button>
               </div>
             </div>
           </div>
@@ -551,18 +581,18 @@ const App = () => {
 
         {showExitModal && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-6">
-            <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl space-y-4 text-center">
-              <h3 className="text-lg font-black text-slate-800">오독오독을 종료하시겠습니까?</h3>
+            <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 w-full max-w-sm shadow-xl space-y-4 text-center">
+              <h3 className="text-lg font-black text-slate-800 dark:text-slate-100">오독오독을 종료하시겠습니까?</h3>
               <div className="flex gap-3">
                 <button onClick={() => setShowExitModal(false)} className="flex-1 bg-orange-500 text-white py-3 rounded-xl font-black">머물기</button>
-                <button onClick={() => CapApp.exitApp()} className="flex-1 bg-slate-100 text-slate-600 py-3 rounded-xl font-bold">나가기</button>
+                <button onClick={() => CapApp.exitApp()} className="flex-1 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-200 py-3 rounded-xl font-bold">나가기</button>
               </div>
             </div>
           </div>
         )}
 
         {user && userProfile && userProfile.nickname && view !== 'reader' && view !== 'book_detail' && (
-          <nav className="flex-none bg-white border-t border-slate-100 flex items-center px-1 pt-1 z-40" style={{ paddingBottom: 'calc(8px + env(safe-area-inset-bottom, 0px))' }}>
+          <nav className="flex-none bg-white dark:bg-slate-800 border-t border-slate-100 dark:border-slate-700 flex items-center px-1 pt-1 z-40" style={{ paddingBottom: 'calc(8px + env(safe-area-inset-bottom, 0px))' }}>
             <button onClick={() => setView('home')} className={`flex flex-col items-center justify-center flex-1 h-full space-y-0.5 transition-colors ${view === 'home' ? 'text-orange-600' : 'text-slate-400'}`}>
               <Home className={`w-6 h-6 ${view === 'home' ? 'fill-orange-100' : ''}`} /><span className="text-[10px] font-bold">{t.tab_home}</span>
             </button>
