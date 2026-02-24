@@ -6,6 +6,7 @@ import { signOut, deleteUser } from 'firebase/auth';
 import { auth, db } from '../firebase';
 import { getTodayDateKey } from '../utils/dateUtils';
 import { getLevelFromXp, getGradeInfo, getAttendanceInk, getXpToNextLevel, getLevelProgressPercent, DAILY_WRITE_LIMIT } from '../utils/levelUtils';
+import { checkAndUnlockAchievements } from '../utils/achievementUtils';
 
 const rawAppId = typeof __app_id !== 'undefined' ? __app_id : 'odok-app-default';
 const appId = rawAppId.replace(/\//g, '_');
@@ -19,6 +20,7 @@ export const useUserProfile = ({ user, setView, setError, viewRef }) => {
   const [tempAnonymousActivity, setTempAnonymousActivity] = useState(false);
   const [language, setLanguage] = useState('ko');
   const [fontSize, setFontSize] = useState('text-base');
+  const [darkMode, setDarkMode] = useState(false);
   const [showAttendanceModal, setShowAttendanceModal] = useState(false);
   const [lastAttendanceInk, setLastAttendanceInk] = useState(1);
   const [showSaveSuccessModal, setShowSaveSuccessModal] = useState(false);
@@ -36,7 +38,19 @@ export const useUserProfile = ({ user, setView, setError, viewRef }) => {
       const level = getLevelFromXp(data.xp ?? 0);
       const attendanceInk = getAttendanceInk(level);
       const nextInk = Math.min(INK_MAX, currentInk + attendanceInk);
-      await updateDoc(profileRef, { lastAttendanceDate: today, ink: nextInk });
+
+      // attendanceStreak 계산
+      let newStreak = 1;
+      if (data.lastAttendanceDate) {
+        const lastDate = new Date(data.lastAttendanceDate);
+        const todayDate = new Date(today);
+        const diffDays = Math.round((todayDate - lastDate) / (1000 * 60 * 60 * 24));
+        if (diffDays === 1) {
+          newStreak = (data.attendanceStreak || 0) + 1;
+        }
+      }
+
+      await updateDoc(profileRef, { lastAttendanceDate: today, ink: nextInk, attendanceStreak: newStreak });
       setLastAttendanceInk(attendanceInk);
       setShowAttendanceModal(true);
     } catch (e) {
@@ -80,6 +94,11 @@ export const useUserProfile = ({ user, setView, setError, viewRef }) => {
             dailyWriteCount: 0,
             lastBookCreatedDate: null,
             lastNicknameChangeDate: null,
+            achievements: [],
+            totalReadCount: 0,
+            totalCommentCount: 0,
+            attendanceStreak: 0,
+            darkMode: false,
             createdAt: serverTimestamp(),
             updatedAt: serverTimestamp()
           };
@@ -121,6 +140,21 @@ export const useUserProfile = ({ user, setView, setError, viewRef }) => {
         if (data.lastNicknameChangeDate === undefined) {
           needsUpdate.lastNicknameChangeDate = null;
         }
+        if (data.achievements === undefined) {
+          needsUpdate.achievements = [];
+        }
+        if (data.totalReadCount === undefined || data.totalReadCount === null) {
+          needsUpdate.totalReadCount = 0;
+        }
+        if (data.totalCommentCount === undefined || data.totalCommentCount === null) {
+          needsUpdate.totalCommentCount = 0;
+        }
+        if (data.attendanceStreak === undefined || data.attendanceStreak === null) {
+          needsUpdate.attendanceStreak = 0;
+        }
+        if (data.darkMode === undefined) {
+          needsUpdate.darkMode = false;
+        }
 
         if (Object.keys(needsUpdate).length > 0) {
           try {
@@ -136,6 +170,7 @@ export const useUserProfile = ({ user, setView, setError, viewRef }) => {
         setTempAnonymousActivity(!!data.anonymousActivity);
         if (data.language) setLanguage(data.language);
         if (data.fontSize) setFontSize(data.fontSize);
+        if (data.darkMode !== undefined) setDarkMode(data.darkMode);
 
         const today = getTodayDateKey();
         if (data.lastAttendanceDate !== today) checkAttendance(profileRef, today);
@@ -165,6 +200,7 @@ export const useUserProfile = ({ user, setView, setError, viewRef }) => {
           nickname: data.nickname || '(없음)'
         });
 
+        checkAndUnlockAchievements(user.uid, data);
         setUserProfile(data);
         if (data.nickname) {
           setTempNickname(data.nickname);
@@ -172,6 +208,7 @@ export const useUserProfile = ({ user, setView, setError, viewRef }) => {
         setTempAnonymousActivity(!!data.anonymousActivity);
         if (data.language) setLanguage(data.language);
         if (data.fontSize) setFontSize(data.fontSize);
+        if (data.darkMode !== undefined) setDarkMode(data.darkMode);
 
         const today = getTodayDateKey();
         if (data.lastAttendanceDate !== today) checkAttendance(profileRef, today);
@@ -252,6 +289,7 @@ export const useUserProfile = ({ user, setView, setError, viewRef }) => {
       const updateData = {
         language: language,
         fontSize: fontSize,
+        darkMode: darkMode,
         anonymousActivity: tempAnonymousActivity,
         updatedAt: serverTimestamp()
       };
@@ -399,6 +437,8 @@ export const useUserProfile = ({ user, setView, setError, viewRef }) => {
     setLanguage,
     fontSize,
     setFontSize,
+    darkMode,
+    setDarkMode,
     showAttendanceModal,
     setShowAttendanceModal,
     lastAttendanceInk,

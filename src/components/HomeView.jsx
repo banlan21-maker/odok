@@ -13,19 +13,19 @@ import { formatGenreTag } from '../utils/formatGenre';
 
 // Skeleton UI 컴포넌트
 const SkeletonCard = () => (
-  <div className="w-32 shrink-0 bg-white rounded-xl border border-slate-100 p-4 animate-pulse">
-    <div className="w-full h-24 bg-slate-200 rounded-lg mb-2"></div>
-    <div className="h-4 bg-slate-200 rounded mb-1"></div>
-    <div className="h-3 bg-slate-200 rounded w-2/3"></div>
+  <div className="w-32 shrink-0 bg-white dark:bg-slate-800 rounded-xl border border-slate-100 dark:border-slate-700 p-4 animate-pulse">
+    <div className="w-full h-24 bg-slate-200 dark:bg-slate-700 rounded-lg mb-2"></div>
+    <div className="h-4 bg-slate-200 dark:bg-slate-700 rounded mb-1"></div>
+    <div className="h-3 bg-slate-200 dark:bg-slate-700 rounded w-2/3"></div>
   </div>
 );
 
 const SkeletonListItem = () => (
-  <div className="bg-white p-4 rounded-xl border border-slate-100 animate-pulse flex items-center gap-4">
-    <div className="w-10 h-10 bg-slate-200 rounded-lg shrink-0"></div>
+  <div className="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-100 dark:border-slate-700 animate-pulse flex items-center gap-4">
+    <div className="w-10 h-10 bg-slate-200 dark:bg-slate-700 rounded-lg shrink-0"></div>
     <div className="flex-1 space-y-2">
-      <div className="h-4 bg-slate-200 rounded w-3/4"></div>
-      <div className="h-3 bg-slate-200 rounded w-1/2"></div>
+      <div className="h-4 bg-slate-200 dark:bg-slate-700 rounded w-3/4"></div>
+      <div className="h-3 bg-slate-200 dark:bg-slate-700 rounded w-1/2"></div>
     </div>
   </div>
 );
@@ -80,13 +80,13 @@ const HomeView = ({
       <div className="space-y-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <h1 className="text-lg font-jua font-black text-slate-800 leading-tight whitespace-pre-line">
+            <h1 className="text-lg font-jua font-black text-slate-800 dark:text-slate-100 leading-tight whitespace-pre-line">
               {t.home_main_title}
             </h1>
           </div>
           <button
             onClick={() => setView('notice_list')}
-            className="p-2 rounded-full hover:bg-slate-100 transition-colors"
+            className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
           >
             <Bell className="w-5 h-5 text-slate-400" />
           </button>
@@ -188,7 +188,7 @@ const HomeView = ({
           <div className="space-y-3">
             <div className="flex items-center gap-2 px-1">
               <Megaphone className="w-5 h-5 text-violet-500" />
-              <h3 className="text-xl font-black text-slate-800">{t.promo_section_title}</h3>
+              <h3 className="text-xl font-black text-slate-800 dark:text-slate-100">{t.promo_section_title}</h3>
             </div>
             <div className="space-y-2">
               {promotions.map(promo => {
@@ -208,7 +208,7 @@ const HomeView = ({
                   <button
                     key={promo.id}
                     onClick={() => handleBookClick(promoBook)}
-                    className="w-full flex items-center gap-3 bg-gradient-to-r from-violet-50 to-white p-3 rounded-xl border border-violet-100 hover:border-violet-200 transition-colors text-left"
+                    className="w-full flex items-center gap-3 bg-gradient-to-r from-violet-50 dark:from-violet-950 to-white dark:to-slate-800 p-3 rounded-xl border border-violet-100 dark:border-violet-900 hover:border-violet-200 dark:hover:border-violet-800 transition-colors text-left"
                   >
                     <img
                       src={coverImage}
@@ -216,7 +216,7 @@ const HomeView = ({
                       className="w-16 h-20 rounded-lg object-cover shrink-0 shadow-sm"
                     />
                     <div className="flex-1 min-w-0 space-y-1">
-                      <p className="text-sm font-black text-slate-800 truncate">{promoBook.title}</p>
+                      <p className="text-sm font-black text-slate-800 dark:text-slate-100 truncate">{promoBook.title}</p>
                       <p className="text-xs text-violet-600 truncate">{promo.promoText}</p>
                       <div className="flex items-center gap-2 text-xs text-slate-400">
                         <span>{authorGrade} {authorName}</span>
@@ -239,7 +239,7 @@ const HomeView = ({
       <div className="space-y-4">
         <div className="flex items-center gap-2 px-1">
           <Sparkles className="w-5 h-5 text-orange-500" />
-          <h3 className="text-xl font-black text-slate-800">{t.home_new_books}</h3>
+          <h3 className="text-xl font-black text-slate-800 dark:text-slate-100">{t.home_new_books}</h3>
         </div>
 
         {isLoadingHomeData ? (
@@ -249,7 +249,7 @@ const HomeView = ({
             ))}
           </div>
         ) : todayBooks.length === 0 ? (
-          <div className="bg-white rounded-2xl border border-dashed border-slate-200 p-8 text-center">
+          <div className="bg-white dark:bg-slate-800 rounded-2xl border border-dashed border-slate-200 dark:border-slate-600 p-8 text-center">
             <BookOpen className="w-10 h-10 text-slate-300 mx-auto mb-3" />
             <p className="text-slate-400 text-sm font-bold mb-1">
               {t.home_empty_new}
@@ -275,10 +275,10 @@ const HomeView = ({
                 <button
                   key={book.id}
                   onClick={() => handleBookClick(book)}
-                  className="w-full px-3 py-2.5 bg-white rounded-xl border border-slate-100 shadow-sm active:bg-slate-50 transition-colors text-left hover:border-orange-200"
+                  className="w-full px-3 py-2.5 bg-white dark:bg-slate-800 rounded-xl border border-slate-100 dark:border-slate-700 shadow-sm active:bg-slate-50 dark:active:bg-slate-700 transition-colors text-left hover:border-orange-200"
                 >
                   <div className="flex items-center gap-2.5">
-                    <div className="relative w-11 h-14 rounded-md overflow-hidden shrink-0 bg-slate-100">
+                    <div className="relative w-11 h-14 rounded-md overflow-hidden shrink-0 bg-slate-100 dark:bg-slate-700">
                       <img
                         src={coverImage}
                         alt={book.title}
@@ -303,15 +303,15 @@ const HomeView = ({
                       )}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <h3 className="font-black text-slate-800 text-sm mb-1 line-clamp-1">{book.title}</h3>
-                      <div className="flex items-center gap-1.5 text-[10px] text-slate-500 flex-wrap">
+                      <h3 className="font-black text-slate-800 dark:text-slate-100 text-sm mb-1 line-clamp-1">{book.title}</h3>
+                      <div className="flex items-center gap-1.5 text-[10px] text-slate-500 dark:text-slate-400 flex-wrap">
                         <span className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-white text-[10px] font-black shadow-sm ${book?.isAnonymous ? 'bg-green-500' : (authorProfiles[book.authorId]?.badgeStyle || 'bg-green-500')}`}>
                           <span className="text-[10px]">{book?.isAnonymous ? '🌱' : (authorProfiles[book.authorId]?.gradeIcon || '🌱')}</span>
                           {getAuthorName(book)}
                         </span>
-                        <span className="bg-slate-100 px-1.5 py-0.5 rounded-full font-bold text-slate-600">{categoryLabel}</span>
+                        <span className="bg-slate-100 dark:bg-slate-700 px-1.5 py-0.5 rounded-full font-bold text-slate-600 dark:text-slate-300">{categoryLabel}</span>
                         {book.subCategory && (
-                          <span className="bg-slate-100 px-1.5 py-0.5 rounded-full text-slate-600">{formatGenreTag(book.subCategory)}</span>
+                          <span className="bg-slate-100 dark:bg-slate-700 px-1.5 py-0.5 rounded-full text-slate-600 dark:text-slate-300">{formatGenreTag(book.subCategory)}</span>
                         )}
                         <span className="flex items-center gap-0.5 text-slate-400 ml-auto">
                           <Calendar className="w-2.5 h-2.5" />
@@ -337,7 +337,7 @@ const HomeView = ({
       <div className="space-y-4">
         <div className="flex items-center gap-2 px-1">
           <Crown className="w-5 h-5 text-yellow-500 fill-yellow-500" />
-          <h3 className="text-xl font-black text-slate-800">{t.home_weekly_best}</h3>
+          <h3 className="text-xl font-black text-slate-800 dark:text-slate-100">{t.home_weekly_best}</h3>
         </div>
 
         {isLoadingHomeData ? (
@@ -347,7 +347,7 @@ const HomeView = ({
             ))}
           </div>
         ) : weeklyBestBooks.length === 0 ? (
-          <div className="bg-white rounded-2xl border border-dashed border-slate-200 p-8 text-center">
+          <div className="bg-white dark:bg-slate-800 rounded-2xl border border-dashed border-slate-200 dark:border-slate-600 p-8 text-center">
             <Trophy className="w-10 h-10 text-slate-300 mx-auto mb-3" />
             <p className="text-slate-400 text-sm font-bold mb-1">
               {t.home_empty_best}
@@ -391,14 +391,14 @@ const HomeView = ({
                 <button
                   key={book.id}
                   onClick={() => handleBookClick(book)}
-                  className="w-full bg-white p-4 rounded-xl border border-slate-100 shadow-sm flex items-center gap-4 hover:bg-orange-50 transition-colors active:scale-[0.98] text-left"
+                  className="w-full bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-100 dark:border-slate-700 shadow-sm flex items-center gap-4 hover:bg-orange-50 dark:hover:bg-slate-700 transition-colors active:scale-[0.98] text-left"
                 >
                   <div className={`w-12 h-12 rounded-xl flex items-center justify-center font-black text-xl shrink-0 shadow-lg ${medalConfig.bg} ${medalConfig.text}`}>
                     {medalConfig.icon || <span className="text-lg">{medalConfig.rankDisplay}</span>}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <h4 className="font-bold text-slate-800 truncate mb-1">{book.title}</h4>
-                    <div className="flex items-center gap-2 text-xs text-slate-500 flex-wrap">
+                    <h4 className="font-bold text-slate-800 dark:text-slate-100 truncate mb-1">{book.title}</h4>
+                    <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 flex-wrap">
                       <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-gradient-to-r from-orange-500 to-rose-500 text-white text-[11px] font-black shadow-sm">
                         <Book className="w-3 h-3" />
                         {getAuthorImage(book) ? (
@@ -443,7 +443,7 @@ const HomeView = ({
       <div className="space-y-4">
         <div className="flex items-center gap-2 px-1">
           <Trophy className="w-5 h-5 text-blue-500" />
-          <h3 className="text-xl font-black text-slate-800">{t.home_top_writers}</h3>
+          <h3 className="text-xl font-black text-slate-800 dark:text-slate-100">{t.home_top_writers}</h3>
         </div>
 
         {isLoadingHomeData ? (
@@ -457,7 +457,7 @@ const HomeView = ({
             ))}
           </div>
         ) : topWriters.length === 0 ? (
-          <div className="bg-white rounded-2xl border border-dashed border-slate-200 p-8 text-center">
+          <div className="bg-white dark:bg-slate-800 rounded-2xl border border-dashed border-slate-200 dark:border-slate-600 p-8 text-center">
             <User className="w-10 h-10 text-slate-300 mx-auto mb-3" />
             <p className="text-slate-400 text-sm font-bold mb-1">
               {t.home_empty_writers}
@@ -477,11 +477,11 @@ const HomeView = ({
               const rankBg = rankColors[index] || 'from-slate-200 to-slate-300 text-slate-600';
 
               return (
-                <div key={writer.id} className="flex items-center gap-3 bg-white rounded-xl border border-slate-100 shadow-sm p-3">
+                <div key={writer.id} className="flex items-center gap-3 bg-white dark:bg-slate-800 rounded-xl border border-slate-100 dark:border-slate-700 shadow-sm p-3">
                   <div className={`w-8 h-8 rounded-full bg-gradient-to-br ${rankBg} flex items-center justify-center text-sm font-black shrink-0`}>
                     {index + 1}
                   </div>
-                  <div className="w-11 h-11 rounded-full overflow-hidden bg-slate-100 shrink-0">
+                  <div className="w-11 h-11 rounded-full overflow-hidden bg-slate-100 dark:bg-slate-600 shrink-0">
                     {writer.profileImageUrl ? (
                       <img src={writer.profileImageUrl} alt="" className="w-full h-full object-cover" />
                     ) : (
@@ -492,9 +492,9 @@ const HomeView = ({
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-1.5 mb-0.5">
-                      <span className="text-sm font-black text-slate-800 truncate">{writer.nickname}</span>
-                      <span className="text-[10px] font-bold text-slate-400 shrink-0">Lv.{writer.level}</span>
-                      <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-slate-100 font-bold text-slate-500 shrink-0">
+                      <span className="text-sm font-black text-slate-800 dark:text-slate-100 truncate">{writer.nickname}</span>
+                      <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 shrink-0">Lv.{writer.level}</span>
+                      <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-700 font-bold text-slate-500 dark:text-slate-400 shrink-0">
                         {writer.gradeIcon} {writer.gradeName}
                       </span>
                     </div>
@@ -514,7 +514,7 @@ const HomeView = ({
       <div className="space-y-4">
         <div className="flex items-center gap-2 px-1">
           <Book className="w-5 h-5 text-amber-500" />
-          <h3 className="text-xl font-black text-slate-800">{t.home_alltime_best || '누적 베스트셀러 📚'}</h3>
+          <h3 className="text-xl font-black text-slate-800 dark:text-slate-100">{t.home_alltime_best || '누적 베스트셀러 📚'}</h3>
         </div>
 
         {isLoadingHomeData ? (
@@ -524,7 +524,7 @@ const HomeView = ({
             ))}
           </div>
         ) : allTimeBestBooks.length === 0 ? (
-          <div className="bg-white rounded-2xl border border-dashed border-slate-200 p-8 text-center">
+          <div className="bg-white dark:bg-slate-800 rounded-2xl border border-dashed border-slate-200 dark:border-slate-600 p-8 text-center">
             <Trophy className="w-10 h-10 text-slate-300 mx-auto mb-3" />
             <p className="text-slate-400 text-sm font-bold mb-1">
               {t.home_empty_alltime_best || '아직 누적 베스트셀러가 없어요'}
@@ -611,7 +611,7 @@ const HomeView = ({
                 <button
                   key={book.id}
                   onClick={() => handleBookClick(book)}
-                  className="w-full bg-white p-4 rounded-xl border border-slate-100 shadow-sm flex items-center gap-4 hover:bg-orange-50 transition-colors active:scale-[0.98] text-left"
+                  className="w-full bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-100 dark:border-slate-700 shadow-sm flex items-center gap-4 hover:bg-orange-50 dark:hover:bg-slate-700 transition-colors active:scale-[0.98] text-left"
                 >
                   <div className={`w-12 h-12 rounded-xl flex items-center justify-center font-black text-xl shrink-0 shadow-lg ${medalConfig.bg} text-white`}>
                     {medalConfig.icon}
@@ -621,10 +621,10 @@ const HomeView = ({
                     <div className="w-full h-full bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center hidden"><Book className="w-6 h-6 text-slate-400" /></div>
                   </div>
                   <div className="flex-1 min-w-0">
-                    <h4 className="font-bold text-slate-800 truncate mb-1">{book.title}</h4>
-                    <div className="flex items-center gap-2 text-xs text-slate-500 flex-wrap">
+                    <h4 className="font-bold text-slate-800 dark:text-slate-100 truncate mb-1">{book.title}</h4>
+                    <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 flex-wrap">
                       <span className="font-bold">{getAuthorName(book)}</span>
-                      <span className="bg-slate-100 px-2 py-0.5 rounded-full text-[10px] font-bold text-slate-600">{categoryName}</span>
+                      <span className="bg-slate-100 dark:bg-slate-700 px-2 py-0.5 rounded-full text-[10px] font-bold text-slate-600 dark:text-slate-300">{categoryName}</span>
                       <span className="flex items-center gap-1 text-slate-400"><Eye className="w-3 h-3" />{formatCount(book.views)}</span>
                       <span className="flex items-center gap-1 text-slate-400"><Heart className="w-3 h-3" />{formatCount(book.likes)}</span>
                     </div>

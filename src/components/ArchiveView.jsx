@@ -17,10 +17,10 @@ const ArchiveView = ({ books, user, onBookClick, favoriteBookIds = [], t, author
     <div className="space-y-6 animate-in slide-in-from-bottom-2 fade-in pb-20">
       {/* 헤더 */}
       <div className="space-y-2">
-        <h2 className="text-2xl font-black text-slate-800 leading-tight">
+        <h2 className="text-2xl font-black text-slate-800 dark:text-slate-100 leading-tight">
           {t?.archive_title || "보관함"}
         </h2>
-        <p className="text-sm text-slate-500">
+        <p className="text-sm text-slate-500 dark:text-slate-400">
           {t?.archive_desc || "내가 작성한 책과 즐겨찾기한 책을 모아보세요."}
         </p>
       </div>
@@ -29,12 +29,12 @@ const ArchiveView = ({ books, user, onBookClick, favoriteBookIds = [], t, author
       <div className="space-y-3">
         <div className="flex items-center gap-2 mb-2">
           <Book className="w-5 h-5 text-orange-600" />
-          <h3 className="font-bold text-slate-700 text-sm">{t?.my_books_tab || "내가 쓴 책"}</h3>
+          <h3 className="font-bold text-slate-700 dark:text-slate-300 text-sm">{t?.my_books_tab || "내가 쓴 책"}</h3>
           <span className="text-xs text-slate-400">({myBooks.length})</span>
         </div>
 
         {myBooks.length === 0 ? (
-          <div className="bg-white rounded-2xl border border-dashed border-slate-200 p-12 text-center">
+          <div className="bg-white dark:bg-slate-800 rounded-2xl border border-dashed border-slate-200 dark:border-slate-600 p-12 text-center">
             <Book className="w-12 h-12 text-slate-200 mx-auto mb-3" />
             <p className="text-slate-400 text-sm font-bold mb-1">
               {t?.my_books_empty || "아직 작성한 책이 없습니다"}
@@ -53,7 +53,7 @@ const ArchiveView = ({ books, user, onBookClick, favoriteBookIds = [], t, author
                 <button
                   key={book.id}
                   onClick={() => onBookClick?.(book)}
-                  className="w-full px-3 py-2.5 bg-white rounded-xl border border-slate-100 shadow-sm text-left hover:border-orange-200 active:bg-slate-50 transition-colors"
+                  className="w-full px-3 py-2.5 bg-white dark:bg-slate-800 rounded-xl border border-slate-100 dark:border-slate-700 shadow-sm text-left hover:border-orange-200 active:bg-slate-50 dark:active:bg-slate-700 transition-colors"
                 >
                   <div className="flex items-center gap-2.5">
                     <div className="relative w-11 h-14 rounded-md overflow-hidden shrink-0 bg-slate-100">
@@ -81,15 +81,15 @@ const ArchiveView = ({ books, user, onBookClick, favoriteBookIds = [], t, author
                       )}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <h3 className="font-black text-slate-800 text-sm mb-1 line-clamp-1">
+                      <h3 className="font-black text-slate-800 dark:text-slate-100 text-sm mb-1 line-clamp-1">
                         {book.title}
                       </h3>
-                      <div className="flex items-center gap-1.5 text-[10px] text-slate-500 flex-wrap">
+                      <div className="flex items-center gap-1.5 text-[10px] text-slate-500 dark:text-slate-400 flex-wrap">
                         <span className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-white text-[10px] font-black shadow-sm ${book?.isAnonymous ? 'bg-green-500' : (authorProfiles[book.authorId]?.badgeStyle || 'bg-green-500')}`}>
                           <span className="text-[10px]">{book?.isAnonymous ? '🌱' : (authorProfiles[book.authorId]?.gradeIcon || '🌱')}</span>
                           {book?.isAnonymous ? '익명' : (authorProfiles[book.authorId]?.nickname || book?.authorName || (t?.anonymous || '익명'))}
                         </span>
-                        <span className="bg-slate-100 px-1.5 py-0.5 rounded-full font-bold text-slate-600">
+                        <span className="bg-slate-100 dark:bg-slate-700 px-1.5 py-0.5 rounded-full font-bold text-slate-600 dark:text-slate-300">
                           {book.category === 'webnovel' ? (t?.cat_webnovel || '웹소설') :
                             book.category === 'novel' ? (t?.cat_novel || '소설') :
                               book.category === 'series' ? (t?.cat_series || '시리즈') :
@@ -139,11 +139,11 @@ const ArchiveView = ({ books, user, onBookClick, favoriteBookIds = [], t, author
       <div className="space-y-3 mt-8">
         <div className="flex items-center gap-2 mb-2">
           <Heart className="w-5 h-5 text-red-400" />
-          <h3 className="font-bold text-slate-700 text-sm">{t?.favorites_tab || "즐겨찾기"}</h3>
+          <h3 className="font-bold text-slate-700 dark:text-slate-300 text-sm">{t?.favorites_tab || "즐겨찾기"}</h3>
           <span className="text-xs text-slate-400">({favoriteBooks.length})</span>
         </div>
         {favoriteBooks.length === 0 ? (
-          <div className="bg-white rounded-2xl border border-dashed border-slate-200 p-12 text-center">
+          <div className="bg-white dark:bg-slate-800 rounded-2xl border border-dashed border-slate-200 dark:border-slate-600 p-12 text-center">
             <Bookmark className="w-12 h-12 text-slate-200 mx-auto mb-3" />
             <p className="text-slate-400 text-sm font-bold mb-1">
               {t?.favorites_empty || "즐겨찾기한 책이 없습니다"}
@@ -162,7 +162,7 @@ const ArchiveView = ({ books, user, onBookClick, favoriteBookIds = [], t, author
                 <button
                   key={book.id}
                   onClick={() => onBookClick?.(book)}
-                  className="w-full px-3 py-2.5 bg-white rounded-xl border border-slate-100 shadow-sm text-left hover:border-amber-200 active:bg-slate-50 transition-colors"
+                  className="w-full px-3 py-2.5 bg-white dark:bg-slate-800 rounded-xl border border-slate-100 dark:border-slate-700 shadow-sm text-left hover:border-amber-200 active:bg-slate-50 dark:active:bg-slate-700 transition-colors"
                 >
                   <div className="flex items-center gap-2.5">
                     <div className="relative w-11 h-14 rounded-md overflow-hidden shrink-0 bg-slate-100">
@@ -190,15 +190,15 @@ const ArchiveView = ({ books, user, onBookClick, favoriteBookIds = [], t, author
                       )}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <h3 className="font-black text-slate-800 text-sm mb-1 line-clamp-1">
+                      <h3 className="font-black text-slate-800 dark:text-slate-100 text-sm mb-1 line-clamp-1">
                         {book.title}
                       </h3>
-                      <div className="flex items-center gap-1.5 text-[10px] text-slate-500 flex-wrap">
+                      <div className="flex items-center gap-1.5 text-[10px] text-slate-500 dark:text-slate-400 flex-wrap">
                         <span className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-white text-[10px] font-black shadow-sm ${book?.isAnonymous ? 'bg-green-500' : (authorProfiles[book.authorId]?.badgeStyle || 'bg-green-500')}`}>
                           <span className="text-[10px]">{book?.isAnonymous ? '🌱' : (authorProfiles[book.authorId]?.gradeIcon || '🌱')}</span>
                           {book?.isAnonymous ? '익명' : (authorProfiles[book.authorId]?.nickname || book?.authorName || (t?.anonymous || '익명'))}
                         </span>
-                        <span className="bg-slate-100 px-1.5 py-0.5 rounded-full font-bold text-slate-600">
+                        <span className="bg-slate-100 dark:bg-slate-700 px-1.5 py-0.5 rounded-full font-bold text-slate-600 dark:text-slate-300">
                           {book.category === 'webnovel' ? (t?.cat_webnovel || '웹소설') :
                             book.category === 'novel' ? (t?.cat_novel || '소설') :
                               book.category === 'series' ? (t?.cat_series || '시리즈') :

@@ -883,34 +883,34 @@ const WriteView = ({ user, userProfile, t, onBookGenerated, slotStatus, setView,
 
   const GeneratingNotice = () => (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-6">
-      <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl space-y-4 animate-in fade-in zoom-in-95 duration-200 text-center">
+      <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 w-full max-w-sm shadow-xl space-y-4 animate-in fade-in zoom-in-95 duration-200 text-center">
         <div className="flex items-center justify-center">
           <RefreshCw className="w-6 h-6 text-orange-500 animate-spin" />
         </div>
-        <p className="text-sm text-slate-700 font-bold">
+        <p className="text-sm text-slate-700 dark:text-slate-200 font-bold">
           {t?.generating_title || "집필 중입니다..."}
         </p>
-        <p className="text-xs text-slate-500">
+        <p className="text-xs text-slate-500 dark:text-slate-400">
           {t?.generating_desc || "책 생성에는 약 2~3분이 소요될 수 있어요."}
         </p>
-        <p className="text-xs text-slate-400">
+        <p className="text-xs text-slate-400 dark:text-slate-500">
           {t?.generating_cancel_desc || "취소 후에 다른 작업을 진행할 수 있습니다."}
         </p>
         {currentLoadingMessage && (
-          <p className="text-xs text-slate-500 font-bold">
+          <p className="text-xs text-slate-500 dark:text-slate-400 font-bold">
             {currentLoadingMessage}
           </p>
         )}
         <div className="flex gap-2">
           <button
             onClick={() => setIsGeneratingHidden(true)}
-            className="flex-1 py-3 rounded-xl text-sm font-black bg-slate-900 text-white hover:bg-slate-800"
+            className="flex-1 py-3 rounded-xl text-sm font-black bg-slate-900 dark:bg-slate-700 text-white hover:bg-slate-800 dark:hover:bg-slate-600"
           >
             {t?.hide_btn || "숨기기"}
           </button>
           <button
             onClick={handleCancelGenerate}
-            className="flex-1 py-3 rounded-xl text-sm font-black bg-white border border-orange-300 text-orange-600 hover:bg-orange-100"
+            className="flex-1 py-3 rounded-xl text-sm font-black bg-white dark:bg-slate-800 border border-orange-300 text-orange-600 hover:bg-orange-100 dark:hover:bg-orange-900/20"
           >
             {t?.cancel_write_btn || "집필 취소"}
           </button>
@@ -940,17 +940,17 @@ const WriteView = ({ user, userProfile, t, onBookGenerated, slotStatus, setView,
     <div className="space-y-6 animate-in slide-in-from-bottom-2 fade-in pb-20">
       {/* 헤더 */}
       <div className="space-y-2">
-        <h2 className="text-2xl font-black text-slate-800 leading-tight">
+        <h2 className="text-2xl font-black text-slate-800 dark:text-slate-100 leading-tight">
           {t?.write_title || "집필"}
         </h2>
-        <p className="text-sm text-slate-500 whitespace-pre-line">
+        <p className="text-sm text-slate-500 dark:text-slate-400 whitespace-pre-line">
           {t?.write_desc || "원하는 장르를 선택하고 주제를 입력하면\nAI가 당신만의 책을 만들어줍니다."}
         </p>
       </div>
 
       {/* 1. 메인 카테고리 선택 (6개) */}
       <div className="space-y-3">
-        <h3 className="text-sm font-bold text-slate-500 px-1">{t?.category_label || "카테고리 선택"}</h3>
+        <h3 className="text-sm font-bold text-slate-500 dark:text-slate-400 px-1">{t?.category_label || "카테고리 선택"}</h3>
         <div className="grid grid-cols-2 gap-3">
           {categories.map((category) => {
             const isSoldOut = category.id === 'series'
@@ -964,10 +964,10 @@ const WriteView = ({ user, userProfile, t, onBookGenerated, slotStatus, setView,
                 disabled={isSoldOut}
                 onClick={() => handleCategorySelect(category)}
                 className={`p-4 rounded-2xl border-2 shadow-sm transition-all text-center relative ${isSoldOut
-                  ? 'bg-slate-100 border-slate-300 opacity-60 cursor-not-allowed'
+                  ? 'bg-slate-100 dark:bg-slate-700 border-slate-300 dark:border-slate-600 opacity-60 cursor-not-allowed'
                   : selectedCategory?.id === category.id
-                    ? 'border-orange-500 bg-orange-50 active:scale-95'
-                    : 'bg-white border-slate-100 hover:border-orange-200 active:scale-95'
+                    ? 'border-orange-500 bg-orange-50 dark:bg-orange-900/20 active:scale-95'
+                    : 'bg-white dark:bg-slate-800 border-slate-100 dark:border-slate-700 hover:border-orange-200 active:scale-95'
                   }`}
               >
                 {isSoldOut && (
@@ -976,14 +976,14 @@ const WriteView = ({ user, userProfile, t, onBookGenerated, slotStatus, setView,
                   </div>
                 )}
                 <div className="text-3xl mb-2">{category.icon}</div>
-                <h3 className="font-bold text-sm text-slate-800 mb-1">{category.name}</h3>
+                <h3 className="font-bold text-sm text-slate-800 dark:text-slate-100 mb-1">{category.name}</h3>
                 {isSoldOut ? (
                   <div className="mt-1 space-y-0.5">
-                    <p className="text-[10px] text-slate-500 font-bold line-clamp-1">
+                    <p className="text-[10px] text-slate-500 dark:text-slate-400 font-bold line-clamp-1">
                       {(t?.today_sold_out || "오늘의 {name} 마감").replace('{name}', category.name)}
                     </p>
                     {slotInfo?.authorId && (
-                      <p className="text-[9px] text-slate-400 mt-0.5 line-clamp-1">
+                      <p className="text-[9px] text-slate-400 dark:text-slate-500 mt-0.5 line-clamp-1">
                         {(t?.by_author || "By. {name}").replace('{name}', slotInfo?.authorName || (slotInfo?.book?.isAnonymous ? '익명' : (authorProfiles[slotInfo.authorId]?.nickname || '익명')))}
                       </p>
                     )}
@@ -999,13 +999,13 @@ const WriteView = ({ user, userProfile, t, onBookGenerated, slotStatus, setView,
 
       {/* 2. 선택된 카테고리에 따른 폼 */}
       {selectedCategory && (
-        <div className="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm space-y-4">
+        <div className="bg-white dark:bg-slate-800 rounded-2xl p-5 border border-slate-100 dark:border-slate-700 shadow-sm space-y-4">
           {/* 비문학 카테고리 (에세이/자기계발/인문철학) - 주제 선택만 */}
           {!selectedCategory.isNovel && (
             <>
               <div className="space-y-3">
                 <div className="flex items-center justify-between gap-2">
-                  <h3 className="text-base font-black text-slate-800">
+                  <h3 className="text-base font-black text-slate-800 dark:text-slate-100">
                     {t?.what_story || "어떤 이야기를 쓰고 싶으신가요?"}
                   </h3>
                   <button
@@ -1045,10 +1045,10 @@ const WriteView = ({ user, userProfile, t, onBookGenerated, slotStatus, setView,
                         }}
                         disabled={isGenerating || !isSlotAvailable(selectedCategory.id)}
                         className={`px-4 py-3 rounded-full text-sm font-bold transition-all relative ${isGenerating || !isSlotAvailable(selectedCategory.id)
-                          ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
+                          ? 'bg-slate-100 dark:bg-slate-700 text-slate-400 cursor-not-allowed'
                           : isSelected
                             ? 'bg-orange-500 text-white shadow-md'
-                            : 'bg-slate-100 text-slate-600 hover:bg-slate-200 active:scale-95'
+                            : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600 active:scale-95'
                           }`}
                       >
                         <span>{t?.['kw_' + item.id] || item.ko}</span>
@@ -1062,7 +1062,7 @@ const WriteView = ({ user, userProfile, t, onBookGenerated, slotStatus, setView,
               </div>
               {selectedTopic && (
                 <div className="space-y-2">
-                  <label className="text-sm font-bold text-slate-700">
+                  <label className="text-sm font-bold text-slate-700 dark:text-slate-200">
                     {t?.book_title || "책 제목"} <span className="text-orange-500">*</span>
                   </label>
                   <div className="space-y-2">
@@ -1071,10 +1071,10 @@ const WriteView = ({ user, userProfile, t, onBookGenerated, slotStatus, setView,
                       value={bookTitle}
                       onChange={(e) => setBookTitle(e.target.value)}
                       placeholder={t?.title_placeholder || "15자 이내로 제목을 입력하세요"}
-                      className="w-full bg-slate-50 border-2 border-slate-200 rounded-xl py-3 px-4 text-sm focus:border-orange-500 focus:bg-white outline-none transition-colors"
+                      className="w-full bg-slate-50 dark:bg-slate-700 border-2 border-slate-200 dark:border-slate-600 rounded-xl py-3 px-4 text-sm focus:border-orange-500 focus:bg-white dark:focus:bg-slate-700 outline-none transition-colors text-slate-800 dark:text-slate-100"
                       maxLength={15}
                     />
-                    <div className="text-xs text-slate-400 font-bold text-right">
+                    <div className="text-xs text-slate-400 dark:text-slate-500 font-bold text-right">
                       {bookTitle.length}/15
                     </div>
                   </div>
@@ -1082,13 +1082,13 @@ const WriteView = ({ user, userProfile, t, onBookGenerated, slotStatus, setView,
               )}
               {selectedTopic && (
                 <div className="space-y-2">
-                  <label className="text-sm font-bold text-slate-700">
+                  <label className="text-sm font-bold text-slate-700 dark:text-slate-200">
                     {t?.select_style || "스타일 선택"} <span className="text-orange-500">*</span>
                   </label>
                   <select
                     value={selectedTone}
                     onChange={(e) => setSelectedTone(e.target.value)}
-                    className="w-full bg-slate-50 border-2 border-slate-200 rounded-xl py-3 px-4 text-sm focus:border-orange-500 focus:bg-white outline-none transition-colors"
+                    className="w-full bg-slate-50 dark:bg-slate-700 border-2 border-slate-200 dark:border-slate-600 rounded-xl py-3 px-4 text-sm focus:border-orange-500 focus:bg-white dark:focus:bg-slate-700 outline-none transition-colors text-slate-800 dark:text-slate-100"
                   >
                     <option value="">{t?.select_style_plz || "스타일을 선택하세요"}</option>
                     {getToneOptions(selectedCategory.id).map((tone) => (
@@ -1131,7 +1131,7 @@ const WriteView = ({ user, userProfile, t, onBookGenerated, slotStatus, setView,
               {/* 시리즈만: 웹소설형/일반소설형 선택 (잠금 없음, 시리즈 버튼에서만 통합 잠금) */}
               {selectedCategory.id === 'series' && (
                 <div className="space-y-2">
-                  <label className="text-sm font-bold text-slate-700">
+                  <label className="text-sm font-bold text-slate-700 dark:text-slate-200">
                     {t?.sub_genre || "세부 장르"} <span className="text-orange-500">*</span>
                   </label>
                   <div className="grid grid-cols-2 gap-2">
@@ -1145,7 +1145,7 @@ const WriteView = ({ user, userProfile, t, onBookGenerated, slotStatus, setView,
                         }}
                         className={`py-3 rounded-xl font-bold text-sm transition-all ${seriesSubType?.id === subType.id
                           ? 'bg-orange-500 text-white'
-                          : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                          : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'
                           }`}
                       >
                         {t?.['sub_type_' + subType.id] || subType.name}
@@ -1158,7 +1158,7 @@ const WriteView = ({ user, userProfile, t, onBookGenerated, slotStatus, setView,
               {/* 장르 선택 */}
               {selectedCategory.id !== 'series' || seriesSubType ? (
                 <div className="space-y-2">
-                  <label className="text-sm font-bold text-slate-700">
+                  <label className="text-sm font-bold text-slate-700 dark:text-slate-200">
                     {t?.genre_label || "장르"} <span className="text-orange-500">*</span>
                   </label>
                   <div className="grid grid-cols-2 gap-2">
@@ -1187,13 +1187,13 @@ const WriteView = ({ user, userProfile, t, onBookGenerated, slotStatus, setView,
               {/* 분위기 선택 */}
               {selectedGenre && (
                 <div className="space-y-2">
-                  <label className="text-sm font-bold text-slate-700">
+                  <label className="text-sm font-bold text-slate-700 dark:text-slate-200">
                     {t?.mood_label || "분위기"} <span className="text-orange-500">*</span>
                   </label>
                   <select
                     value={selectedMood}
                     onChange={(e) => setSelectedMood(e.target.value)}
-                    className="w-full bg-slate-50 border-2 border-slate-200 rounded-xl py-3 px-4 text-sm focus:border-orange-500 focus:bg-white outline-none transition-colors"
+                    className="w-full bg-slate-50 dark:bg-slate-700 border-2 border-slate-200 dark:border-slate-600 rounded-xl py-3 px-4 text-sm focus:border-orange-500 focus:bg-white dark:focus:bg-slate-700 outline-none transition-colors text-slate-800 dark:text-slate-100"
                   >
                     <option value="">{t?.mood_plz || "분위기를 선택하세요"}</option>
                     {getMoodOptions().map((mood) => (
@@ -1203,7 +1203,7 @@ const WriteView = ({ user, userProfile, t, onBookGenerated, slotStatus, setView,
                     ))}
                   </select>
                   {selectedMood && MOOD_TO_NAMEKEY[selectedMood] && (
-                    <p className="text-xs text-slate-400">
+                    <p className="text-xs text-slate-400 dark:text-slate-500">
                       {t?.[MOOD_TO_NAMEKEY[selectedMood] + '_desc'] || MOOD_DESCRIPTIONS[selectedMood] || ''}
                     </p>
                   )}
@@ -1213,13 +1213,13 @@ const WriteView = ({ user, userProfile, t, onBookGenerated, slotStatus, setView,
               {/* 시점 선택 (소설류 전용) */}
               {selectedGenre && selectedCategory?.isNovel && (
                 <div className="space-y-2">
-                  <label className="text-sm font-bold text-slate-700">
+                  <label className="text-sm font-bold text-slate-700 dark:text-slate-200">
                     {t?.pov_label || "누가 이야기하나요?"} <span className="text-orange-500">*</span>
                   </label>
                   <select
                     value={selectedPOV}
                     onChange={(e) => setSelectedPOV(e.target.value)}
-                    className="w-full bg-slate-50 border-2 border-slate-200 rounded-xl py-3 px-4 text-sm focus:border-orange-500 focus:bg-white outline-none transition-colors"
+                    className="w-full bg-slate-50 dark:bg-slate-700 border-2 border-slate-200 dark:border-slate-600 rounded-xl py-3 px-4 text-sm focus:border-orange-500 focus:bg-white dark:focus:bg-slate-700 outline-none transition-colors text-slate-800 dark:text-slate-100"
                   >
                     <option value="">{t?.pov_plz || "시점을 선택하세요"}</option>
                     <option value="first_person">{t?.pov_first_person || "내가 직접 말하기"}</option>
@@ -1227,7 +1227,7 @@ const WriteView = ({ user, userProfile, t, onBookGenerated, slotStatus, setView,
                     <option value="omniscient">{t?.pov_omniscient || "전지적 시점"}</option>
                   </select>
                   {selectedPOV && (
-                    <p className="text-xs text-slate-400">
+                    <p className="text-xs text-slate-400 dark:text-slate-500">
                       {selectedPOV === 'first_person' && (t?.pov_first_person_desc || "주인공이 자기 이야기를 하듯 생생하게 씁니다.")}
                       {selectedPOV === 'third_limited' && (t?.pov_third_limited_desc || "관찰자가 주인공의 행동을 보듯 설명합니다.")}
                       {selectedPOV === 'omniscient' && (t?.pov_omniscient_desc || "신처럼 모든 인물의 속마음까지 다 보여줍니다.")}
@@ -1239,13 +1239,13 @@ const WriteView = ({ user, userProfile, t, onBookGenerated, slotStatus, setView,
               {/* 말투 선택 (소설류 전용) */}
               {selectedGenre && selectedCategory?.isNovel && (
                 <div className="space-y-2">
-                  <label className="text-sm font-bold text-slate-700">
+                  <label className="text-sm font-bold text-slate-700 dark:text-slate-200">
                     {t?.speech_tone_label || "어떤 말투로 쓸까요?"} <span className="text-orange-500">*</span>
                   </label>
                   <select
                     value={selectedSpeechTone}
                     onChange={(e) => setSelectedSpeechTone(e.target.value)}
-                    className="w-full bg-slate-50 border-2 border-slate-200 rounded-xl py-3 px-4 text-sm focus:border-orange-500 focus:bg-white outline-none transition-colors"
+                    className="w-full bg-slate-50 dark:bg-slate-700 border-2 border-slate-200 dark:border-slate-600 rounded-xl py-3 px-4 text-sm focus:border-orange-500 focus:bg-white dark:focus:bg-slate-700 outline-none transition-colors text-slate-800 dark:text-slate-100"
                   >
                     <option value="">{t?.speech_tone_plz || "말투를 선택하세요"}</option>
                     <option value="friendly">{t?.speech_tone_friendly || "친근한 말투"}</option>
@@ -1253,7 +1253,7 @@ const WriteView = ({ user, userProfile, t, onBookGenerated, slotStatus, setView,
                     <option value="polite">{t?.speech_tone_polite || "정중한 말투"}</option>
                   </select>
                   {selectedSpeechTone && (
-                    <p className="text-xs text-slate-400">
+                    <p className="text-xs text-slate-400 dark:text-slate-500">
                       {selectedSpeechTone === 'friendly' && (t?.speech_tone_friendly_desc || '~했어, ~였지처럼 편안하게 이야기합니다.')}
                       {selectedSpeechTone === 'formal' && (t?.speech_tone_formal_desc || '~했다, ~하였다처럼 정통 소설의 느낌을 줍니다.')}
                       {selectedSpeechTone === 'polite' && (t?.speech_tone_polite_desc || '~했습니다, ~입니다처럼 차분하고 예의 바르게 씁니다.')}
@@ -1265,20 +1265,20 @@ const WriteView = ({ user, userProfile, t, onBookGenerated, slotStatus, setView,
               {/* 대화 비중 선택 (소설류 전용) */}
               {selectedGenre && selectedCategory?.isNovel && (
                 <div className="space-y-2">
-                  <label className="text-sm font-bold text-slate-700">
+                  <label className="text-sm font-bold text-slate-700 dark:text-slate-200">
                     {t?.dialogue_ratio_label || "대화가 얼마나 많은 게 좋을까요?"} <span className="text-orange-500">*</span>
                   </label>
                   <select
                     value={selectedDialogueRatio}
                     onChange={(e) => setSelectedDialogueRatio(e.target.value)}
-                    className="w-full bg-slate-50 border-2 border-slate-200 rounded-xl py-3 px-4 text-sm focus:border-orange-500 focus:bg-white outline-none transition-colors"
+                    className="w-full bg-slate-50 dark:bg-slate-700 border-2 border-slate-200 dark:border-slate-600 rounded-xl py-3 px-4 text-sm focus:border-orange-500 focus:bg-white dark:focus:bg-slate-700 outline-none transition-colors text-slate-800 dark:text-slate-100"
                   >
                     <option value="">{t?.dialogue_ratio_plz || "대화 비중을 선택하세요"}</option>
                     <option value="dialogue_heavy">{t?.dialogue_ratio_heavy || "대화 중심 (웹소설 스타일)"}</option>
                     <option value="description_heavy">{t?.dialogue_ratio_desc || "설명 중심 (일반 소설 스타일)"}</option>
                   </select>
                   {selectedDialogueRatio && (
-                    <p className="text-xs text-slate-400">
+                    <p className="text-xs text-slate-400 dark:text-slate-500">
                       {selectedDialogueRatio === 'dialogue_heavy' && (t?.dialogue_ratio_heavy_desc || "인물들의 대화가 많아 술술 읽히는 방식입니다.")}
                       {selectedDialogueRatio === 'description_heavy' && (t?.dialogue_ratio_desc_desc || "상황 묘사와 설명이 풍부하고 깊이 있는 방식입니다.")}
                     </p>
@@ -1289,7 +1289,7 @@ const WriteView = ({ user, userProfile, t, onBookGenerated, slotStatus, setView,
               {/* 책 제목 */}
               {selectedGenre && (
                 <div className="space-y-2">
-                  <label className="text-sm font-bold text-slate-700">
+                  <label className="text-sm font-bold text-slate-700 dark:text-slate-200">
                     {t?.book_title || "책 제목"} <span className="text-orange-500">*</span>
                   </label>
                   <div className="space-y-2">
@@ -1298,10 +1298,10 @@ const WriteView = ({ user, userProfile, t, onBookGenerated, slotStatus, setView,
                       value={bookTitle}
                       onChange={(e) => setBookTitle(e.target.value)}
                       placeholder={t?.title_placeholder || "15자 이내로 제목을 입력하세요"}
-                      className="w-full bg-slate-50 border-2 border-slate-200 rounded-xl py-3 px-4 text-sm focus:border-orange-500 focus:bg-white outline-none transition-colors"
+                      className="w-full bg-slate-50 dark:bg-slate-700 border-2 border-slate-200 dark:border-slate-600 rounded-xl py-3 px-4 text-sm focus:border-orange-500 focus:bg-white dark:focus:bg-slate-700 outline-none transition-colors text-slate-800 dark:text-slate-100"
                       maxLength={15}
                     />
-                    <div className="text-xs text-slate-400 font-bold text-right">
+                    <div className="text-xs text-slate-400 dark:text-slate-500 font-bold text-right">
                       {bookTitle.length}/15
                     </div>
                   </div>
@@ -1311,7 +1311,7 @@ const WriteView = ({ user, userProfile, t, onBookGenerated, slotStatus, setView,
               {/* 키워드 선택 (장르 선택 후) */}
               {selectedGenre && (
                 <div className="space-y-2">
-                  <label className="text-sm font-bold text-slate-700">
+                  <label className="text-sm font-bold text-slate-700 dark:text-slate-200">
                     {t?.topic_keyword || "주제 또는 키워드"} <span className="text-orange-500">*</span>
                   </label>
                   <div className="space-y-2">
@@ -1320,10 +1320,10 @@ const WriteView = ({ user, userProfile, t, onBookGenerated, slotStatus, setView,
                       value={keywords}
                       onChange={(e) => setKeywords(e.target.value)}
                       placeholder={t?.keyword_placeholder || "예: 가을 낙엽, 첫 사랑, 성장, 일상의 소중함..."}
-                      className="w-full bg-slate-50 border-2 border-slate-200 rounded-xl py-3 px-4 text-sm focus:border-orange-500 focus:bg-white outline-none transition-colors"
+                      className="w-full bg-slate-50 dark:bg-slate-700 border-2 border-slate-200 dark:border-slate-600 rounded-xl py-3 px-4 text-sm focus:border-orange-500 focus:bg-white dark:focus:bg-slate-700 outline-none transition-colors text-slate-800 dark:text-slate-100"
                       maxLength={50}
                     />
-                    <div className="text-xs text-slate-400 font-bold text-right">
+                    <div className="text-xs text-slate-400 dark:text-slate-500 font-bold text-right">
                       {keywords.length}/50
                     </div>
                   </div>
@@ -1333,13 +1333,13 @@ const WriteView = ({ user, userProfile, t, onBookGenerated, slotStatus, setView,
               {/* 결말 스타일 (소설류 전용, 시리즈 제외) */}
               {selectedCategory.isNovel && selectedCategory.id !== 'series' && (
                 <div className="space-y-2">
-                  <label className="text-sm font-bold text-slate-700">
+                  <label className="text-sm font-bold text-slate-700 dark:text-slate-200">
                     {t?.ending_style || "결말 스타일"}
                   </label>
                   <select
                     value={endingStyle}
                     onChange={(e) => setEndingStyle(e.target.value)}
-                    className="w-full bg-slate-50 border-2 border-slate-200 rounded-xl py-3 px-4 text-sm focus:border-orange-500 focus:bg-white outline-none transition-colors"
+                    className="w-full bg-slate-50 dark:bg-slate-700 border-2 border-slate-200 dark:border-slate-600 rounded-xl py-3 px-4 text-sm focus:border-orange-500 focus:bg-white dark:focus:bg-slate-700 outline-none transition-colors text-slate-800 dark:text-slate-100"
                   >
                     <option value="">{t?.no_select || "선택 안 함"}</option>
                     {endingStyleIds.map((item) => (
@@ -1382,20 +1382,20 @@ const WriteView = ({ user, userProfile, t, onBookGenerated, slotStatus, setView,
 
       {showPaidWriteConfirm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-6">
-          <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl space-y-4 animate-in fade-in zoom-in-95 duration-200">
+          <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 w-full max-w-sm shadow-xl space-y-4 animate-in fade-in zoom-in-95 duration-200">
             <div className="text-center space-y-2">
               <Droplets className="w-12 h-12 text-orange-500 mx-auto" />
-              <h3 className="text-xl font-black text-slate-800">
+              <h3 className="text-xl font-black text-slate-800 dark:text-slate-100">
                 {t?.extra_write_title || "추가 집필"}
               </h3>
-              <p className="text-sm text-slate-600">
+              <p className="text-sm text-slate-600 dark:text-slate-300">
                 {t?.extra_write_desc_2 || "하루 무료 횟수를 사용했습니다."}
               </p>
-              <p className="text-sm text-slate-600 font-bold">
+              <p className="text-sm text-slate-600 dark:text-slate-300 font-bold">
                 <span className="text-orange-500">{(t?.extra_write_confirm || "{cost} 잉크를 사용하여 집필하시겠습니까?").replace('{cost}', getExtraWriteInkCost(getLevelFromXp(userProfile?.xp ?? 0)) + ' 잉크')}</span>
               </p>
               <div className="pt-2">
-                <p className="text-xs text-slate-400">
+                <p className="text-xs text-slate-400 dark:text-slate-500">
                   {(t?.current_hold || "현재 보유: {ink} 잉크").replace('{ink}', userProfile?.ink || 0)}
                 </p>
               </div>
@@ -1410,15 +1410,15 @@ const WriteView = ({ user, userProfile, t, onBookGenerated, slotStatus, setView,
               </button>
 
               <div className="relative flex items-center py-2">
-                <div className="flex-grow border-t border-slate-200"></div>
-                <span className="flex-shrink-0 mx-4 text-xs text-slate-400 font-bold">{t?.or || "또는"}</span>
-                <div className="flex-grow border-t border-slate-200"></div>
+                <div className="flex-grow border-t border-slate-200 dark:border-slate-600"></div>
+                <span className="flex-shrink-0 mx-4 text-xs text-slate-400 dark:text-slate-500 font-bold">{t?.or || "또는"}</span>
+                <div className="flex-grow border-t border-slate-200 dark:border-slate-600"></div>
               </div>
 
               <div className="flex gap-2">
                 <button
                   onClick={closePaidWriteConfirm}
-                  className="flex-1 bg-slate-100 text-slate-600 py-3 rounded-xl font-bold hover:bg-slate-200 transition-colors"
+                  className="flex-1 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 py-3 rounded-xl font-bold hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors"
                 >
                   {t?.cancel || "취소(안함)"}
                 </button>
@@ -1437,16 +1437,16 @@ const WriteView = ({ user, userProfile, t, onBookGenerated, slotStatus, setView,
 
       {showNoWritesNotice && remainingDailyWrites === 0 && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-6">
-          <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl space-y-4 animate-in fade-in zoom-in-95 duration-200">
+          <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 w-full max-w-sm shadow-xl space-y-4 animate-in fade-in zoom-in-95 duration-200">
             <div className="text-center space-y-2">
               <PenTool className="w-12 h-12 text-orange-500 mx-auto" />
-              <h3 className="text-xl font-black text-slate-800">
+              <h3 className="text-xl font-black text-slate-800 dark:text-slate-100">
                 {t?.write_limit_title || "오늘은 집필이 끝났어요"}
               </h3>
-              <p className="text-sm text-slate-600">
+              <p className="text-sm text-slate-600 dark:text-slate-300">
                 {t?.write_limit_desc || "하루 집필 가능 횟수(2회)를 모두 사용했습니다."}
               </p>
-              <p className="text-xs text-slate-400">
+              <p className="text-xs text-slate-400 dark:text-slate-500">
                 {t?.write_limit_reset_time || "내일 다시 집필할 수 있어요."}
               </p>
             </div>
@@ -1464,13 +1464,13 @@ const WriteView = ({ user, userProfile, t, onBookGenerated, slotStatus, setView,
       {
         showKeywordRefreshModal && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-6 animate-in fade-in duration-200">
-            <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl space-y-4">
+            <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 w-full max-w-sm shadow-xl space-y-4">
               <div className="text-center space-y-2">
-                <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-2">
+                <div className="w-16 h-16 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center mx-auto mb-2">
                   <RefreshCw className="w-8 h-8 text-blue-500 animate-spin-slow" />
                 </div>
-                <h3 className="text-lg font-black text-slate-800">{t?.keyword_refresh_title || "키워드 새로고침"}</h3>
-                <p className="text-sm text-slate-600">
+                <h3 className="text-lg font-black text-slate-800 dark:text-slate-100">{t?.keyword_refresh_title || "키워드 새로고침"}</h3>
+                <p className="text-sm text-slate-600 dark:text-slate-300">
                   {t?.keyword_refresh_desc || "새로운 키워드 5개를 받아보세요."}
                 </p>
               </div>
@@ -1484,7 +1484,7 @@ const WriteView = ({ user, userProfile, t, onBookGenerated, slotStatus, setView,
                 </button>
                 <button
                   onClick={handleInkRefresh}
-                  className="w-full bg-slate-100 text-slate-700 py-3 rounded-xl font-bold hover:bg-slate-200 transition-colors flex items-center justify-center gap-2"
+                  className="w-full bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 py-3 rounded-xl font-bold hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors flex items-center justify-center gap-2"
                 >
                   <Droplets className="w-4 h-4 text-blue-500" />
                   {t?.refresh_ink_btn || "잉크 1개 사용하기"}
@@ -1504,8 +1504,8 @@ const WriteView = ({ user, userProfile, t, onBookGenerated, slotStatus, setView,
       {/* 에러 메시지 */}
       {
         displayError && (
-          <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-center animate-in fade-in">
-            <p className="text-red-600 text-sm font-bold">{displayError}</p>
+          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-4 text-center animate-in fade-in">
+            <p className="text-red-600 dark:text-red-400 text-sm font-bold">{displayError}</p>
             <button
               onClick={() => {
                 setLocalError(null);
@@ -1522,9 +1522,9 @@ const WriteView = ({ user, userProfile, t, onBookGenerated, slotStatus, setView,
       {/* 안내 메시지 */}
       {
         !selectedCategory && (
-          <div className="bg-orange-50 border border-orange-200 rounded-xl p-6 text-center">
+          <div className="bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-xl p-6 text-center">
             <Book className="w-12 h-12 text-orange-400 mx-auto mb-3" />
-            <p className="text-slate-600 text-sm font-bold">
+            <p className="text-slate-600 dark:text-slate-300 text-sm font-bold">
               {t?.select_category_plz || "위에서 카테고리를 선택해주세요"}
             </p>
           </div>
