@@ -101,10 +101,11 @@ export const useComments = ({ user, userProfile, currentStory, view, setError, e
                 const commentText = commentInput.trim();
                 const isParentComment = !replyTo?.id;
 
+                const isAnonymous = !!userProfile?.anonymousActivity;
                 const commentRef = await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'comments'), {
                     storyId: currentStory.id,
                     userId: user.uid,
-                    nickname: userProfile?.nickname || "익명",
+                    nickname: isAnonymous ? "익명" : (userProfile?.nickname || "익명"),
                     text: commentText,
                     parentId: replyTo?.id || null,
                     createdAt: serverTimestamp()
