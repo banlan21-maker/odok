@@ -139,7 +139,35 @@ const ProfileView = ({
       <div className="">
         <div className="space-y-3 pb-10 pt-4">
 
-          {/* 1. 상단 정보: 레벨 & 경험치 바 */}
+          {/* 1. 광고 보고 잉크 얻기 버튼 (최상단) */}
+          {userProfile && (
+            <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-2xl p-4 border-2 border-blue-200 shadow-sm">
+              <button
+                onClick={handleChargeInk}
+                disabled={isCharging}
+                className={`w-full py-4 rounded-xl font-black text-base transition-all flex items-center justify-center gap-2 ${isCharging
+                  ? 'bg-slate-300 text-slate-500 cursor-not-allowed'
+                  : 'bg-blue-500 text-white hover:bg-blue-600 active:scale-95'
+                  }`}
+              >
+                {isCharging ? (
+                  <span className="animate-pulse">충전 중...</span>
+                ) : showChargeSuccess ? (
+                  <>
+                    <Droplets className="w-4 h-4" />
+                    <span>+10 충전 완료!</span>
+                  </>
+                ) : (
+                  <>
+                    <Video className="w-5 h-5" />
+                    <span>{t?.get_ink_ad || "광고 보고 잉크 얻기 (+10)"}</span>
+                  </>
+                )}
+              </button>
+            </div>
+          )}
+
+          {/* 2. 상단 정보: 레벨 & 경험치 바 (광고 버튼 아래) */}
           {userProfile && (
             <div className="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm">
               <div className="flex items-center justify-between mb-2">
@@ -173,47 +201,12 @@ const ProfileView = ({
             </div>
           )}
 
-          {/* 2. 보유 잉크 & 광고 보고 잉크 얻기 버튼 */}
-          {userProfile && (
-            <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-2xl p-4 border-2 border-blue-200 shadow-sm">
-              <div className="flex items-center justify-between mb-3">
-                <div>
-                  <span className="text-[10px] text-blue-600 font-bold">{t?.current_ink || "보유 잉크"}</span>
-                  <div className="text-2xl font-black text-blue-700 leading-none mt-0.5 flex items-center gap-1">
-                    <Droplets className="w-6 h-6 fill-blue-500 text-blue-500" />
-                    {userProfile.ink || 50}
-                  </div>
-                </div>
-              </div>
-              <button
-                onClick={handleChargeInk}
-                disabled={isCharging}
-                className={`w-full py-2.5 rounded-xl font-black text-sm transition-all flex items-center justify-center gap-2 ${isCharging
-                  ? 'bg-slate-300 text-slate-500 cursor-not-allowed'
-                  : 'bg-blue-500 text-white hover:bg-blue-600 active:scale-95'
-                  }`}
-              >
-                {isCharging ? (
-                  <span className="animate-pulse">충전 중...</span>
-                ) : showChargeSuccess ? (
-                  <>
-                    <Droplets className="w-4 h-4" />
-                    <span>+10 충전 완료!</span>
-                  </>
-                ) : (
-                  <>
-                    <Video className="w-5 h-5" />
-                    <span>{t?.get_ink_ad || "광고 보고 잉크 얻기 (+10)"}</span>
-                  </>
-                )}
-              </button>
-            </div>
-          )}
+          {/* 3. 어플 설정 그룹 */}
+          <div className="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm space-y-4">
+            <h3 className="text-sm font-black text-slate-800 border-b border-slate-50 pb-2">{t?.app_settings || "어플 설정"}</h3>
 
-          {/* 3. 닉네임(필수) + 프로필 사진 (50:50 배치, 사용 설명서는 닉네임 영역 하단) */}
-          <div className="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm">
             <div className="flex gap-4">
-              {/* 왼쪽: 닉네임 + 익명활동 체크박스 + 사용 설명서 버튼 */}
+              {/* 왼쪽: 닉네임 + 익명활동 체크박스 + 사용 설명서 */}
               <div className="flex-1 min-w-0 flex flex-col">
                 <div className="flex items-center justify-between gap-2 mb-2">
                   <label className="text-xs font-bold text-slate-500">{t?.nickname_label_required || "닉네임(필수)"}</label>
@@ -236,29 +229,27 @@ const ProfileView = ({
                   className="w-full bg-slate-50 border-2 border-slate-200 rounded-xl py-2.5 px-4 text-sm font-bold focus:border-orange-500 focus:bg-white outline-none transition-colors"
                 />
                 {!canChange && nicknameChangeInfo && (
-                  <p className="text-[10px] text-orange-600 font-bold mt-1">
+                  <p className="text-[10px] text-orange-600 font-bold mt-1 mb-3">
                     닉네임 변경 가능까지 {nicknameChangeInfo.remainingDays}일 남음
                   </p>
                 )}
                 {canChange && userProfile?.nickname && (
-                  <p className="text-[10px] text-slate-400 mt-1">
+                  <p className="text-[10px] text-slate-400 mt-1 mb-3">
                     {t?.nickname_hint || "최초 1회는 자유롭게 변경 가능합니다"}
                   </p>
                 )}
-                {!userProfile?.nickname && (
-                  <p className="text-[10px] text-slate-400 mt-1">
-                    한글/영어/숫자/공백 포함 최대 6글자
-                  </p>
-                )}
+
+                {/* 사용 설명서 버튼 (왼쪽 컬럼 하단) */}
                 {onOpenHelp && (
                   <button
                     onClick={onOpenHelp}
-                    className="w-full mt-3 py-3 rounded-xl font-bold text-sm bg-slate-100 text-slate-700 hover:bg-slate-200 transition-colors flex items-center justify-center gap-2 active:scale-[0.98]"
+                    className="w-full py-3 rounded-xl font-bold text-sm bg-slate-100 text-slate-700 hover:bg-slate-200 transition-colors flex items-center justify-center gap-2 active:scale-[0.98]"
                   >
                     <span>{t?.help_btn || "사용 설명서"}</span>
                   </button>
                 )}
               </div>
+
               {/* 오른쪽: 프로필 사진 */}
               <div className="flex-1 min-w-0 flex flex-col items-center justify-start">
                 <label className="text-xs font-bold text-slate-500 mb-2 block w-full text-center">{t?.profile_photo || "프로필 사진"}</label>
@@ -288,64 +279,54 @@ const ProfileView = ({
                 </label>
               </div>
             </div>
-            {isUploadingImage && (
-              <div className="mt-2 text-[10px] text-slate-400 font-bold">
-                이미지 압축 및 업로드 중입니다...
+
+            {/* 언어 설정 */}
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-slate-500 block">{t?.language_label || "언어 설정"}</label>
+              <div className="grid grid-cols-2 gap-2">
+                {[
+                  { code: 'ko', label: '한국어' },
+                  { code: 'en', label: 'English' }
+                ].map((lang) => (
+                  <button
+                    key={lang.code}
+                    onClick={() => setLanguage(lang.code)}
+                    className={`py-2.5 rounded-xl text-xs font-bold transition-all ${language === lang.code
+                      ? 'bg-orange-500 text-white shadow-md'
+                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200 active:scale-95'
+                      }`}
+                  >
+                    {lang.label}
+                  </button>
+                ))}
               </div>
-            )}
-          </div>
-
-          {/* 4. 환경 설정: 언어 설정 */}
-          <div className="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm">
-            <label className="text-xs font-bold text-slate-500 mb-2 block">{t?.language_label || "언어 설정"}</label>
-            <div className="grid grid-cols-2 gap-2">
-              {[
-                { code: 'ko', label: '한국어' },
-                { code: 'en', label: 'English' }
-              ].map((lang) => (
-                <button
-                  key={lang.code}
-                  onClick={() => setLanguage(lang.code)}
-                  className={`py-2.5 rounded-xl text-xs font-bold transition-all ${language === lang.code
-                    ? 'bg-orange-500 text-white shadow-md'
-                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200 active:scale-95'
-                    }`}
-                >
-                  {lang.label}
-                </button>
-              ))}
             </div>
-          </div>
 
-          {/* 5. 글자 크기 설정 (4단계) */}
-          <div className="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm">
-            <label className="text-xs font-bold text-slate-500 mb-2 block">{t?.font_size_label || "글자 크기 (본문 용)"}</label>
-            <div className="grid grid-cols-4 gap-2">
-              {[
-                { size: 'text-sm', label: t?.font_small || '작게' },
-                { size: 'text-base', label: t?.font_medium || '보통' },
-                { size: 'text-lg', label: t?.font_large || '크게' },
-                { size: 'text-xl', label: t?.font_xlarge || '더 크게' }
-              ].map((fs) => (
-                <button
-                  key={fs.size}
-                  onClick={() => setFontSize(fs.size)}
-                  className={`py-2 rounded-xl text-[10px] font-bold transition-all ${fontSize === fs.size
-                    ? 'bg-slate-800 text-white shadow-md'
-                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200 active:scale-95'
-                    }`}
-                >
-                  {fs.label}
-                </button>
-              ))}
+            {/* 글자 크기 설정 */}
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-slate-500 block">{t?.font_size_label || "글자 크기 (본문 용)"}</label>
+              <div className="grid grid-cols-4 gap-2">
+                {[
+                  { size: 'text-sm', label: t?.font_small || '작게' },
+                  { size: 'text-base', label: t?.font_medium || '보통' },
+                  { size: 'text-lg', label: t?.font_large || '크게' },
+                  { size: 'text-xl', label: t?.font_xlarge || '더 크게' }
+                ].map((fs) => (
+                  <button
+                    key={fs.size}
+                    onClick={() => setFontSize(fs.size)}
+                    className={`py-2 rounded-xl text-[10px] font-bold transition-all ${fontSize === fs.size
+                      ? 'bg-slate-800 text-white shadow-md'
+                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200 active:scale-95'
+                      }`}
+                  >
+                    {fs.label}
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
 
-          {/* 6. 계정 관리 */}
-          <div className="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm space-y-2">
-            <label className="text-xs font-bold text-slate-500 mb-2 block">{t?.account_management || "계정 관리"}</label>
-
-            {/* 저장 버튼 */}
+            {/* 저장 버튼 (높이 축소: py-4 -> py-3) */}
             <button
               onClick={saveProfile}
               disabled={!tempNickname.trim()}
@@ -354,15 +335,20 @@ const ProfileView = ({
                 : 'bg-slate-900 text-white hover:bg-slate-800 active:scale-95'
                 }`}
             >
-              <Save className="w-4 h-4" />
-              {t?.save_btn || "저장"}
+              <Save className="w-5 h-5" />
+              {t?.save_btn || "설정 저장"}
             </button>
+          </div>
+
+          {/* 4. 계정 관리 그룹 */}
+          <div className="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm space-y-2">
+            <h3 className="text-sm font-black text-slate-800 border-b border-slate-50 pb-2 mb-1">{t?.account_management || "계정 관리"}</h3>
 
             {/* 로그아웃 버튼 */}
             {!user?.isAnonymous && (
               <button
                 onClick={handleLogout}
-                className="w-full py-2.5 rounded-xl font-bold text-sm text-slate-600 hover:bg-slate-100 transition-colors flex items-center justify-center gap-2 active:scale-95"
+                className="w-full py-3 rounded-xl font-bold text-sm text-slate-600 hover:bg-slate-100 transition-colors flex items-center justify-center gap-2 active:scale-95"
               >
                 <LogOut className="w-4 h-4" />
                 {t?.logout || "로그아웃"}
@@ -373,7 +359,7 @@ const ProfileView = ({
             {!user?.isAnonymous && (
               <button
                 onClick={() => setShowDeleteConfirm(true)}
-                className="w-full py-2.5 rounded-xl font-bold text-sm text-red-500 hover:bg-red-50 transition-colors flex items-center justify-center gap-2 active:scale-95"
+                className="w-full py-3 rounded-xl font-bold text-sm text-red-500 hover:bg-red-50 transition-colors flex items-center justify-center gap-2 active:scale-95"
               >
                 <Trash2 className="w-4 h-4" />
                 {t?.delete_account || "계정 탈퇴"}

@@ -94,7 +94,7 @@ const HomeView = ({
         <div>
           <span className="text-orange-600 font-bold text-xs bg-orange-50 px-2 py-1 rounded-md mb-2 inline-block">
             <div className="flex items-center gap-2">
-              <span>{(t.home_welcome || "{name}님 환영합니다!").replace('{name}', userProfile?.nickname || t.guest)}</span>
+              <span>{(t.home_welcome || "{name}님 환영합니다!").replace('{name}', userProfile?.anonymousActivity ? "익명" : (userProfile?.nickname || t.guest))}</span>
               {levelInfo && (
                 <span className="bg-orange-100 text-orange-600 text-[10px] px-2 py-0.5 rounded-full font-black flex items-center gap-0.5">
                   {levelInfo.gradeIcon && <span>{levelInfo.gradeIcon}</span>}

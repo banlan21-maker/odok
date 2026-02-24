@@ -523,6 +523,7 @@ const App = () => {
                 <ProfileView
                   user={user} userProfile={userProfile} t={t} levelInfo={levelInfo}
                   tempNickname={tempNickname} setTempNickname={setTempNickname}
+                  tempAnonymousActivity={tempAnonymousActivity} setTempAnonymousActivity={setTempAnonymousActivity}
                   language={language} setLanguage={setLanguage} fontSize={fontSize} setFontSize={setFontSize}
                   handleGoogleLogin={handleGoogleLogin} saveProfile={saveProfile} handleLogout={handleLogout}
                   addInk={addInk} handleDeleteAccount={handleDeleteAccount} error={error} setError={setError} appId={appId}
