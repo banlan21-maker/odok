@@ -7,8 +7,8 @@ import { Capacitor } from '@capacitor/core';
 const TEST_AD_UNIT_ID_ANDROID = 'ca-app-pub-3940256099942544/5224354917';
 const TEST_AD_UNIT_ID_IOS = 'ca-app-pub-3940256099942544/1712485313';
 
-// 실제 ID (출시 전에는 주석 처리)
-// const REAL_AD_UNIT_ID_ANDROID = 'ca-app-pub-XXXXXXXX/YYYYYYYY';
+// 실제 ID
+const REAL_AD_UNIT_ID_ANDROID = 'ca-app-pub-9517850144901016/2220729686';
 
 export const initializeAdMob = async () => {
     if (!Capacitor.isNativePlatform()) return;
@@ -16,7 +16,7 @@ export const initializeAdMob = async () => {
     try {
         await AdMob.initialize({
             requestTrackingAuthorization: true,
-            initializeForTesting: true, // 테스트 모드
+            initializeForTesting: false, // 실제 광고 송출을 위해 false로 설정
         });
         console.log('✅ AdMob Initialized');
     } catch (err) {
@@ -42,7 +42,8 @@ export const showRewardVideoAd = async (onReward, onError) => {
 
     // 2. 모바일 앱 환경: 실제(테스트) 광고 송출
     try {
-        const adId = Capacitor.getPlatform() === 'ios' ? TEST_AD_UNIT_ID_IOS : TEST_AD_UNIT_ID_ANDROID;
+        const isIOS = Capacitor.getPlatform() === 'ios';
+        const adId = isIOS ? TEST_AD_UNIT_ID_IOS : REAL_AD_UNIT_ID_ANDROID;
 
         // 기존 리스너 제거 (메모리 누수 방지)
         await AdMob.removeAllListeners();
