@@ -63,11 +63,6 @@ export const useAuth = ({ setView, viewRef }) => {
   useEffect(() => {
     const detection = detectInAppBrowser();
     if (detection && detection.isInApp) {
-      console.warn('⚠️ 인앱 브라우저 감지:', {
-        browser: detection.browserName,
-        device: detection.device,
-        userAgent: navigator.userAgent
-      });
       setDetectedInAppBrowser(detection.browserName);
       setDetectedDevice(detection.device);
       setShowInAppBrowserWarning(true);
@@ -90,26 +85,19 @@ export const useAuth = ({ setView, viewRef }) => {
         if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
           await signInWithCustomToken(auth, __initial_auth_token);
         }
-      } catch (err) { console.error("Auth error:", err); }
+      } catch { }
     };
     initAuth();
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
         if (user.isAnonymous) {
-          console.log('⚠️ 익명 로그인 감지, 로그아웃 처리');
           await signOut(auth);
           setUser(null);
           setView('login');
         } else {
-          console.log('✅ 인증 상태 변경 - 로그인됨:', {
-            uid: user.uid,
-            email: user.email,
-            displayName: user.displayName
-          });
           setUser(user);
         }
       } else {
-        console.log('❌ 인증 상태 변경 - 로그아웃됨');
         setUser(null);
         setView('login');
       }
@@ -129,8 +117,8 @@ export const useAuth = ({ setView, viewRef }) => {
         if (!tokenResult?.token) return;
         const credential = GoogleAuthProvider.credential(tokenResult.token);
         await signInWithCredential(auth, credential);
-      } catch (err) {
-        console.warn('Native silent sign-in skipped:', err);
+      } catch {
+        // silent sign-in 실패 시 무시 (사용자가 직접 로그인)
       }
     };
 
@@ -141,8 +129,7 @@ export const useAuth = ({ setView, viewRef }) => {
   useEffect(() => {
     if (!Capacitor.isNativePlatform()) return;
     const setupNotificationListener = async () => {
-      await LocalNotifications.addListener('localNotificationActionPerformed', (notification) => {
-        console.log('알림 클릭됨:', notification);
+      await LocalNotifications.addListener('localNotificationActionPerformed', () => {
         if (viewRef.current !== 'archive') {
           setView('archive');
         }
@@ -162,8 +149,6 @@ export const useAuth = ({ setView, viewRef }) => {
     }
 
     try {
-      console.log('🔐 Google 로그인 시도...');
-
       if (Capacitor.isNativePlatform()) {
         const nativeResult = await FirebaseAuthentication.signInWithGoogle();
         const idToken = nativeResult?.credential?.idToken;
@@ -171,26 +156,14 @@ export const useAuth = ({ setView, viewRef }) => {
           throw new Error('Google 로그인 토큰을 가져올 수 없습니다.');
         }
         const credential = GoogleAuthProvider.credential(idToken);
-        const result = await signInWithCredential(auth, credential);
-        console.log('✅ Native Google 로그인 성공:', {
-          uid: result.user.uid,
-          email: result.user.email,
-          displayName: result.user.displayName
-        });
+        await signInWithCredential(auth, credential);
         return;
       }
 
       const provider = new GoogleAuthProvider();
-      const result = await signInWithPopup(auth, provider);
-
-      console.log('✅ Google 로그인 성공:', {
-        uid: result.user.uid,
-        email: result.user.email,
-        displayName: result.user.displayName
-      });
+      await signInWithPopup(auth, provider);
 
     } catch (error) {
-      console.error('❌ Google 로그인 실패:', error);
 
       let errorMessage = "로그인에 실패했습니다.";
 

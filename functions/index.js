@@ -686,6 +686,10 @@ exports.generateBookAI = onCall(
   },
   async (request) => {
     try {
+      if (!request.auth) {
+        throw new HttpsError("unauthenticated", "로그인이 필요합니다.");
+      }
+
       if (!GEMINI_API_KEY) {
         throw new HttpsError("failed-precondition", "Gemini API 키가 설정되지 않았습니다.");
       }
@@ -840,6 +844,10 @@ exports.generateSeriesEpisode = onCall(
   },
   async (request) => {
     try {
+      if (!request.auth) {
+        throw new HttpsError("unauthenticated", "로그인이 필요합니다.");
+      }
+
       if (!GEMINI_API_KEY) {
         throw new HttpsError("failed-precondition", "Gemini API 키가 설정되지 않았습니다.");
       }
@@ -1132,7 +1140,9 @@ exports.analyzeReportAI = onCall(
 // 호환성 유지용 함수
 exports.generateStoryAI = onCall(
   {
-    region: REGION
+    region: REGION,
+    maxInstances: 10,
+    timeoutSeconds: 540
   },
   async (request) => {
     return exports.generateBookAI(request);
