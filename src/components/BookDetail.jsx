@@ -5,7 +5,7 @@ import { Capacitor } from '@capacitor/core';
 import { KeepAwake } from '@capacitor-community/keep-awake';
 import { ChevronLeft, ChevronRight, Book, Calendar, User, Heart, Send, Bookmark, CheckCircle, PenTool, RefreshCw, Trash2, Eye, Megaphone } from 'lucide-react';
 import { formatDateDetailed } from '../utils/dateUtils';
-import { getCoverImageFromBook } from '../utils/bookCovers';
+import { getCoverImageFromBook, hasPremiumCover } from '../utils/bookCovers';
 import { collection, addDoc, deleteDoc, doc, onSnapshot, serverTimestamp, setDoc, updateDoc, increment, runTransaction, getDoc } from 'firebase/firestore';
 import { deleteBookAdmin } from '../utils/aiService';
 import { db } from '../firebase';
@@ -18,7 +18,7 @@ const DAILY_WRITE_LIMIT = 2;
 const DAILY_FREE_WRITES = 1;
 const INK_MAX = 999;
 
-const BookDetail = ({ book, onClose, onBookUpdate, fontSize = 'text-base', user, userProfile, appId, slotStatus, deductInk, t, isAdmin, authorProfiles = {}, promotions = [], createPromotion }) => {
+const BookDetail = ({ book, onClose, onBookUpdate, fontSize = 'text-base', user, userProfile, appId, slotStatus, deductInk, t, isAdmin, authorProfiles = {}, promotions = [], createPromotion, followAuthor, unfollowAuthor, isFollowing, onAuthorClick }) => {
   if (!book) return null;
 
   // 관리자: 모든 책 수정/삭제 가능. 일반 사용자: 본인 책만 수정/삭제 가능
@@ -85,9 +85,6 @@ const BookDetail = ({ book, onClose, onBookUpdate, fontSize = 'text-base', user,
   const [isSendingInk, setIsSendingInk] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [showPromotionModal, setShowPromotionModal] = useState(false);
-  const [promoText, setPromoText] = useState('');
-  const [isPromoting, setIsPromoting] = useState(false);
   const [isEditingContent, setIsEditingContent] = useState(false);
   const [editedContent, setEditedContent] = useState('');
   const [isSavingContent, setIsSavingContent] = useState(false);
@@ -361,6 +358,25 @@ const BookDetail = ({ book, onClose, onBookUpdate, fontSize = 'text-base', user,
     try {
       await setDoc(completionRef, { userId: user.uid, bookId, createdAt: serverTimestamp() });
       await updateDoc(bookRef, { completions: increment(1) });
+      // 월간 챌린지: 완독 버튼 누를 때만 카운트 (2026_04부터 시작)
+      const CHALLENGE_START = '2026_04';
+      if (book?.authorId !== user.uid) {
+        const profileRef = doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'info');
+        const _now = new Date();
+        const challengeMonthKey = `${_now.getFullYear()}_${String(_now.getMonth() + 1).padStart(2, '0')}`;
+        if (challengeMonthKey >= CHALLENGE_START) {
+          const storedMonth = userProfile?.challenge_month;
+          if (storedMonth === challengeMonthKey) {
+            await updateDoc(profileRef, { challenge_reads: increment(1) });
+          } else {
+            await updateDoc(profileRef, {
+              challenge_month: challengeMonthKey,
+              challenge_reads: 1,
+              challenge_claimed: false,
+            });
+          }
+        }
+      }
     } catch (err) {
       console.error('완독 처리 실패:', err);
     }
@@ -684,13 +700,12 @@ const BookDetail = ({ book, onClose, onBookUpdate, fontSize = 'text-base', user,
 
           {/* 표지 이미지 및 기본 정보 */}
           <div className="flex gap-4">
-            <div className="w-24 h-32 rounded-lg overflow-hidden shrink-0 bg-slate-100 dark:bg-slate-700 shadow-md">
+            <div className="w-24 h-32 rounded-lg overflow-hidden shrink-0 bg-slate-100 dark:bg-slate-700 shadow-md relative">
               <img
                 src={coverImage}
                 alt={book.title}
                 className="w-full h-full object-cover"
                 onError={(e) => {
-                  // 이미지 로드 실패 시 기본 아이콘으로 대체
                   e.target.style.display = 'none';
                   e.target.nextElementSibling.style.display = 'flex';
                 }}
@@ -698,6 +713,22 @@ const BookDetail = ({ book, onClose, onBookUpdate, fontSize = 'text-base', user,
               <div className="w-full h-full bg-gradient-to-br from-orange-100 to-orange-200 flex items-center justify-center hidden">
                 <Book className="w-8 h-8 text-orange-600" />
               </div>
+              {/* AI 프리미엄 표지: 제목·작가명 텍스트 오버레이 */}
+              {hasPremiumCover(book) && (
+                <div className="absolute inset-0 flex flex-col justify-between p-1.5 bg-gradient-to-t from-black/60 via-transparent to-black/20 pointer-events-none">
+                  <div className="self-end bg-orange-500 rounded-full px-1 py-0.5 text-white text-[8px] font-black leading-none">
+                    AI
+                  </div>
+                  <div>
+                    <p className="text-white text-[9px] font-black leading-tight drop-shadow-md line-clamp-2">
+                      {book.title}
+                    </p>
+                    <p className="text-white/70 text-[8px] font-bold text-right drop-shadow mt-0.5 truncate">
+                      {book.isAnonymous ? '익명' : (book.authorName || '')}
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="flex-1 min-w-0 space-y-3">
@@ -707,10 +738,34 @@ const BookDetail = ({ book, onClose, onBookUpdate, fontSize = 'text-base', user,
 
               {/* 메타 정보 */}
               <div className="flex items-center gap-3 flex-wrap">
-                <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
+                <div
+                  className={`flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400 ${!book?.isAnonymous && book?.authorId ? 'cursor-pointer hover:text-orange-500 transition-colors' : ''}`}
+                  onClick={() => !book?.isAnonymous && book?.authorId && onAuthorClick?.(book.authorId)}
+                >
                   <span>{book?.isAnonymous ? '🌱' : (authorProfiles[book.authorId]?.gradeIcon || '🌱')}</span>
                   <span className="font-bold">{book?.isAnonymous ? '익명' : (authorProfiles[book.authorId]?.nickname || book?.authorName || '익명')}</span>
                 </div>
+                {/* 팔로우 버튼: 본인 작품·익명 작품 제외 */}
+                {!book.isAnonymous && book.authorId && book.authorId !== user?.uid && followAuthor && (
+                  <button
+                    onClick={async () => {
+                      const authorNickname = authorProfiles[book.authorId]?.nickname || book.authorName || '익명';
+                      const profileImageUrl = authorProfiles[book.authorId]?.profileImageUrl || null;
+                      if (isFollowing(book.authorId)) {
+                        await unfollowAuthor(book.authorId);
+                      } else {
+                        await followAuthor(book.authorId, authorNickname, profileImageUrl);
+                      }
+                    }}
+                    className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold transition-colors ${
+                      isFollowing(book.authorId)
+                        ? 'bg-orange-100 text-orange-600 hover:bg-orange-200'
+                        : 'bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400 hover:bg-orange-50 hover:text-orange-500'
+                    }`}
+                  >
+                    {isFollowing(book.authorId) ? '✓ 팔로잉' : '+ 팔로우'}
+                  </button>
+                )}
                 <span className="text-slate-300">•</span>
                 <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
                   <Calendar className="w-3.5 h-3.5" />
@@ -718,36 +773,20 @@ const BookDetail = ({ book, onClose, onBookUpdate, fontSize = 'text-base', user,
                 </div>
               </div>
 
-              {/* 카테고리/장르 태그 + 홍보하기 버튼 (한 줄: 왼쪽 카테고리, 오른쪽 홍보) */}
-              <div className="flex items-center justify-between gap-2 flex-wrap">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="bg-orange-100 text-orange-600 px-3 py-1 rounded-full text-xs font-bold">
-                    {categoryName}
+              {/* 카테고리/장르 태그 */}
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="bg-orange-100 text-orange-600 px-3 py-1 rounded-full text-xs font-bold">
+                  {categoryName}
+                </span>
+                {book.subCategory && (
+                  <span className="bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 px-3 py-1 rounded-full text-xs font-bold">
+                    {formatGenreTag(book.subCategory)}
                   </span>
-                  {book.subCategory && (
-                    <span className="bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 px-3 py-1 rounded-full text-xs font-bold">
-                      {formatGenreTag(book.subCategory)}
-                    </span>
-                  )}
-                </div>
-                {book.authorId === user?.uid && (
-                  (() => {
-                    const isAlreadyPromoted = promotions.some(p => p.bookId === book.id);
-                    return isAlreadyPromoted ? (
-                      <span className="inline-flex items-center gap-1.5 bg-emerald-100 text-emerald-600 px-4 py-2 rounded-xl text-xs font-bold shrink-0">
-                        <Megaphone className="w-3.5 h-3.5" />
-                        {t.promo_active}
-                      </span>
-                    ) : (
-                      <button
-                        onClick={() => setShowPromotionModal(true)}
-                        className="inline-flex items-center gap-1.5 bg-violet-100 text-violet-600 hover:bg-violet-200 px-4 py-2 rounded-xl text-xs font-bold transition-colors shrink-0"
-                      >
-                        <Megaphone className="w-3.5 h-3.5" />
-                        {t.promo_button}
-                      </button>
-                    );
-                  })()
+                )}
+                {promotions.some(p => p.bookId === book.id) && (
+                  <span className="inline-flex items-center gap-1 bg-violet-100 dark:bg-violet-950/40 text-violet-600 dark:text-violet-400 px-3 py-1 rounded-full text-xs font-bold">
+                    📢 홍보 중
+                  </span>
                 )}
               </div>
             </div>
@@ -968,7 +1007,10 @@ const BookDetail = ({ book, onClose, onBookUpdate, fontSize = 'text-base', user,
                   >
                     <div className="text-xs text-slate-400 dark:text-slate-500 mb-1 space-y-0.5">
                       <div className="flex items-center gap-2">
-                        <span className="font-bold text-slate-600 dark:text-slate-300">{c.authorName || (t?.anonymous || '익명')}</span>
+                        <span
+                          className={`font-bold text-slate-600 dark:text-slate-300 ${c.userId && c.userId !== user?.uid ? 'cursor-pointer hover:text-orange-500 transition-colors' : ''}`}
+                          onClick={() => c.userId && c.userId !== user?.uid && onAuthorClick?.(c.userId)}
+                        >{c.authorName || (t?.anonymous || '익명')}</span>
                         <span>·</span>
                         <span>{c.createdAt?.toDate?.()?.toLocaleString('ko-KR') || (t?.just_now || '방금 전')}</span>
                         {c.editedAt && <span>· {t?.edited || "수정됨"}</span>}
@@ -1138,65 +1180,6 @@ const BookDetail = ({ book, onClose, onBookUpdate, fontSize = 'text-base', user,
                   className="flex-1 py-3 rounded-xl text-sm font-black bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600"
                 >
                   {t?.stay || "머물기"}
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* 운영자: 책 삭제 확인 모달 */}
-        {/* 홍보 모달 */}
-        {showPromotionModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-6">
-            <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 w-full max-w-sm shadow-xl space-y-4">
-              <div className="text-center space-y-1">
-                <Megaphone className="w-8 h-8 text-violet-500 mx-auto" />
-                <h3 className="text-lg font-black text-slate-800 dark:text-slate-100">{t.promo_modal_title}</h3>
-              </div>
-              <input
-                type="text"
-                value={promoText}
-                onChange={(e) => setPromoText(e.target.value.slice(0, 50))}
-                placeholder={t.promo_input_placeholder}
-                maxLength={50}
-                className="w-full border border-slate-200 dark:border-slate-600 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100"
-              />
-              <p className="text-xs text-slate-400 dark:text-slate-500 text-center">{promoText.length}/50</p>
-              <div className="bg-violet-50 dark:bg-violet-900/30 rounded-xl p-3 text-center">
-                <p className="text-xs font-bold text-violet-600 dark:text-violet-400">{t.promo_cost}</p>
-                {(userProfile?.ink || 0) < 10 && (
-                  <p className="text-xs text-rose-500 mt-1">{t.promo_ink_short}</p>
-                )}
-              </div>
-              <div className="space-y-2">
-                <button
-                  onClick={async () => {
-                    if (!promoText.trim()) return;
-                    setIsPromoting(true);
-                    try {
-                      await createPromotion(book.id, promoText.trim());
-                      setShowPromotionModal(false);
-                      setPromoText('');
-                    } catch (err) {
-                      if (err.message === 'PROMO_FULL') alert(t.promo_full);
-                      else if (err.message === 'PROMO_ALREADY') alert(t.promo_already);
-                      else if (err.message === 'PROMO_INK_SHORT') alert(t.promo_ink_short);
-                      else alert(err.message || t.promo_confirm + ' 실패. 다시 시도해주세요.');
-                    } finally {
-                      setIsPromoting(false);
-                    }
-                  }}
-                  disabled={isPromoting || !promoText.trim() || (userProfile?.ink || 0) < 10}
-                  className="w-full bg-violet-500 text-white py-3 rounded-xl text-sm font-black hover:bg-violet-600 transition-colors disabled:opacity-50"
-                >
-                  {isPromoting ? '...' : t.promo_confirm}
-                </button>
-                <button
-                  onClick={() => { setShowPromotionModal(false); setPromoText(''); }}
-                  disabled={isPromoting}
-                  className="w-full bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 py-2 rounded-xl text-sm font-bold hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors"
-                >
-                  {t.cancel}
                 </button>
               </div>
             </div>

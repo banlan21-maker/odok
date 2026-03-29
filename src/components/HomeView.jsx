@@ -1,6 +1,6 @@
 // src/components/HomeView.jsx
 // Step 3: 홈 탭 구현
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   BookOpen, Crown, Trophy, Star, Megaphone, User,
   ArrowRight, Medal, Book, Bell, Sparkles, ChevronLeft, ChevronRight, Calendar,
@@ -30,6 +30,135 @@ const SkeletonListItem = () => (
   </div>
 );
 
+// ── 프리미엄 홍보 캐러셀 ────────────────────────────────────────
+const PromoCarousel = ({ promotions, books, authorProfiles, handleBookClick, t }) => {
+  const [current, setCurrent] = useState(0);
+  const timerRef = useRef(null);
+
+  const items = promotions
+    .map(promo => {
+      const book = books.find(b => b.id === promo.bookId);
+      if (!book) return null;
+      return { promo, book };
+    })
+    .filter(Boolean);
+
+  useEffect(() => {
+    if (items.length <= 1) return;
+    timerRef.current = setInterval(() => setCurrent(p => (p + 1) % items.length), 5000);
+    return () => clearInterval(timerRef.current);
+  }, [items.length]);
+
+  if (items.length === 0) return null;
+
+  const getRemainingHours = (expiresAt) => {
+    const exp = expiresAt?.toDate?.() || (expiresAt?.seconds ? new Date(expiresAt.seconds * 1000) : null);
+    if (!exp) return '';
+    const h = Math.max(0, Math.floor((exp - new Date()) / 3600000));
+    return `${h}시간 남음`;
+  };
+
+  return (
+    <div className="space-y-2">
+      {/* 섹션 헤더 */}
+      <div className="flex items-center gap-2 px-1">
+        <Megaphone className="w-5 h-5 text-violet-500" />
+        <h3 className="text-xl font-black text-slate-800 dark:text-slate-100">프리미엄 홍보</h3>
+        <span className="text-[10px] font-bold text-violet-400 bg-violet-50 dark:bg-violet-950/40 px-2 py-0.5 rounded-full">
+          {items.length}
+        </span>
+      </div>
+
+      {/* 카드 */}
+      <div className="relative rounded-3xl overflow-hidden shadow-xl" style={{ height: '230px' }}>
+        {items.map(({ promo, book }, i) => {
+          const cover = getCoverImageFromBook(book);
+          const authorName = promo.authorNickname || (book?.isAnonymous ? '익명' : (authorProfiles[promo.authorId]?.nickname || book?.authorName || '익명'));
+          const authorBio = promo.authorBio || authorProfiles[promo.authorId]?.bio || '';
+          const authorImg = authorProfiles[promo.authorId]?.profileImageUrl || null;
+          const remaining = getRemainingHours(promo.expiresAt);
+
+          return (
+            <div
+              key={promo.id}
+              className="absolute inset-0 transition-opacity duration-500"
+              style={{ opacity: i === current ? 1 : 0, pointerEvents: i === current ? 'auto' : 'none' }}
+            >
+              {/* 블러 배경 */}
+              {cover && (
+                <img
+                  src={cover}
+                  alt=""
+                  className="absolute inset-0 w-full h-full object-cover"
+                  style={{ filter: 'blur(14px)', transform: 'scale(1.18)' }}
+                />
+              )}
+              {/* 그라데이션 오버레이 */}
+              <div className="absolute inset-0 bg-gradient-to-b from-black/25 via-black/55 to-black/80" />
+
+              {/* 클릭 영역 */}
+              <button
+                className="absolute inset-0 w-full flex flex-col justify-between p-5 text-left"
+                onClick={() => handleBookClick(book)}
+              >
+                {/* 상단: 작가 정보 */}
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-full overflow-hidden border border-white/30 shrink-0 bg-white/20">
+                    {authorImg
+                      ? <img src={authorImg} alt="" className="w-full h-full object-cover" />
+                      : <span className="w-full h-full flex items-center justify-center text-sm">👤</span>}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-white font-black text-xs leading-none">{authorName}</p>
+                    {authorBio && <p className="text-white/55 text-[10px] mt-0.5 truncate">{authorBio}</p>}
+                  </div>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <span className="text-[9px] text-white/40">{remaining}</span>
+                    <span className="text-[9px] font-bold text-violet-300 bg-violet-500/25 px-1.5 py-0.5 rounded-full">📢</span>
+                  </div>
+                </div>
+
+                {/* 중앙: 홍보 문구 */}
+                <div className="text-center px-4 py-1">
+                  <p className="text-white text-xl font-black leading-tight drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)]">
+                    {promo.promoText}
+                  </p>
+                </div>
+
+                {/* 하단: 책 정보 + 소개글 */}
+                <div>
+                  {promo.bookSummary && (
+                    <p className="text-white/65 text-[11px] leading-relaxed line-clamp-2 mb-1.5">
+                      {promo.bookSummary}
+                    </p>
+                  )}
+                  <div className="flex items-center gap-2">
+                    {cover && <img src={cover} alt="" className="w-7 h-9 rounded object-cover shadow" />}
+                    <p className="text-white font-black text-sm truncate">{book.title}</p>
+                  </div>
+                </div>
+              </button>
+            </div>
+          );
+        })}
+
+        {/* 슬라이드 인디케이터 */}
+        {items.length > 1 && (
+          <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5 z-10">
+            {items.map((_, i) => (
+              <button
+                key={i}
+                onClick={() => { setCurrent(i); clearInterval(timerRef.current); }}
+                className={`h-1.5 rounded-full transition-all ${i === current ? 'w-5 bg-white' : 'w-1.5 bg-white/40'}`}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
 const HomeView = ({
   userProfile,
   t,
@@ -44,7 +173,8 @@ const HomeView = ({
   handleBookClick,
   authorProfiles = {},
   promotions = [],
-  books = []
+  books = [],
+  onAuthorClick,
 }) => {
   const getAuthorName = (book) => (book?.isAnonymous ? '익명' : (authorProfiles[book?.authorId]?.nickname || book?.authorName || '익명'));
   const getAuthorImage = (book) => (book?.isAnonymous ? null : authorProfiles[book?.authorId]?.profileImageUrl || null);
@@ -172,68 +302,10 @@ const HomeView = ({
         )}
       </div>
 
-      {/* 홍보 섹션 */}
-      {promotions.length > 0 && (() => {
-        const getRemainingTime = (expiresAt) => {
-          const expires = expiresAt?.toDate?.() || (expiresAt?.seconds ? new Date(expiresAt.seconds * 1000) : null);
-          if (!expires) return '';
-          const diff = expires - new Date();
-          if (diff <= 0) return '';
-          const hours = Math.floor(diff / (1000 * 60 * 60));
-          const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-          return `${hours}${t.promo_hours} ${minutes}${t.promo_minutes}`;
-        };
-
-        return (
-          <div className="space-y-3">
-            <div className="flex items-center gap-2 px-1">
-              <Megaphone className="w-5 h-5 text-violet-500" />
-              <h3 className="text-xl font-black text-slate-800 dark:text-slate-100">{t.promo_section_title}</h3>
-            </div>
-            <div className="space-y-2">
-              {promotions.map(promo => {
-                const promoBook = books.find(b => b.id === promo.bookId);
-                if (!promoBook) return null;
-                const coverImage = getCoverImageFromBook(promoBook);
-                const authorName = promoBook?.isAnonymous ? '익명' : (authorProfiles[promo.authorId]?.nickname || promoBook?.authorName || '익명');
-                const authorGrade = promoBook?.isAnonymous ? '🌱' : (authorProfiles[promo.authorId]?.gradeIcon || '🌱');
-                const remaining = getRemainingTime(promo.expiresAt);
-                const categoryName = {
-                  'webnovel': '웹소설', 'novel': '소설', 'essay': '에세이',
-                  'self-improvement': '자기계발', 'self-help': '자기계발',
-                  'humanities': '인문·철학', 'series': '시리즈'
-                }[promoBook.category] || promoBook.category;
-
-                return (
-                  <button
-                    key={promo.id}
-                    onClick={() => handleBookClick(promoBook)}
-                    className="w-full flex items-center gap-3 bg-gradient-to-r from-violet-50 dark:from-violet-950 to-white dark:to-slate-800 p-3 rounded-xl border border-violet-100 dark:border-violet-900 hover:border-violet-200 dark:hover:border-violet-800 transition-colors text-left"
-                  >
-                    <img
-                      src={coverImage}
-                      alt={promoBook.title}
-                      className="w-16 h-20 rounded-lg object-cover shrink-0 shadow-sm"
-                    />
-                    <div className="flex-1 min-w-0 space-y-1">
-                      <p className="text-sm font-black text-slate-800 dark:text-slate-100 truncate">{promoBook.title}</p>
-                      <p className="text-xs text-violet-600 truncate">{promo.promoText}</p>
-                      <div className="flex items-center gap-2 text-xs text-slate-400">
-                        <span>{authorGrade} {authorName}</span>
-                        <span className="text-slate-200">•</span>
-                        <span className="bg-violet-100 text-violet-500 px-1.5 py-0.5 rounded text-[10px] font-bold">{categoryName}</span>
-                      </div>
-                      {remaining && (
-                        <p className="text-[10px] text-slate-300">{t.promo_remaining}: {remaining}</p>
-                      )}
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        );
-      })()}
+      {/* ── 프리미엄 홍보 보드 (캐러셀) ── */}
+      {promotions.length > 0 && (
+        <PromoCarousel promotions={promotions} books={books} authorProfiles={authorProfiles} handleBookClick={handleBookClick} t={t} />
+      )}
 
       {/* 3. 오늘의 신간 (세로 리스트) */}
       <div className="space-y-4">
@@ -477,7 +549,11 @@ const HomeView = ({
               const rankBg = rankColors[index] || 'from-slate-200 to-slate-300 text-slate-600';
 
               return (
-                <div key={writer.id} className="flex items-center gap-3 bg-white dark:bg-slate-800 rounded-xl border border-slate-100 dark:border-slate-700 shadow-sm p-3">
+                <div
+                  key={writer.id}
+                  onClick={() => onAuthorClick?.(writer.id)}
+                  className="flex items-center gap-3 bg-white dark:bg-slate-800 rounded-xl border border-slate-100 dark:border-slate-700 shadow-sm p-3 cursor-pointer hover:border-orange-200 dark:hover:border-orange-800 hover:bg-orange-50/40 dark:hover:bg-orange-950/20 transition-colors active:scale-[0.98]"
+                >
                   <div className={`w-8 h-8 rounded-full bg-gradient-to-br ${rankBg} flex items-center justify-center text-sm font-black shrink-0`}>
                     {index + 1}
                   </div>

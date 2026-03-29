@@ -184,6 +184,7 @@ const WriteView = ({ user, userProfile, t, onBookGenerated, slotStatus, setView,
     { id: 'humanities', name: t?.cat_humanities || '인문·철학', icon: '💭', isNovel: false }
   ];
 
+  const [activeWriteTab, setActiveWriteTab] = useState('free');
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [selectedGenre, setSelectedGenre] = useState(null); // 소설류 장르
   const [seriesSubType, setSeriesSubType] = useState(null); // 시리즈의 웹소설형/일반소설형
@@ -948,6 +949,72 @@ const WriteView = ({ user, userProfile, t, onBookGenerated, slotStatus, setView,
         </p>
       </div>
 
+      {/* 탭: 자유집필 / 동화공방 */}
+      <div className="flex gap-1.5 p-1 bg-slate-100 dark:bg-slate-800 rounded-2xl">
+        <button
+          onClick={() => setActiveWriteTab('free')}
+          className={`flex-1 py-2.5 rounded-xl text-sm font-black transition-all ${
+            activeWriteTab === 'free'
+              ? 'bg-white dark:bg-slate-700 text-orange-500 shadow-sm'
+              : 'text-slate-400 dark:text-slate-500'
+          }`}
+        >
+          ✍️ 자유집필
+        </button>
+        <button
+          onClick={() => setActiveWriteTab('fairy')}
+          className={`flex-1 py-2.5 rounded-xl text-sm font-black transition-all ${
+            activeWriteTab === 'fairy'
+              ? 'bg-white dark:bg-slate-700 text-purple-500 shadow-sm'
+              : 'text-slate-400 dark:text-slate-500'
+          }`}
+        >
+          🧚 동화공방
+        </button>
+      </div>
+
+      {activeWriteTab === 'fairy' ? (
+        <div className="flex flex-col items-center justify-center py-10 px-4 text-center space-y-6">
+          {/* 애니메이션 아이콘 */}
+          <div className="relative w-28 h-28 flex items-center justify-center">
+            <div className="absolute inset-0 bg-purple-100 dark:bg-purple-900/30 rounded-full animate-pulse" />
+            <span className="text-6xl relative z-10">📖</span>
+            <span className="absolute top-0 right-0 text-2xl animate-bounce" style={{ animationDuration: '1.5s' }}>✨</span>
+            <span className="absolute bottom-0 left-1 text-xl animate-bounce" style={{ animationDuration: '2s', animationDelay: '0.3s' }}>🧚</span>
+            <span className="absolute top-2 left-0 text-lg animate-bounce" style={{ animationDuration: '1.8s', animationDelay: '0.6s' }}>⭐</span>
+          </div>
+
+          {/* COMING SOON 뱃지 */}
+          <div className="space-y-3">
+            <span className="inline-block bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 text-xs font-black px-4 py-1.5 rounded-full tracking-widest">
+              COMING SOON
+            </span>
+            <p className="text-lg font-black text-slate-800 dark:text-slate-100 leading-snug">
+              우리 아이가 주인공이 되는<br />마법 같은 시간
+            </p>
+            <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
+              오독오독 동화공방이 곧 찾아옵니다! 🧚✨
+            </p>
+          </div>
+
+          {/* 예정 기능 미리보기 */}
+          <div className="w-full bg-slate-50 dark:bg-slate-800/60 border border-dashed border-purple-200 dark:border-purple-800 rounded-2xl p-5 space-y-3 text-left">
+            <p className="text-xs font-black text-purple-400 dark:text-purple-500 text-center">✦ 준비 중인 기능 ✦</p>
+            {[
+              { icon: '🎨', text: '아이 이름으로 만드는 나만의 동화' },
+              { icon: '🌈', text: '삽화와 함께하는 동화책 뷰어' },
+              { icon: '📚', text: '소중한 동화 모아두는 보관함' },
+              { icon: '🎁', text: 'PDF로 저장해 선물하기' },
+            ].map(({ icon, text }) => (
+              <div key={text} className="flex items-center gap-3">
+                <span className="text-xl">{icon}</span>
+                <span className="text-sm text-slate-600 dark:text-slate-300 font-bold">{text}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : (
+        <>
       {/* 1. 메인 카테고리 선택 (6개) */}
       <div className="space-y-3">
         <h3 className="text-sm font-bold text-slate-500 dark:text-slate-400 px-1">{t?.category_label || "카테고리 선택"}</h3>
@@ -1530,6 +1597,8 @@ const WriteView = ({ user, userProfile, t, onBookGenerated, slotStatus, setView,
           </div>
         )
       }
+        </>
+      )}
     </div >
   );
 };

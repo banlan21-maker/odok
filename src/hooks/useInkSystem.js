@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   doc, setDoc, getDoc, updateDoc, increment
 } from 'firebase/firestore';
@@ -17,6 +17,52 @@ export const useInkSystem = ({ user, userProfile, setView, setError, setSelected
   const [pendingBookData, setPendingBookData] = useState(null);
   const [showLevelUpModal, setShowLevelUpModal] = useState(false);
   const [newLevel, setNewLevel] = useState(null);
+
+  // 월간 챌린지 결산 state
+  const [challengeResult, setChallengeResult] = useState(null); // null | { result: 'success'|'fail', monthKey, reads, goal }
+
+  // 매월 1일: 지난달 챌린지 결산 (Firestore 직접 읽어 stale 방지)
+  useEffect(() => {
+    if (!user?.uid) return;
+
+    const settle = async () => {
+      try {
+        const profileRef = doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'info');
+        const snap = await getDoc(profileRef);
+        if (!snap.exists()) return;
+        const data = snap.data();
+
+        const cm = data.challenge_month;
+        if (!cm) return;
+
+        const CHALLENGE_START = '2026_04';
+        if (cm < CHALLENGE_START) return;
+
+        const now = new Date();
+        const thisMonthKey = `${now.getFullYear()}_${String(now.getMonth() + 1).padStart(2, '0')}`;
+
+        // challenge_month가 지난 달 → 아직 결산 안 됐으면 결산
+        if (cm >= thisMonthKey) return;
+        if (data.challenge_settled_month === cm) return;
+
+        const reads = data.challenge_reads || 0;
+        const goal = 5;
+        const alreadyClaimed = data.challenge_claimed === true;
+
+        // 수동 수령(challenge_claimed)을 이미 한 경우 잉크 중복 지급 방지
+        if (reads >= goal && !alreadyClaimed) {
+          await addInk(10);
+        }
+        await updateDoc(profileRef, { challenge_settled_month: cm, challenge_claimed: reads >= goal });
+        setChallengeResult({ result: reads >= goal ? 'success' : 'fail', monthKey: cm, reads, goal });
+      } catch (err) {
+        console.error('챌린지 결산 오류:', err);
+      }
+    };
+
+    settle();
+  // user.uid가 확정된 후 1회만 실행 (로그인 시)
+  }, [user?.uid]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // 잉크 차감 (XP: 1잉크=10XP, total_ink_spent 누적, 레벨업 시 잉크 보너스)
   const deductInk = async (amount) => {
@@ -134,7 +180,9 @@ export const useInkSystem = ({ user, userProfile, setView, setError, setSelected
           views: increment(1)
         });
         const profileRef = doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'info');
-        await updateDoc(profileRef, { totalReadCount: increment(1) });
+        await updateDoc(profileRef, {
+          totalReadCount: increment(1),
+        });
       } catch (viewErr) {
         console.error('조회수 증가 실패:', viewErr);
       }
@@ -180,6 +228,8 @@ export const useInkSystem = ({ user, userProfile, setView, setError, setSelected
     openBookWithInkCheck,
     confirmOpenBook,
     handleWatchAdForRead,
-    handleBookClick
+    handleBookClick,
+    challengeResult,
+    setChallengeResult,
   };
 };

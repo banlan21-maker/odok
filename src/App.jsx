@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import {
   BookOpen, Coffee, Lightbulb, ChevronLeft,
   RefreshCw, Book, Calendar, List, ArrowRight, User, PenTool, Save,
-  Star, MessageCircle, Reply, Send, MoreHorizontal, Bookmark, Heart, Globe, Home, Edit2, Flag, X, Library, Vote, Trophy, CheckCircle, Smile, Zap, Brain, Sparkles, LogOut, Lock, Droplets, Video
+  Star, MessageCircle, Reply, Send, MoreHorizontal, Bookmark, Heart, Globe, Home, Edit2, Flag, X, Library, Vote, Trophy, CheckCircle, Smile, Zap, Brain, Sparkles, LogOut, Lock, Droplets, Video, ShoppingBag, Settings
 } from 'lucide-react';
 
 // Hooks
@@ -14,6 +14,7 @@ import { useBooks } from './hooks/useBooks';
 import { useComments } from './hooks/useComments';
 import { useStoryReader } from './hooks/useStoryReader';
 import { useAchievements } from './hooks/useAchievements';
+import { useFollows } from './hooks/useFollows';
 
 // Utils & Data
 import { T, genres } from './data';
@@ -33,11 +34,28 @@ import ProfileView from './components/ProfileView';
 import WriteView from './components/WriteView';
 import ArchiveView from './components/ArchiveView';
 import BookDetail from './components/BookDetail';
+import PremiumCoverModal from './components/PremiumCoverModal';
+import StoreView from './components/StoreView';
+import BagModal from './components/BagModal';
+import RainbowInkModal from './components/RainbowInkModal';
+import MagicEraserModal from './components/MagicEraserModal';
+import GoldenPenModal from './components/GoldenPenModal';
+import GiftModal from './components/GiftModal';
+import PaintbrushModal from './components/PaintbrushModal';
+import BookPreviewModal from './components/BookPreviewModal';
+import SettingsModal from './components/SettingsModal';
+import MegaphoneModal from './components/MegaphoneModal';
+import ChallengeResultModal from './components/ChallengeResultModal';
+import AuthorProfileModal from './components/AuthorProfileModal';
+import { useInventory } from './hooks/useInventory';
+import { useHighlights } from './hooks/useHighlights';
+import { db } from './firebase';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
 
 const rawAppId = typeof __app_id !== 'undefined' ? __app_id : 'odok-app-default';
 const appId = rawAppId.replace(/\//g, '_');
 
-const APP_VERSION = "1.07";
+const APP_VERSION = "2.0.0";
 
 const App = () => {
 
@@ -48,6 +66,54 @@ const App = () => {
   useEffect(() => {
     viewRef.current = view;
   }, [view]);
+
+  // 앱 시작 시 버전 체크 & Firestore 초기화
+  useEffect(() => {
+    const STORE_URL = 'https://play.google.com/store/apps/details?id=com.banlan21.odok';
+    const DEFAULT_SETTINGS = {
+      min_version: '2.0.0',
+      store_url: STORE_URL,
+      update_msg: '오독오독 2.0 대규모 업데이트! 확성기, 문방구, 작가 프로필 기능이 추가되었습니다. 원활한 사용을 위해 업데이트를 진행해주세요.',
+    };
+
+    const compareVersions = (v1, v2) => {
+      const p1 = v1.split('.').map(Number);
+      const p2 = v2.split('.').map(Number);
+      for (let i = 0; i < Math.max(p1.length, p2.length); i++) {
+        const a = p1[i] || 0;
+        const b = p2[i] || 0;
+        if (a < b) return -1;
+        if (a > b) return 1;
+      }
+      return 0;
+    };
+
+    const checkVersion = async () => {
+      try {
+        const versionRef = doc(db, 'app_settings', 'version_info');
+        const snap = await getDoc(versionRef);
+        let settings;
+        if (!snap.exists()) {
+          await setDoc(versionRef, DEFAULT_SETTINGS);
+          settings = DEFAULT_SETTINGS;
+        } else {
+          settings = snap.data();
+        }
+        const minVer = settings.min_version || '1.0.0';
+        if (compareVersions(APP_VERSION, minVer) < 0) {
+          setForceUpdate({
+            storeUrl: settings.store_url || STORE_URL,
+            updateMsg: settings.update_msg || DEFAULT_SETTINGS.update_msg,
+          });
+        }
+      } catch (err) {
+        console.warn('[버전 체크] 오류:', err);
+      }
+    };
+
+    checkVersion();
+  }, []);
+
   const [error, setError] = useState(null);
   const [selectedBook, setSelectedBook] = useState(null);
   const [currentBook, setCurrentBook] = useState(null);
@@ -64,7 +130,7 @@ const App = () => {
   // 2. User Profile Hook
   const {
     userProfile, setUserProfile,
-    tempNickname, setTempNickname, tempAnonymousActivity, setTempAnonymousActivity,
+    tempNickname, setTempNickname, tempBio, setTempBio, tempAnonymousActivity, setTempAnonymousActivity,
     language, setLanguage,
     fontSize, setFontSize,
     darkMode, setDarkMode,
@@ -86,7 +152,8 @@ const App = () => {
     newLevel, setNewLevel,
     deductInk, addInk,
     confirmOpenBook,
-    handleWatchAdForRead, handleBookClick
+    handleWatchAdForRead, handleBookClick,
+    challengeResult, setChallengeResult,
   } = useInkSystem({
     user,
     userProfile,
@@ -161,6 +228,49 @@ const App = () => {
     showAchievementModal,
     setShowAchievementModal
   } = useAchievements({ userProfile });
+
+  // 9. Follows Hook
+  const {
+    follows,
+    followAuthor,
+    unfollowAuthor,
+    isFollowing
+  } = useFollows({ user, books });
+
+  // 10. Inventory Hook
+  const {
+    purchaseItem,
+    isPurchasing,
+    useItem,
+    getInventory,
+    getItemQuantity,
+    getTotalItems,
+  } = useInventory({ user, userProfile });
+
+  const [showBagModal, setShowBagModal] = useState(false);
+  const [showRainbowInkModal, setShowRainbowInkModal] = useState(false);
+  const [showMagicEraserModal, setShowMagicEraserModal] = useState(false);
+  const [showGoldenPenModal, setShowGoldenPenModal] = useState(false);
+  const [giftTargetItem, setGiftTargetItem] = useState(null);
+  const [showPaintbrushModal, setShowPaintbrushModal] = useState(false);
+  const [previewBook, setPreviewBook] = useState(null);
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [showMegaphoneModal, setShowMegaphoneModal] = useState(false);
+  const [authorProfileUserId, setAuthorProfileUserId] = useState(null);
+  const [profileSubTab, setProfileSubTab] = useState('profile'); // 'profile' | 'store'
+  const [forceUpdate, setForceUpdate] = useState(null); // null | { storeUrl, updateMsg }
+
+  const { highlights, addHighlight, deleteHighlight } = useHighlights({ user });
+
+  // 책 클릭 시 미리보기 모달 먼저 열기
+  const handleBookClickWithPreview = (book) => {
+    setPreviewBook(book);
+  };
+
+  // profile 탭 이탈 시 서브탭 초기화
+  useEffect(() => {
+    if (view !== 'profile') setProfileSubTab('profile');
+  }, [view]);
 
   const t = T[language] || T.ko;
 
@@ -241,19 +351,35 @@ const App = () => {
           </div>
           <div className="flex items-center gap-3">
             {userProfile && (
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5">
                 <div className="flex items-center gap-1 bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300 px-2 py-1 rounded-lg">
                   <PenTool className="w-3.5 h-3.5" />
                   <span className="text-xs font-bold">{remainingDailyWrites}</span>
-                </div>
-                <div className="flex items-center gap-1 bg-blue-50 dark:bg-blue-950 px-2 py-1 rounded-lg">
-                  <span className="text-red-600 font-black text-xs">↑</span>
-                  <span className="text-xs font-black text-red-600">Lv.{levelInfo.level}</span>
                 </div>
                 <div className="flex items-center gap-1 bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300 px-2 py-1 rounded-lg">
                   <Droplets className="w-3.5 h-3.5 fill-blue-500 text-blue-500" />
                   <span className="text-xs font-bold">{userProfile.ink || 0}</span>
                 </div>
+                <div className="flex items-center gap-1 bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300 px-2 py-1 rounded-lg">
+                  <span className="text-xs font-black">Lv.{levelInfo.level}</span>
+                </div>
+                <button
+                  onClick={() => setShowBagModal(true)}
+                  className="relative flex items-center justify-center w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-950 hover:bg-blue-100 dark:hover:bg-blue-900 transition-colors"
+                >
+                  <ShoppingBag className="w-4 h-4 text-blue-600 dark:text-blue-300" />
+                  {getTotalItems() > 0 && (
+                    <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-orange-500 text-white text-[9px] font-black flex items-center justify-center leading-none">
+                      {getTotalItems() > 9 ? '9+' : getTotalItems()}
+                    </span>
+                  )}
+                </button>
+                <button
+                  onClick={() => setShowSettingsModal(true)}
+                  className="flex items-center justify-center w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-950 hover:bg-blue-100 dark:hover:bg-blue-900 transition-colors"
+                >
+                  <Settings className="w-4 h-4 text-blue-600 dark:text-blue-300" />
+                </button>
               </div>
             )}
           </div>
@@ -268,8 +394,8 @@ const App = () => {
                 <div className="flex justify-between items-center mb-4"><h3 className="font-bold text-lg dark:text-slate-100">사용 설명서</h3><button onClick={() => storyReaderHook.setIsHelpModalOpen(false)}><X className="w-5 h-5 text-slate-400" /></button></div>
                 <div className="text-sm text-slate-600 dark:text-slate-300 space-y-4 max-h-[60vh] overflow-y-auto pr-2">
                   <section>
-                    <h4 className="font-bold text-slate-800 mb-1">1. 🖊️ 집필 시스템</h4>
-                    <ul className="list-disc list-inside space-y-1 text-xs text-slate-600">
+                    <h4 className="font-bold text-slate-800 dark:text-slate-100 mb-1">1. 🖊️ 집필 시스템</h4>
+                    <ul className="list-disc list-inside space-y-1 text-xs text-slate-600 dark:text-slate-400">
                       <li><strong>1일 2회 집필:</strong> 매일 최대 2번 글을 쓸 수 있습니다. (첫 번째 무료, 두 번째는 잉크 소모·레벨에 따라 3~5개)</li>
                       <li><strong>선착순 발행:</strong> 장르별로 <strong>하루에 단 한 권</strong>만 발행됩니다. 서둘러 집필해보세요!</li>
                       <li><strong>광고 찬스:</strong> 광고를 보면 잉크 없이 무료로 한 번 더 집필할 수 있습니다.</li>
@@ -277,39 +403,77 @@ const App = () => {
                   </section>
 
                   <section>
-                    <h4 className="font-bold text-slate-800 mb-1">2. 💧 잉크 시스템</h4>
-                    <ul className="list-disc list-inside space-y-1 text-xs text-slate-600">
-                      <li><strong>획득:</strong> 출석(레벨별 2~5개), 레벨업 시 5개, 집필 완료 시 보상 등.</li>
-                      <li><strong>사용:</strong> 책 읽기(1~2개), 추가 집필, 키워드 변경, 작가 후원, <strong>작품 홍보(10개)</strong>에 사용됩니다.</li>
-                      <li><strong>XP:</strong> 잉크 1개 사용 시 10XP가 쌓여 레벨업에 반영됩니다.</li>
+                    <h4 className="font-bold text-slate-800 dark:text-slate-100 mb-1">2. 💧 잉크 시스템</h4>
+                    <ul className="list-disc list-inside space-y-1 text-xs text-slate-600 dark:text-slate-400">
+                      <li><strong>획득:</strong> 출석(레벨별 2~5개), 레벨업 보너스, 집필 완료 보상, 월간 챌린지 달성(10개).</li>
+                      <li><strong>사용:</strong> 책 읽기(1~2개), 추가 집필, 키워드 변경, 작가 후원, 문방구 아이템 구매.</li>
+                      <li><strong>XP:</strong> 잉크 1개 사용 시 10XP 적립 → 레벨업.</li>
                     </ul>
                   </section>
 
                   <section>
-                    <h4 className="font-bold text-slate-800 mb-1">3. 🏆 레벨 &amp; 칭호 (7단계)</h4>
-                    <p className="text-xs mb-1">잉크 사용 시 10XP 적립 → 레벨 상승 → 칭호·아이콘이 책 표지 등에 표시됩니다.</p>
-                    <ul className="list-disc list-inside space-y-1 text-xs text-slate-600">
-                      <li><strong>🌱 새싹 (Lv.1~10):</strong> 기본 혜택, 출석 2개</li>
-                      <li><strong>✏️ 작가 (Lv.11~20):</strong> 출석 3개, 후원 기능 오픈</li>
-                      <li><strong>🪶 숙련 작가 (Lv.21~40):</strong> 출석 4개, 키워드 무료 새로고침</li>
-                      <li><strong>🖊️ 베스트 작가 (Lv.41~60):</strong> 독서 비용 할인 (2→1)</li>
-                      <li><strong>✒️ 스타 작가 (Lv.61~80):</strong> 집필 비용 할인 (5→4)</li>
-                      <li><strong>🖋️ 거장 (Lv.81~98):</strong> 출석 5개</li>
-                      <li><strong>🌈 마스터 (Lv.99):</strong> 집필 비용 최종 할인 (5→3)</li>
+                    <h4 className="font-bold text-slate-800 dark:text-slate-100 mb-1">3. 🏆 레벨 &amp; 칭호 (7단계)</h4>
+                    <p className="text-xs mb-1 text-slate-500 dark:text-slate-400">잉크 사용 시 XP 적립 → 레벨 상승 → 칭호·아이콘이 책 표지 등에 표시됩니다.</p>
+                    <ul className="list-disc list-inside space-y-1 text-xs text-slate-600 dark:text-slate-400">
+                      <li>🌱 새싹 → ✏️ 작가 → 🪶 숙련 작가 → 🖊️ 베스트 작가 → ✒️ 스타 작가 → 🖋️ 거장 → 🌈 마스터</li>
+                      <li>레벨이 오를수록 출석 잉크 증가, 읽기/집필 비용 할인, 후원 기능 개방.</li>
                     </ul>
                   </section>
 
                   <section>
-                    <h4 className="font-bold text-slate-800 mb-1">4. 📢 작품 홍보</h4>
-                    <ul className="list-disc list-inside space-y-1 text-xs text-slate-600">
-                      <li>본인이 쓴 책 상세에서 <strong>홍보하기</strong> 버튼을 누르면, 잉크 10개로 <strong>48시간 동안</strong> 홈의 「작품 홍보」 구역에 노출됩니다.</li>
-                      <li>이미 홍보 중인 작품이 있으면 새로 홍보할 수 없습니다.</li>
+                    <h4 className="font-bold text-slate-800 dark:text-slate-100 mb-1">4. 🏪 문방구 &amp; 아이템</h4>
+                    <ul className="list-disc list-inside space-y-1 text-xs text-slate-600 dark:text-slate-400">
+                      <li><strong>🌈 무지개 잉크 (5개):</strong> 글쓰기 에디터에서 글자 색상 변경.</li>
+                      <li><strong>✨ 마법 지우개 (3개):</strong> 에디터 내 전체 텍스트 초기화.</li>
+                      <li><strong>🖊️ 황금 만년필 (7개):</strong> 글쓰기 글자 수 제한 확장.</li>
+                      <li><strong>🎨 페인트브러시 (8개):</strong> 책 표지 배경색 변경.</li>
+                      <li><strong>✏️ 샤프 (5개):</strong> 책 미리보기에서 AI 소개글 생성·업그레이드.</li>
+                      <li><strong>📢 확성기 (10개):</strong> 내 작품을 홈 화면에 24시간 노출.</li>
+                      <li>구매한 아이템은 <strong>내 가방(🎒)</strong>에서 확인·사용 가능.</li>
                     </ul>
                   </section>
 
                   <section>
-                    <h4 className="font-bold text-slate-800 mb-1">5. 📚 릴레이 시리즈</h4>
-                    <ul className="list-disc list-inside space-y-1 text-xs text-slate-600">
+                    <h4 className="font-bold text-slate-800 dark:text-slate-100 mb-1">5. 📢 확성기 홍보</h4>
+                    <ul className="list-disc list-inside space-y-1 text-xs text-slate-600 dark:text-slate-400">
+                      <li>가방(🎒)에서 확성기 아이템 사용 → 홍보할 책 선택 → 홍보 문구 입력.</li>
+                      <li>등록 후 <strong>24시간 동안</strong> 홈 화면 상단 캐러셀에 노출됩니다.</li>
+                      <li>샤프(✏️) 1개로 AI 책 소개글을 자동 생성할 수 있습니다.</li>
+                      <li>동시에 1개 작품만 홍보 가능 (자리가 꽉 찬 경우 대기).</li>
+                    </ul>
+                  </section>
+
+                  <section>
+                    <h4 className="font-bold text-slate-800 dark:text-slate-100 mb-1">6. 🖍️ 하이라이트 &amp; 공유</h4>
+                    <ul className="list-disc list-inside space-y-1 text-xs text-slate-600 dark:text-slate-400">
+                      <li>책 뷰어에서 원하는 문장을 <strong>길게 누르고 드래그</strong>하면 팝업이 나타납니다.</li>
+                      <li><strong>🎨 하이라이트 저장:</strong> 마음에 드는 문장을 내 프로필에 저장.</li>
+                      <li><strong>📢 공유하기:</strong> 5가지 배경 이미지 중 선택해 감성 이미지 카드 생성 → 카카오/인스타/다운로드.</li>
+                      <li>저장된 하이라이트는 프로필 탭에서 확인·삭제 가능.</li>
+                    </ul>
+                  </section>
+
+                  <section>
+                    <h4 className="font-bold text-slate-800 dark:text-slate-100 mb-1">7. 📅 월간 챌린지</h4>
+                    <ul className="list-disc list-inside space-y-1 text-xs text-slate-600 dark:text-slate-400">
+                      <li>매달 1일 리셋 · <strong>이번 달 5권 완독</strong>이 목표입니다.</li>
+                      <li>완독 버튼(책 뷰어에서 3분 이상 읽은 후 활성화)을 눌러야 카운트됩니다.</li>
+                      <li>달성 시 다음 달 1일 앱 실행 시 <strong>잉크 10개</strong> 자동 지급 + 축하 알림.</li>
+                    </ul>
+                  </section>
+
+                  <section>
+                    <h4 className="font-bold text-slate-800 dark:text-slate-100 mb-1">8. 👤 작가 프로필</h4>
+                    <ul className="list-disc list-inside space-y-1 text-xs text-slate-600 dark:text-slate-400">
+                      <li>홈 집필왕 목록, 책 상세 작가 이름, 댓글 닉네임을 탭하면 작가 프로필 모달이 열립니다.</li>
+                      <li>대표작(점수 최고 작품), 집필 목록, 팔로우/언팔로우 기능 제공.</li>
+                      <li>팔로우한 작가가 신작을 등록하면 <strong>푸시 알림</strong>을 받을 수 있습니다.</li>
+                    </ul>
+                  </section>
+
+                  <section>
+                    <h4 className="font-bold text-slate-800 dark:text-slate-100 mb-1">9. 📚 릴레이 시리즈</h4>
+                    <ul className="list-disc list-inside space-y-1 text-xs text-slate-600 dark:text-slate-400">
                       <li><strong>이어쓰기:</strong> 시리즈는 <strong>누구나</strong> 다음 화를 이어 쓸 수 있는 릴레이 소설입니다.</li>
                       <li><strong>연재/완결:</strong> 2화부터 독자 투표로 「연재」 또는 「완결」을 선택할 수 있습니다.</li>
                       <li><strong>통합 슬롯:</strong> 시리즈 신작·이어쓰기 포함 <strong>하루에 단 한 번</strong> 발행 가능합니다.</li>
@@ -327,11 +491,20 @@ const App = () => {
 
           {selectedNotice && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-6">
-              <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 w-full max-w-md shadow-xl space-y-4">
-                <div className="flex items-center justify-between"><div className="text-lg font-black text-slate-800 dark:text-slate-100">{t.notice_title}</div><button onClick={() => setSelectedNotice(null)} className="p-1.5 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-500"><X className="w-4 h-4" /></button></div>
-                <div className="space-y-2"><div className="text-lg font-black text-slate-800 dark:text-slate-100">{selectedNotice.title}</div><div className="text-sm text-slate-600 dark:text-slate-300 whitespace-pre-line">{selectedNotice.content}</div></div>
+              <div className="bg-white dark:bg-slate-800 rounded-2xl w-full max-w-md shadow-xl flex flex-col" style={{ maxHeight: '80vh' }}>
+                {/* 헤더 - 고정 */}
+                <div className="flex items-center justify-between px-6 pt-5 pb-3 flex-none border-b border-slate-100 dark:border-slate-700">
+                  <div className="text-lg font-black text-slate-800 dark:text-slate-100">{t.notice_title}</div>
+                  <button onClick={() => setSelectedNotice(null)} className="p-1.5 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-500"><X className="w-4 h-4" /></button>
+                </div>
+                {/* 내용 - 스크롤 */}
+                <div className="overflow-y-auto flex-1 px-6 py-4 space-y-2">
+                  <div className="text-base font-black text-slate-800 dark:text-slate-100">{selectedNotice.title}</div>
+                  <div className="text-sm text-slate-600 dark:text-slate-300 whitespace-pre-line leading-relaxed">{selectedNotice.content}</div>
+                </div>
+                {/* 하단 버튼 - 고정 */}
                 {isNoticeAdmin && (
-                  <div className="flex gap-2 pt-2 border-t border-slate-100 dark:border-slate-700 mt-2">
+                  <div className="flex gap-2 px-6 py-4 flex-none border-t border-slate-100 dark:border-slate-700">
                     <button onClick={() => { openNoticeEditor(selectedNotice); setSelectedNotice(null); }} className="flex-1 py-2 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-xl font-bold text-xs">{t.edit}</button>
                     <button onClick={() => deleteNotice(selectedNotice.id)} className="flex-1 py-2 bg-red-50 text-red-600 rounded-xl font-bold text-xs">{t.delete || "삭제"}</button>
                   </div>
@@ -438,12 +611,10 @@ const App = () => {
             <ProfileView
               user={user} userProfile={userProfile} t={t} levelInfo={levelInfo}
               tempNickname={tempNickname} setTempNickname={setTempNickname}
+              tempBio={tempBio} setTempBio={setTempBio}
               tempAnonymousActivity={tempAnonymousActivity} setTempAnonymousActivity={setTempAnonymousActivity}
-              language={language} setLanguage={setLanguage}
-              fontSize={fontSize} setFontSize={setFontSize}
-              darkMode={darkMode} setDarkMode={setDarkMode}
               handleGoogleLogin={handleGoogleLogin} saveProfile={saveProfile}
-              handleLogout={handleLogout} addInk={addInk} handleDeleteAccount={handleDeleteAccount}
+              addInk={addInk}
               error={error} setError={setError} appId={appId}
               onOpenHelp={() => storyReaderHook.setIsHelpModalOpen(true)}
             />
@@ -456,8 +627,9 @@ const App = () => {
                   userProfile={userProfile} t={t} levelInfo={levelInfo} notices={notices}
                   setView={setView} todayBooks={todayBooks} weeklyBestBooks={weeklyBestBooks} allTimeBestBooks={allTimeBestBooks}
                   topWriters={topWriters} isLoadingHomeData={isLoadingHomeData}
-                  handleBookClick={handleBookClick} authorProfiles={authorProfiles}
+                  handleBookClick={handleBookClickWithPreview} authorProfiles={authorProfiles}
                   promotions={promotions} books={books}
+                  onAuthorClick={(uid) => setAuthorProfileUserId(uid)}
                 />
               )}
 
@@ -495,7 +667,7 @@ const App = () => {
               )}
 
               {view === 'reader' && currentBook && !storyReaderHook.currentStory && (
-                <ReaderView book={currentBook} onBack={() => { setCurrentBook(null); setView('library'); }} fontSize={fontSize} />
+                <ReaderView book={currentBook} onBack={() => { setCurrentBook(null); setView('library'); }} fontSize={fontSize} addHighlight={addHighlight} />
               )}
 
               {view === 'reader' && storyReaderHook.currentStory && !currentBook && (
@@ -530,9 +702,20 @@ const App = () => {
                 </div>
               )}
 
-              {view === 'library' && <LibraryView t={t} books={books} onBookClick={handleBookClick} filter={libraryFilter} onFilterChange={setLibraryFilter} authorProfiles={authorProfiles} />}
+              {view === 'library' && <LibraryView t={t} books={books} onBookClick={handleBookClickWithPreview} filter={libraryFilter} onFilterChange={setLibraryFilter} authorProfiles={authorProfiles} />}
 
-              {view === 'archive' && <ArchiveView t={t} books={books} user={user} favoriteBookIds={storyReaderHook.bookFavorites.map(f => f.bookId)} onBookClick={handleBookClick} authorProfiles={authorProfiles} />}
+              {view === 'archive' && <ArchiveView t={t} books={books} user={user} favoriteBookIds={storyReaderHook.bookFavorites.map(f => f.bookId)} onBookClick={handleBookClickWithPreview} authorProfiles={authorProfiles} />}
+
+              {view === 'store' && (
+                <StoreView
+                  userProfile={userProfile}
+                  purchaseItem={purchaseItem}
+                  isPurchasing={isPurchasing}
+                  getItemQuantity={getItemQuantity}
+                  onGiftItem={(item) => setGiftTargetItem(item)}
+                  addInk={addInk}
+                />
+              )}
 
               {view === 'book_detail' && selectedBook && (
                 <BookDetail
@@ -540,6 +723,8 @@ const App = () => {
                   appId={appId} fontSize={fontSize} slotStatus={slotStatus} deductInk={deductInk} t={t}
                   isAdmin={isNoticeAdmin} authorProfiles={authorProfiles}
                   promotions={promotions} createPromotion={createPromotion}
+                  followAuthor={followAuthor} unfollowAuthor={unfollowAuthor} isFollowing={isFollowing}
+                  onAuthorClick={(uid) => setAuthorProfileUserId(uid)}
                   onClose={() => {
                     const isMyBook = selectedBook.authorId === user?.uid;
                     setSelectedBook(null);
@@ -549,31 +734,221 @@ const App = () => {
               )}
 
               {view === 'profile' && (
-                <ProfileView
-                  user={user} userProfile={userProfile} t={t} levelInfo={levelInfo}
-                  tempNickname={tempNickname} setTempNickname={setTempNickname}
-                  tempAnonymousActivity={tempAnonymousActivity} setTempAnonymousActivity={setTempAnonymousActivity}
-                  language={language} setLanguage={setLanguage} fontSize={fontSize} setFontSize={setFontSize}
-                  darkMode={darkMode} setDarkMode={setDarkMode}
-                  handleGoogleLogin={handleGoogleLogin} saveProfile={saveProfile} handleLogout={handleLogout}
-                  addInk={addInk} handleDeleteAccount={handleDeleteAccount} error={error} setError={setError} appId={appId}
-                  onOpenHelp={() => storyReaderHook.setIsHelpModalOpen(true)}
-                />
+                <div className="-mx-5">
+                  {/* 프로필 / 문방구 서브탭 */}
+                  <div className="flex border-b border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 sticky top-0 z-10">
+                    <button
+                      onClick={() => setProfileSubTab('profile')}
+                      className={`flex-1 py-3 text-sm font-bold transition-colors ${profileSubTab === 'profile' ? 'text-orange-600 border-b-2 border-orange-500' : 'text-slate-400'}`}
+                    >
+                      👤 프로필
+                    </button>
+                    <button
+                      onClick={() => setProfileSubTab('store')}
+                      className={`flex-1 py-3 text-sm font-bold transition-colors ${profileSubTab === 'store' ? 'text-amber-600 border-b-2 border-amber-500' : 'text-slate-400'}`}
+                    >
+                      🏪 문방구
+                    </button>
+                  </div>
+
+                  {profileSubTab === 'profile' && (
+                    <div className="px-5">
+                      <ProfileView
+                        user={user} userProfile={userProfile} t={t} levelInfo={levelInfo}
+                        tempNickname={tempNickname} setTempNickname={setTempNickname}
+                        tempBio={tempBio} setTempBio={setTempBio}
+                        tempAnonymousActivity={tempAnonymousActivity} setTempAnonymousActivity={setTempAnonymousActivity}
+                        handleGoogleLogin={handleGoogleLogin} saveProfile={saveProfile}
+                        addInk={addInk} error={error} setError={setError} appId={appId}
+                        onOpenHelp={() => storyReaderHook.setIsHelpModalOpen(true)}
+                        follows={follows} unfollowAuthor={unfollowAuthor}
+                        highlights={highlights} deleteHighlight={deleteHighlight}
+                      />
+                    </div>
+                  )}
+
+                  {profileSubTab === 'store' && (
+                    <StoreView
+                      userProfile={userProfile}
+                      purchaseItem={purchaseItem}
+                      isPurchasing={isPurchasing}
+                      getItemQuantity={getItemQuantity}
+                      onGiftItem={(item) => setGiftTargetItem(item)}
+                      addInk={addInk}
+                    />
+                  )}
+                </div>
               )}
             </>
           )}
         </main>
 
         {showWritingCompleteModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-6">
-            <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 w-full max-w-sm shadow-xl space-y-4 text-center">
-              <p className="text-sm font-bold text-slate-700 dark:text-slate-200">{t.writing_complete_title}</p>
-              <div className="flex gap-2">
-                <button onClick={() => {
-                  const book = books.find(b => b.id === showWritingCompleteModal.book.id) || showWritingCompleteModal.book;
-                  setSelectedBook(book); setView('book_detail'); setShowWritingCompleteModal(null);
-                }} className="flex-1 py-3 rounded-xl text-sm font-black bg-orange-500 text-white">{t.view_book_now}</button>
-                <button onClick={() => setShowWritingCompleteModal(null)} className="flex-1 py-3 rounded-xl text-sm font-black bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-200">{t.stay}</button>
+          <PremiumCoverModal
+            book={books.find(b => b.id === showWritingCompleteModal.book.id) || showWritingCompleteModal.book}
+            userProfile={userProfile}
+            appId={appId}
+            deductInk={deductInk}
+            onCoverGenerated={(coverUrl) => {
+              // Firestore에서 최신 book을 가져와 selectedBook 업데이트
+              const updatedBook = books.find(b => b.id === showWritingCompleteModal.book.id);
+              if (updatedBook) setSelectedBook({ ...updatedBook, cover_url: coverUrl });
+            }}
+            onViewBook={() => {
+              const book = books.find(b => b.id === showWritingCompleteModal.book.id) || showWritingCompleteModal.book;
+              setSelectedBook(book);
+              setView('book_detail');
+              setShowWritingCompleteModal(null);
+            }}
+            onSkip={() => setShowWritingCompleteModal(null)}
+          />
+        )}
+
+        {showBagModal && (
+          <BagModal
+            inventory={getInventory()}
+            onClose={() => setShowBagModal(false)}
+            onUseItem={(itemId) => {
+              if (itemId === 'rainbow_ink') setShowRainbowInkModal(true);
+              if (itemId === 'magic_eraser') setShowMagicEraserModal(true);
+              if (itemId === 'golden_pen') setShowGoldenPenModal(true);
+              if (itemId === 'paint_brush') setShowPaintbrushModal(true);
+              if (itemId === 'megaphone') setShowMegaphoneModal(true);
+            }}
+          />
+        )}
+
+        {showRainbowInkModal && (
+          <RainbowInkModal
+            user={user}
+            books={books}
+            useItem={useItem}
+            onClose={() => setShowRainbowInkModal(false)}
+          />
+        )}
+
+        {showMagicEraserModal && (
+          <MagicEraserModal
+            user={user}
+            books={books}
+            useItem={useItem}
+            onClose={() => setShowMagicEraserModal(false)}
+          />
+        )}
+
+        {showGoldenPenModal && (
+          <GoldenPenModal
+            user={user}
+            books={books}
+            useItem={useItem}
+            onClose={() => setShowGoldenPenModal(false)}
+          />
+        )}
+
+        {showPaintbrushModal && (
+          <PaintbrushModal
+            user={user}
+            userProfile={userProfile}
+            books={books}
+            useItem={useItem}
+            onClose={() => setShowPaintbrushModal(false)}
+          />
+        )}
+
+        {giftTargetItem && (
+          <GiftModal
+            item={giftTargetItem}
+            follows={follows}
+            userProfile={userProfile}
+            onClose={() => setGiftTargetItem(null)}
+          />
+        )}
+
+        {showSettingsModal && (
+          <SettingsModal
+            language={language} setLanguage={setLanguage}
+            fontSize={fontSize} setFontSize={setFontSize}
+            darkMode={darkMode} setDarkMode={setDarkMode}
+            t={t}
+            user={user}
+            handleLogout={handleLogout}
+            handleDeleteAccount={handleDeleteAccount}
+            saveProfile={saveProfile}
+            onClose={() => setShowSettingsModal(false)}
+            onOpenHelp={() => storyReaderHook.setIsHelpModalOpen(true)}
+          />
+        )}
+
+        {showMegaphoneModal && (
+          <MegaphoneModal
+            user={user}
+            userProfile={userProfile}
+            books={books}
+            createPromotion={createPromotion}
+            onClose={() => setShowMegaphoneModal(false)}
+          />
+        )}
+
+        {challengeResult && (
+          <ChallengeResultModal
+            result={challengeResult.result}
+            monthKey={challengeResult.monthKey}
+            reads={challengeResult.reads}
+            goal={challengeResult.goal}
+            onClose={() => setChallengeResult(null)}
+          />
+        )}
+
+        {authorProfileUserId && (
+          <AuthorProfileModal
+            targetUserId={authorProfileUserId}
+            books={books}
+            currentUser={user}
+            followAuthor={followAuthor}
+            unfollowAuthor={unfollowAuthor}
+            isFollowing={isFollowing}
+            onBookClick={handleBookClick}
+            onClose={() => setAuthorProfileUserId(null)}
+          />
+        )}
+
+        {previewBook && (
+          <BookPreviewModal
+            book={previewBook}
+            user={user}
+            userProfile={userProfile}
+            useItem={useItem}
+            authorProfiles={authorProfiles}
+            onRead={(book) => { setPreviewBook(null); handleBookClick(book); }}
+            onClose={() => setPreviewBook(null)}
+            onGoToStore={() => { setProfileSubTab('store'); setView('profile'); }}
+          />
+        )}
+
+        {/* 강제 업데이트 모달 - 가장 높은 우선순위, 닫기 불가 */}
+        {forceUpdate && (
+          <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-md p-6">
+            <div className="w-full max-w-sm bg-white rounded-3xl shadow-2xl overflow-hidden">
+              {/* 상단 그래픽 */}
+              <div className="bg-gradient-to-br from-orange-400 to-orange-600 px-6 pt-8 pb-6 text-center">
+                <div className="text-5xl mb-3">🚀</div>
+                <h2 className="text-xl font-black text-white">업데이트 필요</h2>
+                <p className="text-orange-100 text-xs mt-1">오독오독이 새롭게 변했어요!</p>
+              </div>
+              {/* 내용 */}
+              <div className="px-6 py-5 space-y-4">
+                <p className="text-sm text-slate-600 leading-relaxed text-center">
+                  {forceUpdate.updateMsg}
+                </p>
+                <div className="bg-orange-50 rounded-2xl px-4 py-3 text-center">
+                  <p className="text-xs text-orange-500 font-bold">현재 버전 {APP_VERSION} → 최신 버전으로 업데이트 필요</p>
+                </div>
+                <button
+                  onClick={() => window.open(forceUpdate.storeUrl, '_system')}
+                  className="w-full py-4 bg-orange-500 hover:bg-orange-600 active:scale-95 text-white font-black text-base rounded-2xl transition-all shadow-lg shadow-orange-200"
+                >
+                  📲 업데이트하러 가기
+                </button>
               </div>
             </div>
           </div>
