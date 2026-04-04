@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import {
-    collection, query, onSnapshot, where, getDocs, doc, getDoc, addDoc, serverTimestamp, updateDoc, increment, setDoc, deleteDoc, Timestamp
+    collection, query, onSnapshot, where, getDocs, doc, getDoc, addDoc, serverTimestamp, updateDoc, increment, setDoc, deleteDoc, Timestamp, runTransaction
 } from 'firebase/firestore';
 import { db } from '../firebase';
 import { startOfDay, startOfWeek, endOfWeek } from 'date-fns';
@@ -498,11 +498,10 @@ export const useBooks = ({ user, userProfile, setError, deductInk, setShowInkCon
         }
     };
 
-    const createPromotion = async (bookId, promoText) => {
+    const createPromotion = async (bookId, promoText, { authorNickname = '', authorBio = '', bookSummary = '' } = {}) => {
         if (!user) throw new Error('LOGIN_REQUIRED');
 
         const now = new Date();
-        // 현재 유효한 홍보 목록 확인
         const promosRef = collection(db, 'artifacts', appId, 'public', 'data', 'promotions');
         const promosSnap = await getDocs(promosRef);
         const activePromos = promosSnap.docs
@@ -515,19 +514,26 @@ export const useBooks = ({ user, userProfile, setError, deductInk, setShowInkCon
         if (activePromos.length >= 5) throw new Error('PROMO_FULL');
         if (activePromos.some(p => p.authorId === user.uid)) throw new Error('PROMO_ALREADY');
 
-        const currentInk = userProfile?.ink || 0;
-        if (currentInk < 10) throw new Error('PROMO_INK_SHORT');
-
-        const deducted = await deductInk(10);
-        if (!deducted) throw new Error('PROMO_INK_SHORT');
+        // 확성기 아이템 차감 (트랜잭션)
+        const profileRef = doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'info');
+        await runTransaction(db, async (transaction) => {
+            const snap = await transaction.get(profileRef);
+            if (!snap.exists()) throw new Error('프로필을 찾을 수 없습니다.');
+            const qty = snap.data()?.inventory?.megaphone ?? 0;
+            if (qty < 1) throw new Error('PROMO_NO_ITEM');
+            transaction.update(profileRef, { 'inventory.megaphone': qty - 1 });
+        });
 
         const createdAt = Timestamp.now();
-        const expiresAt = Timestamp.fromMillis(createdAt.toMillis() + 48 * 60 * 60 * 1000);
+        const expiresAt = Timestamp.fromMillis(createdAt.toMillis() + 24 * 60 * 60 * 1000); // 24시간
 
         await addDoc(promosRef, {
             bookId,
             authorId: user.uid,
             promoText: promoText.slice(0, 50),
+            authorNickname,
+            authorBio,
+            bookSummary,
             createdAt,
             expiresAt
         });

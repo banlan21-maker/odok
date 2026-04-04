@@ -53,7 +53,11 @@ const ArchiveView = ({ books, user, onBookClick, favoriteBookIds = [], t, author
                 <button
                   key={book.id}
                   onClick={() => onBookClick?.(book)}
-                  className="w-full px-3 py-2.5 bg-white dark:bg-slate-800 rounded-xl border border-slate-100 dark:border-slate-700 shadow-sm text-left hover:border-orange-200 active:bg-slate-50 dark:active:bg-slate-700 transition-colors"
+                  className={`w-full px-3 py-2.5 bg-white dark:bg-slate-800 rounded-xl border shadow-sm text-left active:bg-slate-50 dark:active:bg-slate-700 transition-colors ${
+                    book.isGoldenEdition
+                      ? 'border-amber-300 dark:border-amber-600 hover:border-amber-400 shadow-amber-100 dark:shadow-amber-900/20'
+                      : 'border-slate-100 dark:border-slate-700 hover:border-orange-200'
+                  }`}
                 >
                   <div className="flex items-center gap-2.5">
                     <div className="relative w-11 h-14 rounded-md overflow-hidden shrink-0 bg-slate-100">
@@ -81,9 +85,16 @@ const ArchiveView = ({ books, user, onBookClick, favoriteBookIds = [], t, author
                       )}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <h3 className="font-black text-slate-800 dark:text-slate-100 text-sm mb-1 line-clamp-1">
-                        {book.title}
-                      </h3>
+                      <div className="flex items-center gap-1.5 mb-1">
+                        <h3 className="font-black text-slate-800 dark:text-slate-100 text-sm line-clamp-1 flex-1">
+                          {book.title}
+                        </h3>
+                        {book.isGoldenEdition && (
+                          <span className="shrink-0 text-[9px] font-black text-amber-600 bg-amber-100 dark:bg-amber-900/50 border border-amber-200 dark:border-amber-700 px-1.5 py-0.5 rounded-full">
+                            ✨ Golden
+                          </span>
+                        )}
+                      </div>
                       <div className="flex items-center gap-1.5 text-[10px] text-slate-500 dark:text-slate-400 flex-wrap">
                         <span className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-white text-[10px] font-black shadow-sm ${book?.isAnonymous ? 'bg-green-500' : (authorProfiles[book.authorId]?.badgeStyle || 'bg-green-500')}`}>
                           <span className="text-[10px]">{book?.isAnonymous ? '🌱' : (authorProfiles[book.authorId]?.gradeIcon || '🌱')}</span>
@@ -190,9 +201,16 @@ const ArchiveView = ({ books, user, onBookClick, favoriteBookIds = [], t, author
                       )}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <h3 className="font-black text-slate-800 dark:text-slate-100 text-sm mb-1 line-clamp-1">
-                        {book.title}
-                      </h3>
+                      <div className="flex items-center gap-1.5 mb-1">
+                        <h3 className="font-black text-slate-800 dark:text-slate-100 text-sm line-clamp-1 flex-1">
+                          {book.title}
+                        </h3>
+                        {book.isGoldenEdition && (
+                          <span className="shrink-0 text-[9px] font-black text-amber-600 bg-amber-100 dark:bg-amber-900/50 border border-amber-200 dark:border-amber-700 px-1.5 py-0.5 rounded-full">
+                            ✨ Golden
+                          </span>
+                        )}
+                      </div>
                       <div className="flex items-center gap-1.5 text-[10px] text-slate-500 dark:text-slate-400 flex-wrap">
                         <span className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-white text-[10px] font-black shadow-sm ${book?.isAnonymous ? 'bg-green-500' : (authorProfiles[book.authorId]?.badgeStyle || 'bg-green-500')}`}>
                           <span className="text-[10px]">{book?.isAnonymous ? '🌱' : (authorProfiles[book.authorId]?.gradeIcon || '🌱')}</span>

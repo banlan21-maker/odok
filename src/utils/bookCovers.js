@@ -48,6 +48,9 @@ export const getBookCoverImage = (category, subCategory = null) => {
 export const getCoverImageFromBook = (book) => {
   if (!book) return getBookCoverImage('default');
 
+  // AI 프리미엄 표지가 있으면 우선 반환
+  if (book.cover_url) return book.cover_url;
+
   // 시리즈인 경우 seriesSubType(webnovel/novel)을 카테고리로 사용
   if ((book.category === 'series' || book.isSeries) && book.seriesSubType) {
     return getBookCoverImage(book.seriesSubType, book.subCategory);
@@ -55,3 +58,8 @@ export const getCoverImageFromBook = (book) => {
 
   return getBookCoverImage(book.category, book.subCategory);
 };
+
+/**
+ * AI 프리미엄 표지 여부 확인
+ */
+export const hasPremiumCover = (book) => !!(book && book.cover_url);

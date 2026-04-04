@@ -17,6 +17,7 @@ const INITIAL_INK = 10;
 export const useUserProfile = ({ user, setView, setError, viewRef }) => {
   const [userProfile, setUserProfile] = useState(null);
   const [tempNickname, setTempNickname] = useState("");
+  const [tempBio, setTempBio] = useState("");
   const [tempAnonymousActivity, setTempAnonymousActivity] = useState(false);
   const [language, setLanguage] = useState('ko');
   const [fontSize, setFontSize] = useState('text-base');
@@ -167,6 +168,7 @@ export const useUserProfile = ({ user, setView, setError, viewRef }) => {
 
         setUserProfile(data);
         setTempNickname(data.nickname || '');
+        setTempBio(data.bio || '');
         setTempAnonymousActivity(!!data.anonymousActivity);
         if (data.language) setLanguage(data.language);
         if (data.fontSize) setFontSize(data.fontSize);
@@ -291,6 +293,7 @@ export const useUserProfile = ({ user, setView, setError, viewRef }) => {
         fontSize: fontSize,
         darkMode: darkMode,
         anonymousActivity: tempAnonymousActivity,
+        bio: tempBio.trim().slice(0, 100),
         updatedAt: serverTimestamp()
       };
 
@@ -431,6 +434,8 @@ export const useUserProfile = ({ user, setView, setError, viewRef }) => {
     setUserProfile,
     tempNickname,
     setTempNickname,
+    tempBio,
+    setTempBio,
     tempAnonymousActivity,
     setTempAnonymousActivity,
     language,

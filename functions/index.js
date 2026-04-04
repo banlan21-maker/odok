@@ -27,10 +27,9 @@ const GEMINI_API_KEY = process.env.GEMINI_API_KEY || process.env.GOOGLE_GENERATI
 // Gemini API 모델 설정 (운영 비용 절감 - Flash 모델 사용)
 // 429 시 순서대로 시도 (모델별 쿼터가 다를 수 있음)
 const MODEL_FALLBACK_CHAIN = [
-  "gemini-2.0-flash",       // 메인
-  "gemini-2.0-flash-lite",  // 대체 1
-  "gemini-2.5-flash",       // 대체 2 (2.5 계열 별도 쿼터)
-  "gemini-2.5-flash-lite"   // 대체 3
+  "gemini-2.5-flash",       // 메인
+  "gemini-2.5-flash-lite",  // 대체 1
+  "gemini-2.5-pro",         // 대체 2 (고품질, 비용 높음)
 ];
 
 // 프롬프트 설정 (Strategy Pattern)
@@ -43,9 +42,7 @@ const NOVEL_BASE_GUIDE = [
   "[CRITICAL RULE] 반드시 한국어만 사용하라. 러시아어, 한자, 일본어, 아랍어 등 그 밖의 언어를 절대 사용하지 마라. 오직 한글, 공백, 기본 문장부호, 숫자만 사용하라.",
   "당신은 독자를 사로잡는 베스트셀러 작가다. 매 문장이 다음 문장을 읽게 만드는 흡인력을 가져야 한다.",
   "요약이 아닌 장면(Scene) 위주로 서술하라. 감각적 묘사(시각·청각·촉각)와 인물의 감정을 생생하게 보여주어라.",
-  "인위적이거나 너무 뻔한 전개는 피하라. 예상을 빗나가는 반전과 자연스러운 개연성을 동시에 갖춰라.",
-  "전체 소설은 공백 포함 약 4,000자 내외로, 단계별 비율에 맞춰 작성하라.",
-  "반드시 [발단-전개-위기-절정-결말]의 5단계 구조를 따른다."
+  "인위적이거나 너무 뻔한 전개는 피하라. 예상을 빗나가는 반전과 자연스러운 개연성을 동시에 갖춰라."
 ].join(" ");
 
 // 시리즈 연속 집필 시 캐릭터·설정 일관성 유지 지침 (시리즈 전용)
@@ -90,18 +87,18 @@ const NOVEL_GENRE_STYLES = [
 ];
 
 const GENRE_SPECIFIC_INSTRUCTIONS = {
-  "로맨스": "남녀 주인공 간의 설레는 감정선과 티키타카(대화의 재미)에 집중하십시오. 복잡한 배경 묘사보다는 인물의 심리와 관계 변화를 중심으로 서술하고, 치명적인 매력이나 오해와 질투 요소를 적극 활용하십시오.",
-  "로맨스 판타지": "서양풍 귀족 사회를 배경으로, 화려한 드레스와 무도회 등의 시각적 요소를 강조하십시오. 남주인공은 권위적이고 차갑지만 여주인공에게만 다정한 '북부 대공' 스타일, 여주인공은 당차고 능력 있는 캐릭터로 묘사하십시오. 회귀/빙의/환생 요소가 있다면 이를 스토리의 핵심 동력으로 삼으십시오.",
-  "판타지": "검과 마법, 몬스터가 존재하는 세계관을 웅장하게 그리십시오. 주인공의 모험과 성장, 동료들과의 유대감을 강조하며, 전투 장면에서는 마법 주문이나 검술의 이펙트를 화려하고 박진감 넘치게 묘사하십시오.",
-  "현대 판타지": "현대 한국 사회를 배경으로 하되, '상태창(System)', '던전', '각성' 같은 게임적 요소를 적극 활용하십시오. 주인공이 특별한 능력으로 사회적 성공을 거두거나 적들을 압도하는 '사이다' 전개를 최우선으로 하십시오. 고구마 같은 답답한 전개는 피하십시오.",
-  "무협": "중원 무림을 배경으로 '구파일방', '마교' 등의 세력 다툼을 그리십시오. 문체는 약간의 고풍스러운 어조를 사용하고, 내공, 검기, 경공 등 무협 고유의 용어를 반드시 포함하여 무공 대결을 묘사하십시오. '협(의리)'과 '복수'의 정서를 강조하십시오.",
-  "미스터리/공포": "독자의 숨통을 조이는 긴장감(Suspense) 조성에 집중하십시오. 미지의 존재에 대한 공포, 좁혀오는 포위망, 끔찍한 묘사를 생생하게 하되, 주인공의 생존 본능과 절박함을 극대화하십시오.",
-  "SF": "미래 기술, 우주, AI가 일상화된 세계를 그리되, 기술이 가져온 인간의 변화나 디스토피아적 상황에서의 생존에 초점을 맞추십시오.",
-  "드라마": "인물 간의 갈등과 화해, 그리고 인간적인 고뇌를 깊이 있게 다루십시오. 자극적인 사건보다는 현실적인 문제(가족, 직장, 꿈)를 소재로 하여 독자의 공감을 이끌어내고 감동을 주는 서사를 만드십시오.",
-  "미스터리/추리": "논리적인 인과관계와 트릭, 복선 회수에 집중하십시오. 범인의 심리전이나 탐정의 추리 과정을 치밀하게 설계하고, 결말의 반전을 위해 정보를 제한적으로 제공하여 독자의 궁금증을 유발하십시오.",
-  "스릴러": "범죄, 음모, 추격전 등 긴박한 상황을 속도감 있는 문체로 서술하십시오. 심리적 압박감과 타임리밋 요소를 활용하여 독자가 책을 덮지 못하게 만드십시오.",
-  "역사": "철저한 시대적 고증과 당시의 생활상, 언어적 특징을 반영하여 현장감을 살리십시오. 역사의 거대한 흐름 속에 던져진 개인의 운명을 비장미 넘치게 혹은 담담하게 서술하십시오.",
-  "힐링": "자극적인 갈등을 최소화하고, 따뜻하고 편안한 분위기를 조성하십시오. 숲속의 오두막, 심야 식당 등 특정 장소의 감각적 묘사(향기, 소리, 날씨)를 통해 독자가 위로받는 느낌을 주십시오."
+  "로맨스": "두 주인공 사이의 감정 변화를 세밀하게 추적하십시오. 첫 만남의 설렘, 오해로 인한 거리감, 질투나 경쟁이 만드는 긴장감, 마침내 마음이 열리는 순간을 각각 뚜렷한 장면으로 보여주십시오. 대화 속 숨겨진 감정(말하지 못한 고백, 눈빛, 손끝의 떨림)을 살려 독자가 두 사람의 설렘을 함께 느끼게 하십시오. '나 지금 심장이 쿵' 같은 직접 서술보다 상대방의 행동 하나에 멈춰버리는 장면으로 감정을 전달하십시오.",
+  "로맨스 판타지": "서양풍 귀족 세계의 화려함과 냉혹한 권력 다툼을 동시에 그리십시오. 남주인공은 차갑고 위압적이지만 여주인공 앞에서만 균열이 생기는 순간을 포착하십시오. 회귀·빙의·환생 요소가 있다면 전생의 기억이 현재 선택에 미치는 긴장감을 극대화하십시오. 무도회 드레스, 촛불이 흔들리는 성관 홀, 마차 안의 침묵 등 시각·촉각적 배경 묘사로 몰입감을 높이십시오. 여주인공은 수동적 피해자가 아닌 자신의 운명을 개척하는 능동적 인물로 그리십시오.",
+  "판타지": "세계관의 규칙(마법 체계, 종족 갈등, 지리)을 초반부터 자연스럽게 독자에게 보여주되 설명 덩어리가 되지 않게 하십시오. 전투 장면은 마법의 시각적 이펙트와 인물의 신체 감각(호흡, 땀, 근육의 긴장)을 함께 묘사해 박진감을 살리십시오. 주인공의 성장은 단순한 능력 상승이 아닌 내면의 갈등과 선택을 통해 보여주십시오. 동료와의 관계에 균열과 신뢰 회복의 감동을 담아 이야기에 깊이를 더하십시오.",
+  "현대 판타지": "현실의 평범한 일상과 초자연적 요소의 충돌을 생생하게 그리십시오. '각성' 후 주인공이 시스템 창(UI)을 처음 인식하는 장면을 독자가 함께 낯설고 경이롭게 느끼도록 묘사하십시오. '사이다' 전개를 위해 기존 강자들이 주인공을 무시하다 충격을 받는 장면을 명확하고 통쾌하게 연출하십시오. 던전·몬스터의 위협은 구체적인 감각(냄새, 공기 압박, 소리)으로 현실감 있게 묘사하십시오. 답답한 전개를 피하고 주인공이 문제를 능동적으로 해결하게 하십시오.",
+  "무협": "중원 강호의 정사(正邪) 대립과 문파 간 세력 다툼을 배경으로 삼으십시오. 무공 대결은 초식의 이름과 기세, 대지를 울리는 내공의 충돌을 고풍스러운 어조와 긴장감 있는 문장으로 묘사하십시오. '협(俠)'의 정신—의리, 약자 보호, 불의에 대한 분노—이 주인공의 행동 동기로 드러나게 하십시오. 복수의 서사라면 원한이 쌓이게 된 과거 장면과 현재의 침묵을 교차하며 비장감을 높이십시오. 대화에는 무림인 특유의 격식체와 자존심을 녹이십시오.",
+  "미스터리/공포": "공포는 눈에 보이는 것보다 '보이지 않는 것'에서 시작하십시오. 주인공이 이상함을 처음 느끼는 작은 균열(어긋난 물건, 낯선 냄새, 이유 없는 한기)에서 공포를 쌓아올리십시오. 독자가 도망쳐야 한다고 느낄 때 주인공은 이유를 알 수 없어 머뭇거리는 심리적 딜레마를 반복하십시오. 공포의 실체는 최후까지 아껴두고, 주인공의 심박수와 체온 변화, 호흡 패턴을 통해 절박함을 전달하십시오. 결말에서 모든 것이 설명되지 않아도 됩니다—불확실한 잔상이 가장 무섭습니다.",
+  "SF": "미래 세계의 기술은 설명하지 말고 일상처럼 사용하게 하십시오(독자가 맥락으로 파악하도록). 과학적 변화가 인간 관계·감정·도덕에 어떤 균열을 만드는지에 집중하십시오. AI·유전공학·우주 이주 등의 요소가 단순한 배경이 아닌 갈등의 핵심 원인이 되게 하십시오. 디스토피아라면 사회 감시 체계나 계급 분화를 주인공의 일상 속 소소한 장면으로 보여주십시오. 과학적 개념은 이야기 흐름을 방해하지 않는 수준에서만 언급하십시오.",
+  "드라마": "갈등의 핵심은 선악이 아닌 각자의 입장이 모두 이해되는 상황에서 벌어지게 하십시오. 주인공이 옳다고 생각하는 선택이 누군가를 다치게 하는 아이러니를 활용하십시오. 가족·직장·꿈이라는 현실적 소재 안에 독자가 자신의 삶을 투영할 수 있는 보편적 정서를 담으십시오. 대화에서 직접 말하지 못하는 감정(원망, 사랑, 죄책감)을 행동이나 침묵으로 표현하십시오. 감동은 과장하지 않고 담담하게 서술할 때 더 깊이 전달됩니다.",
+  "미스터리/추리": "독자가 탐정과 함께 추리할 수 있도록 단서를 공정하게 배치하십시오(단서는 있지만 독자가 간과하기 쉽게). 범인은 초반부터 등장하되 의심받지 않아야 하며, 나중에 돌아봤을 때 '아, 그 장면이!' 하는 복선을 심어두십시오. 탐정의 추리 과정은 논리의 비약 없이 관찰→가설→검증의 흐름을 따르십시오. 범인의 심리와 동기는 단순한 악이 아닌 이해 가능한 내면을 갖추게 하십시오. 결말의 반전 이후 독자가 첫 장면을 다시 읽고 싶어지게 만드십시오.",
+  "스릴러": "첫 장면부터 독자를 위협감 속에 던져넣으십시오. 주인공이 알고 있는 것보다 독자가 조금 더 알게 하거나(아이러니), 반대로 독자보다 정보가 적어 답답하게 만드는 두 가지 전략을 의도적으로 사용하십시오. 타임리밋(시간 압박)과 물리적 추격을 교차하며 호흡을 끊지 마십시오. 주인공의 판단 실수가 위기를 키우는 구조로 독자가 함께 긴장하게 하십시오. 반전은 개연성 있는 복선 위에서만 작동합니다.",
+  "역사": "역사적 사실을 배경으로 삼되 인물의 내면과 선택에 집중하십시오. 당시 언어·복식·생활상을 과도하지 않게 녹여 현장감을 살리십시오. 역사의 거대한 흐름(전쟁, 왕조 교체) 앞에 놓인 평범한 개인의 선택이 갖는 무게를 비장미 있게 그리십시오. 고증 오류가 될 수 있는 현대적 표현이나 개념은 피하십시오. 독자가 이미 아는 역사적 결말을 향해 달려가는 인물의 운명에 비극적 아름다움을 부여하십시오.",
+  "힐링": "사건보다 감각과 분위기로 이야기를 이끄십시오. 장소의 냄새, 음식의 온도, 창밖의 빗소리처럼 구체적인 감각 묘사가 독자를 그 공간으로 데려가야 합니다. 갈등은 있되 극단적이지 않게, 상처는 있되 지나치게 무겁지 않게 다루십시오. 주인공이 작은 것에서 위로를 발견하는 순간—낯선 사람의 친절, 오랜 취미의 재발견—을 섬세하게 포착하십시오. 마지막 장면은 모든 것이 해결되지 않아도 독자가 숨을 내쉬며 미소 지을 수 있게 마무리하십시오."
 };
 
 const NOVEL_MOOD_OPTIONS = {
@@ -265,7 +262,7 @@ function buildPOVInstruction(selectedPOV) {
   return instructions[pov] ? `[POV Guideline] ${instructions[pov]}` : null;
 }
 
-function buildSystemPrompt({ isNovel, category, subCategory, genre, isSeries = false, endingStyle, selectedTone, selectedMood, selectedPOV, selectedSpeechTone, selectedDialogueRatio }) {
+function buildSystemPrompt({ isNovel, category, subCategory, genre, isSeries = false, episodeType = null, endingStyle, selectedTone, selectedMood, selectedPOV, selectedSpeechTone, selectedDialogueRatio }) {
   if (isNovel) {
     const endingGuide = endingStyle
       ? `결말은 반드시 '${endingStyle}' 형태로 끝내며 그 톤을 유지하라.`
@@ -274,6 +271,17 @@ function buildSystemPrompt({ isNovel, category, subCategory, genre, isSeries = f
     const povGuide = buildPOVInstruction(selectedPOV);
     const speechToneGuide = buildSpeechToneInstruction(selectedSpeechTone);
     const dialogueRatioGuide = buildDialogueRatioInstruction(selectedDialogueRatio);
+    // episodeType: null(단편/1화), 'continue'(이어쓰기), 'finalize'(완결)
+    let structureGuide;
+    if (episodeType === 'finalize') {
+      structureGuide = "이번 화는 완결 화다. 지금까지 쌓아온 모든 갈등·복선을 빠짐없이 회수하며, 각 등장인물의 변화와 결말을 충분히 보여주어라. 공백 포함 약 3,000자 이상의 묵직하고 완성도 높은 결말을 작성하라. 단계 구분 없이 하나의 흐름으로 서술하라.";
+    } else if (episodeType === 'continue') {
+      structureGuide = "이번 화는 연재 중인 에피소드다. 직전 화의 마지막 장면에서 자연스럽게 이어 공백 포함 약 3,000자 이상을 작성하라. 단계 구분 없이 하나의 흐름으로 서술하고, 마지막 문장은 독자가 다음 화를 기다리게 만드는 절단신공(Cliffhanger)으로 끝내라.";
+    } else if (isSeries) {
+      structureGuide = "이번 화는 시리즈의 첫 번째 화다. [시작-사건과 훅] 2단계 구조로 공백 포함 약 3,000자 내외로 작성하라. 독자가 다음 화를 기다리게 만드는 강렬한 훅(Hook)으로 끝맺어라.";
+    } else {
+      structureGuide = "단편 소설로, [발단-전개-위기-절정-결말] 5단계 구조로 공백 포함 약 4,000자 내외로, 단계별 비율에 맞춰 작성하라. 절정에서는 갈등을 최고조로 끌어올리며, 전체 분량의 약 30%를 할애한다.";
+    }
     return [
       `당신은 ${genre || "소설"} 분야의 최고 작가입니다.`,
       `[장르 지침] ${pickGenreGuideline(genre)}`,
@@ -283,8 +291,7 @@ function buildSystemPrompt({ isNovel, category, subCategory, genre, isSeries = f
       dialogueRatioGuide,
       NOVEL_BASE_GUIDE,
       isSeries ? NOVEL_SERIES_CONTEXT_GUIDE : null,
-      pickGenreGuide(genre),
-      "절정에서는 갈등을 최고조로 끌어올리며, 전체 분량의 약 30%를 할애한다.",
+      structureGuide,
       endingGuide,
       "[출력 형식] 본문에는 책 내용과 무관한 특수문자(예: *, #, -, •, **, 마크다운·불릿 기호 등)를 절대 사용하지 마세요. 독자가 읽는 순수한 글만 출력하세요."
     ].filter(Boolean).join("\n\n");
@@ -335,13 +342,11 @@ function buildStepPrompt({
     `Task: 이번에는 "${currentStep.name}" 단계를 작성하세요.`,
     `가이드라인: ${currentStep.instruction}`,
     isNovel
-      ? "Show, Don't Tell 방식으로 보여주기 위주로 서술하세요. 대화문과 묘사를 적극 활용하세요."
-      : "Persuasive & Insightful 톤으로 논리적 흐름을 유지하고, 독자에게 말을 거는 듯한 어조로 작성하세요.",
+      ? "직접 설명하지 말고 장면으로 보여주세요. 대화문과 감각적 묘사(시각·청각·촉각)를 적극 활용하세요."
+      : "설득력 있고 통찰력 있는 어조로 논리적 흐름을 유지하고, 독자에게 말을 거는 듯한 친근한 문체로 작성하세요.",
     "순수 텍스트로만 작성하세요 (JSON 형식, 코드 사용 금지).",
     "[절대 금지] 별표(*), 숫자 기호(#), 하이픈(-), 불릿(•), 마크다운 강조(**) 등 책 내용과 무관한 특수문자를 본문에 넣지 마세요. 문단 구분·장식용 기호 없이 본문만 출력하세요.",
     `[절대 금지] "${currentStep.name}", "## ${currentStep.name}", "### ${currentStep.name}", "**[${currentStep.name}]**" 등의 단계명을 본문에 포함하지 마십시오. 오직 내용만 출력하세요.`,
-    "[절대 금지] [제목], [줄거리], [요약], [브릿지], [설정], [캐릭터], [전개], [결말] 등 대괄호 메타 태그를 본문에 절대 포함하지 마세요. 내부 추론이나 구조 설명도 출력하지 마세요. 독자가 읽는 소설/글의 본문만 작성하세요.",
-    "[절대 금지] '물리적 상태:', '심리적 상태:', '미해결 정보:' 등 내부 작업용 라벨을 본문에 절대 표시하지 마세요. 이 정보는 참고용으로만 쓰고, 본문에는 순수한 스토리/글만 출력하세요.",
     "이전 내용을 반복하지 마세요.",
     "한국어로 작성하세요."
   ];
@@ -887,7 +892,8 @@ exports.generateSeriesEpisode = onCall(
         subCategory,
         genre,
         isSeries: true,
-        endingStyle: isFinalize ? (endingStyle || '닫힌 결말 (해피 엔딩)') : null,
+        episodeType: isFinalize ? 'finalize' : 'continue',
+        endingStyle: isFinalize ? (endingStyle || null) : null,
         selectedTone: null,
         selectedMood,
         selectedPOV: selectedPOV || null,
@@ -900,7 +906,8 @@ exports.generateSeriesEpisode = onCall(
 
       const lastParagraph = extractLastSentences(lastEpisodeContent || "", 10);
       const previousStorySummary = cumulativeSummary || "";
-      const sceneBridge = lastEpisodeContent
+      // 완결은 다음 장면이 없으므로 scene bridge 추출 불필요
+      const sceneBridge = (!isFinalize && lastEpisodeContent)
         ? await extractSceneBridge(lastEpisodeContent, systemPrompt, true)
         : "";
 
@@ -1137,6 +1144,542 @@ exports.analyzeReportAI = onCall(
   }
 );
 
+// ─────────────────────────────────────────────────────────────────
+// generateBookCover: 프리미엄 AI 표지 생성
+// 1) Gemini 텍스트 → 영문 이미지 프롬프트 생성
+// 2) Gemini 이미지 모델 → base64 이미지 생성
+// 3) Firebase Storage 업로드 → cover_url Firestore 업데이트
+// ─────────────────────────────────────────────────────────────────
+exports.generateBookCover = onCall(
+  {
+    region: REGION,
+    maxInstances: 5,
+    timeoutSeconds: 120,
+    memory: "512MiB",
+  },
+  async (request) => {
+    if (!request.auth) {
+      throw new HttpsError("unauthenticated", "로그인이 필요합니다.");
+    }
+
+    const { bookId, bookTitle, bookContent, appId: clientAppId } = request.data || {};
+    const userId = request.auth.uid;
+
+    if (!bookId || !bookTitle) {
+      throw new HttpsError("invalid-argument", "bookId와 bookTitle이 필요합니다.");
+    }
+
+    const safeAppId = (clientAppId || "odok-app-default").replace(/\//g, "_");
+    const contentSnippet = (bookContent || "").substring(0, 1500);
+
+    if (!GEMINI_API_KEY) {
+      throw new HttpsError("internal", "Gemini API 키가 설정되지 않았습니다.");
+    }
+
+    const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+
+    // ── Step 1: 영문 이미지 프롬프트 생성 ──────────────────────────
+    logger.info("[generateBookCover] Step1: 이미지 프롬프트 생성 시작");
+    let imagePrompt;
+    try {
+      const textModel = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+      const promptGenRequest = `You are a professional book cover artist. Based on the Korean novel below, create a vivid English image generation prompt for a book cover background.
+
+Novel Title: ${bookTitle}
+Novel Content: ${contentSnippet}
+
+Requirements:
+- Write a detailed English image description (2-3 sentences)
+- Focus on mood, atmosphere, colors, and visual elements that represent the story
+- Style: cinematic, artistic, painterly illustration
+- CRITICAL: Ensure the image contains NO TEXT, NO LETTERS, NO WORDS, NO TITLES, NO SUBTITLES, NO CAPTIONS, NO SIGNATURES, and NO SYMBOLS of any kind. Generate a pure artistic background image only.
+- Output ONLY the image prompt, nothing else.`;
+
+      const textResult = await textModel.generateContent(promptGenRequest);
+      imagePrompt = textResult.response.text().trim();
+      logger.info("[generateBookCover] 생성된 프롬프트:", imagePrompt);
+    } catch (err) {
+      logger.error("[generateBookCover] 프롬프트 생성 실패:", err.message);
+      throw new HttpsError("internal", `이미지 프롬프트 생성 실패: ${err.message}`);
+    }
+
+    // 텍스트 방지 강화
+    imagePrompt += " No text, no letters, no words, no writing of any kind. Pure background art only.";
+
+    // ── Step 2: Gemini 이미지 생성 ────────────────────────────────
+    logger.info("[generateBookCover] Step2: AI 이미지 생성 시작");
+    let imageBase64;
+    let imageMimeType = "image/png";
+
+    const imageModelNames = [
+      "gemini-2.5-flash-image",
+      "gemini-3.1-flash-image-preview",
+      "gemini-3-pro-image-preview",
+    ];
+
+    let imageGenerated = false;
+    for (const modelName of imageModelNames) {
+      try {
+        const imageModel = genAI.getGenerativeModel({ model: modelName });
+        const imageResult = await imageModel.generateContent({
+          contents: [{ role: "user", parts: [{ text: imagePrompt }] }],
+          generationConfig: { responseModalities: ["IMAGE"] },
+        });
+
+        const parts = imageResult.response.candidates?.[0]?.content?.parts || [];
+        const inlinePart = parts.find((p) => p.inlineData?.data);
+        if (inlinePart) {
+          imageBase64 = inlinePart.inlineData.data;
+          imageMimeType = inlinePart.inlineData.mimeType || "image/png";
+          imageGenerated = true;
+          logger.info(`[generateBookCover] 이미지 생성 성공 (model: ${modelName})`);
+          break;
+        }
+      } catch (err) {
+        logger.warn(`[generateBookCover] ${modelName} 실패:`, err.message);
+      }
+    }
+
+    if (!imageGenerated || !imageBase64) {
+      throw new HttpsError("internal", "AI 이미지 생성에 실패했습니다. 잠시 후 다시 시도해주세요.");
+    }
+
+    // ── Step 3: Firebase Storage 업로드 ───────────────────────────
+    logger.info("[generateBookCover] Step3: Storage 업로드 시작");
+    const imageBuffer = Buffer.from(imageBase64, "base64");
+    const ext = imageMimeType.includes("jpeg") ? "jpg" : "png";
+    const storagePath = `covers/${userId}/${bookId}.${ext}`;
+
+    const bucket = admin.storage().bucket();
+    const file = bucket.file(storagePath);
+    await file.save(imageBuffer, {
+      metadata: { contentType: imageMimeType },
+    });
+    await file.makePublic();
+    const coverUrl = `https://storage.googleapis.com/${bucket.name}/${storagePath}`;
+
+    // ── Step 4: Firestore cover_url 업데이트 ──────────────────────
+    logger.info("[generateBookCover] Step4: Firestore 업데이트");
+    await adminDb
+      .collection("artifacts")
+      .doc(safeAppId)
+      .collection("books")
+      .doc(bookId)
+      .update({ cover_url: coverUrl, cover_generated_at: admin.firestore.FieldValue.serverTimestamp() });
+
+    logger.info("[generateBookCover] 완료:", coverUrl);
+    return { coverUrl };
+  }
+);
+
+// 서버 측 아이템 가격 (클라이언트 조작 방지)
+const STORE_ITEMS_SERVER = {
+  golden_pen:   { price: 15, name: '황금만년필' },
+  rainbow_ink:  { price: 10, name: '무지개 잉크' },
+  magic_eraser: { price: 10, name: '마법 지우개' },
+  paint_brush:  { price: 50, name: '페인트붓' },
+  sharp:        { price: 10, name: '샤프' },
+};
+
+// ── 페인트붓: AI 표지 재생성 (미리보기용 — Firestore 업데이트 없음) ──
+exports.regenerateCover = onCall(
+  {
+    region: REGION,
+    maxInstances: 5,
+    timeoutSeconds: 180,
+    memory: "512MiB",
+  },
+  async (request) => {
+    if (!request.auth) {
+      throw new HttpsError("unauthenticated", "로그인이 필요합니다.");
+    }
+
+    const { bookId, appId: clientAppId } = request.data || {};
+    const userId = request.auth.uid;
+
+    if (!bookId) throw new HttpsError("invalid-argument", "bookId가 필요합니다.");
+
+    const safeAppId = (clientAppId || "odok-app-default").replace(/\//g, "_");
+
+    // 책 데이터 조회
+    const bookSnap = await adminDb
+      .collection("artifacts").doc(safeAppId)
+      .collection("books").doc(bookId).get();
+
+    if (!bookSnap.exists) throw new HttpsError("not-found", "책을 찾을 수 없습니다.");
+
+    const book = bookSnap.data();
+    if (book.authorId !== userId) {
+      throw new HttpsError("permission-denied", "본인의 책만 수정할 수 있습니다.");
+    }
+
+    const bookTitle = book.title || "Untitled";
+    const contentSnippet = (book.content || "").substring(0, 1500);
+
+    if (!GEMINI_API_KEY) throw new HttpsError("internal", "Gemini API 키가 설정되지 않았습니다.");
+
+    const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+
+    // ── Step 1: 이미지 프롬프트 생성 ──────────────────────────────────
+    logger.info("[regenerateCover] Step1: 프롬프트 생성");
+    let imagePrompt;
+    try {
+      const textModel = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+      const promptGenRequest = `You are a professional book cover artist. Based on the Korean novel below, create a vivid English image generation prompt for a book cover background.
+
+Novel Title: ${bookTitle}
+Novel Content: ${contentSnippet}
+
+Requirements:
+- Write a detailed English image description (2-3 sentences)
+- Focus on mood, atmosphere, colors, and visual elements that represent the story
+- Style: cinematic, artistic, painterly illustration
+- CRITICAL: Ensure the image contains NO TEXT, NO LETTERS, NO WORDS, NO TITLES, NO SUBTITLES, NO CAPTIONS, NO SIGNATURES, and NO SYMBOLS of any kind. Generate a pure artistic background image only.
+- Output ONLY the image prompt, nothing else.`;
+
+      const textResult = await textModel.generateContent(promptGenRequest);
+      imagePrompt = textResult.response.text().trim();
+      logger.info("[regenerateCover] 프롬프트:", imagePrompt);
+    } catch (err) {
+      throw new HttpsError("internal", `이미지 프롬프트 생성 실패: ${err.message}`);
+    }
+
+    imagePrompt += " No text, no letters, no words, no writing of any kind. Pure background art only.";
+
+    // ── Step 2: Gemini 이미지 생성 ────────────────────────────────────
+    logger.info("[regenerateCover] Step2: 이미지 생성");
+    const imageModelNames = [
+      "gemini-2.5-flash-image",
+      "gemini-3.1-flash-image-preview",
+      "gemini-3-pro-image-preview",
+    ];
+
+    let imageBase64 = null;
+    let imageMimeType = "image/png";
+
+    for (const modelName of imageModelNames) {
+      try {
+        const imageModel = genAI.getGenerativeModel({ model: modelName });
+        const imageResult = await imageModel.generateContent({
+          contents: [{ role: "user", parts: [{ text: imagePrompt }] }],
+          generationConfig: { responseModalities: ["IMAGE"] },
+        });
+        const parts = imageResult.response.candidates?.[0]?.content?.parts || [];
+        const inlinePart = parts.find((p) => p.inlineData?.data);
+        if (inlinePart) {
+          imageBase64 = inlinePart.inlineData.data;
+          imageMimeType = inlinePart.inlineData.mimeType || "image/png";
+          logger.info(`[regenerateCover] 이미지 생성 성공 (model: ${modelName})`);
+          break;
+        }
+      } catch (err) {
+        logger.warn(`[regenerateCover] ${modelName} 실패:`, err.message);
+      }
+    }
+
+    if (!imageBase64) {
+      throw new HttpsError("internal", "AI 이미지 생성에 실패했습니다. 잠시 후 다시 시도해주세요.");
+    }
+
+    // ── Step 3: 미리보기 경로에 업로드 (원본 표지 보존) ─────────────
+    logger.info("[regenerateCover] Step3: Storage 업로드");
+    const imageBuffer = Buffer.from(imageBase64, "base64");
+    const ext = imageMimeType.includes("jpeg") ? "jpg" : "png";
+    const storagePath = `covers/${userId}/${bookId}_brush.${ext}`;
+
+    const bucket = admin.storage().bucket();
+    const file = bucket.file(storagePath);
+    await file.save(imageBuffer, { metadata: { contentType: imageMimeType } });
+    await file.makePublic();
+    const previewUrl = `https://storage.googleapis.com/${bucket.name}/${storagePath}`;
+
+    logger.info("[regenerateCover] 미리보기 생성 완료:", previewUrl);
+    // Firestore는 클라이언트가 확정 시 직접 업데이트
+    return { previewUrl };
+  }
+);
+
+// ── 아이템 선물하기 ──────────────────────────────────────────────────
+exports.giftItem = onCall(
+  {
+    region: REGION,
+    maxInstances: 10,
+    timeoutSeconds: 30,
+  },
+  async (request) => {
+    if (!request.auth) {
+      throw new HttpsError("unauthenticated", "로그인이 필요합니다.");
+    }
+
+    const { recipientUid, itemId, quantity, appId: rawAppId } = request.data;
+    const senderUid = request.auth.uid;
+
+    if (!recipientUid || !itemId) {
+      throw new HttpsError("invalid-argument", "필수 파라미터가 누락되었습니다.");
+    }
+    if (senderUid === recipientUid) {
+      throw new HttpsError("invalid-argument", "자신에게는 선물할 수 없습니다.");
+    }
+
+    const item = STORE_ITEMS_SERVER[itemId];
+    if (!item) throw new HttpsError("invalid-argument", "유효하지 않은 아이템입니다.");
+
+    const qty = Math.min(Math.max(1, parseInt(quantity) || 1), 10);
+    const totalCost = item.price * qty;
+    const safeAppId = (rawAppId || "odok-app-default").replace(/\//g, "_");
+
+    const senderRef = adminDb
+      .collection("artifacts").doc(safeAppId)
+      .collection("users").doc(senderUid)
+      .collection("profile").doc("info");
+
+    const recipientRef = adminDb
+      .collection("artifacts").doc(safeAppId)
+      .collection("users").doc(recipientUid)
+      .collection("profile").doc("info");
+
+    try {
+      await adminDb.runTransaction(async (transaction) => {
+        const senderSnap = await transaction.get(senderRef);
+        if (!senderSnap.exists) throw new Error("보내는 사람 프로필을 찾을 수 없습니다.");
+
+        const senderData = senderSnap.data();
+        const currentInk = senderData.ink ?? 0;
+        if (currentInk < totalCost) {
+          throw new Error(`잉크가 부족해요! (보유: ${currentInk}개, 필요: ${totalCost}개)`);
+        }
+
+        const recipientSnap = await transaction.get(recipientRef);
+        if (!recipientSnap.exists) throw new Error("받는 사람 프로필을 찾을 수 없습니다.");
+
+        const recipientData = recipientSnap.data();
+        const currentRecipientQty = recipientData.inventory?.[itemId] ?? 0;
+
+        transaction.update(senderRef, { ink: currentInk - totalCost });
+        transaction.update(recipientRef, {
+          [`inventory.${itemId}`]: currentRecipientQty + qty,
+        });
+      });
+
+      logger.info(`[giftItem] ${senderUid} → ${recipientUid}: ${itemId} x${qty}`);
+      return { success: true };
+    } catch (err) {
+      throw new HttpsError("internal", err.message || "선물 전송에 실패했습니다.");
+    }
+  }
+);
+
+// ── 황금만년필: 문장 품격 강화 ───────────────────────────────────────
+exports.enhanceBook = onCall(
+  {
+    region: REGION,
+    maxInstances: 10,
+    timeoutSeconds: 120,
+  },
+  async (request) => {
+    if (!request.auth) {
+      throw new HttpsError("unauthenticated", "로그인이 필요합니다.");
+    }
+
+    const { content, feature } = request.data;
+    if (!content || typeof content !== "string") {
+      throw new HttpsError("invalid-argument", "content가 필요합니다.");
+    }
+
+    const featureGuides = {
+      describe: {
+        system: "너는 문학적 묘사의 대가다. 줄거리는 절대 바꾸지 말고, 건조한 문장에 오감(시각·청각·촉각·후각·미각)을 자극하는 생생하고 풍부한 묘사를 덧입혀라. 감정·공간·분위기의 질감이 독자에게 생생하게 전달되어야 한다. 기존 문장을 확장하되 과도하게 늘리지 않도록 균형을 맞춰라. 마크다운 없이 본문만 출력하라. 반드시 한국어만 사용하라.",
+        prompt: "위 텍스트의 묘사를 대폭 강화하되 줄거리는 절대 바꾸지 말고 본문만 출력하라:"
+      },
+      quotes: {
+        system: "너는 기억에 남는 명문장을 창조하는 작가다. 줄거리와 흐름은 절대 바꾸지 말고, 소설의 주제를 관통하는 철학적이고 멋진 명대사·명문장을 적재적소에 2~4개 자연스럽게 삽입하라. 독자가 밑줄을 긋고 싶은 깊이 있는 문장이어야 한다. 마크다운 없이 본문만 출력하라. 반드시 한국어만 사용하라.",
+        prompt: "위 텍스트에 명문장을 삽입하되 줄거리는 절대 바꾸지 말고 본문만 출력하라:"
+      },
+      polish: {
+        system: "너는 10년 경력의 전문 문학 편집자다. 줄거리는 절대 바꾸지 말고, 전체를 꼼꼼히 윤문·퇴고하라. 비문 수정, 문장 호흡 조절, 반복 표현 제거, 세련된 문체로 완성하라. 가독성을 최우선으로 고려하라. 마크다운 없이 본문만 출력하라. 반드시 한국어만 사용하라.",
+        prompt: "위 텍스트를 프로 수준으로 윤문·퇴고하되 줄거리는 절대 바꾸지 말고 본문만 출력하라:"
+      },
+    };
+
+    const feat = featureGuides[feature];
+    if (!feat) {
+      throw new HttpsError("invalid-argument", "유효하지 않은 기능입니다.");
+    }
+
+    const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+    const prompt = `[원본 텍스트]\n${content}\n\n${feat.prompt}`;
+
+    let enhancedContent = null;
+    for (const modelName of MODEL_FALLBACK_CHAIN) {
+      try {
+        const model = genAI.getGenerativeModel({
+          model: modelName,
+          systemInstruction: feat.system,
+          generationConfig: { temperature: 0.7, maxOutputTokens: 8192 },
+        });
+        const result = await model.generateContent(prompt);
+        const text = result.response.text().trim();
+        if (text) { enhancedContent = text; break; }
+      } catch (err) {
+        logger.warn(`[enhanceBook] ${modelName} 실패:`, err.message);
+      }
+    }
+
+    if (!enhancedContent) {
+      throw new HttpsError("internal", "텍스트 개선에 실패했습니다. 잠시 후 다시 시도해주세요.");
+    }
+
+    return { enhancedContent };
+  }
+);
+
+// ── 무지개 잉크 스타일 변환 ──────────────────────────────────────────
+exports.transformBookStyle = onCall(
+  {
+    region: REGION,
+    maxInstances: 10,
+    timeoutSeconds: 120,
+  },
+  async (request) => {
+    if (!request.auth) {
+      throw new HttpsError("unauthenticated", "로그인이 필요합니다.");
+    }
+
+    const { content, style } = request.data;
+    if (!content || typeof content !== "string") {
+      throw new HttpsError("invalid-argument", "content가 필요합니다.");
+    }
+
+    const styleGuides = {
+      dialect: "주어진 텍스트를 경상도 사투리로 변환하라. '~카이', '~데이', '~라카이', '~가', '~아이가', '마', '와', '니', '우야꼬', '아이고' 등 경상도 특유의 방언과 어투를 자연스럽게 섞어라. 투박하지만 정감 넘치는 분위기를 살려라.",
+      historical: "주어진 텍스트를 조선시대 사극 문체로 변환하라. '~하오', '~이옵니다', '~하셨나이까', '~하리이다', '소인', '전하', '마마' 등 고풍스러운 어휘와 존댓말을 사용하라. 운율감 있고 격조 높은 문체로 다듬어라.",
+      literary: "주어진 텍스트를 순수문학 고전 명작 스타일로 변환하라. 유려하고 깊이 있는 문학적 문체로 다듬어라. 감각적인 묘사, 섬세한 심리 표현, 은유와 상징을 풍부하게 사용하라.",
+      trendy: "주어진 텍스트를 MZ세대 트렌디 감성으로 변환하라. '레전드', '갓생', '찐', '개잼', '핵인싸', '소름', '존버' 등 최신 인터넷 유행어를 자연스럽게 섞어라. 짧고 임팩트 있는 문장과 이모지를 활용해 힙한 감성을 살려라.",
+      cyber: "주어진 텍스트를 AI 보고서 사이버네틱 스타일로 변환하라. 'SYSTEM:', '[LOG]', '[DATA]', '처리 완료', 'ERROR:' 같은 기술적 문구를 섞고, 냉철하고 객관적인 보고 문체로 변환하라. 감정을 수치화하거나 알고리즘적으로 표현하라.",
+    };
+
+    const guide = styleGuides[style];
+    if (!guide) {
+      throw new HttpsError("invalid-argument", "유효하지 않은 스타일입니다.");
+    }
+
+    const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+    const systemInstruction = "너는 텍스트 스타일 변환 전문가다. 원본의 내용과 의미는 유지하면서 문체·어투만 변환하라. 마크다운 헤더, 라벨, 메타 정보 없이 오직 변환된 본문만 출력하라. 반드시 한국어로만 출력하라.";
+    const prompt = `[변환 지시]\n${guide}\n\n[원본 텍스트]\n${content}\n\n[변환된 텍스트]`;
+
+    let transformedContent = null;
+    for (const modelName of MODEL_FALLBACK_CHAIN) {
+      try {
+        const model = genAI.getGenerativeModel({
+          model: modelName,
+          systemInstruction,
+          generationConfig: { temperature: 0.8, maxOutputTokens: 8192 },
+        });
+        const result = await model.generateContent(prompt);
+        const text = result.response.text().trim();
+        if (text) {
+          transformedContent = text;
+          break;
+        }
+      } catch (err) {
+        logger.warn(`[transformBookStyle] ${modelName} 실패:`, err.message);
+      }
+    }
+
+    if (!transformedContent) {
+      throw new HttpsError("internal", "텍스트 변환에 실패했습니다. 잠시 후 다시 시도해주세요.");
+    }
+
+    return { transformedContent };
+  }
+);
+
+// ── 마법 지우개: 결말 재창조 ─────────────────────────────────────────
+exports.regenerateEnding = onCall(
+  {
+    region: REGION,
+    maxInstances: 10,
+    timeoutSeconds: 120,
+  },
+  async (request) => {
+    if (!request.auth) {
+      throw new HttpsError("unauthenticated", "로그인이 필요합니다.");
+    }
+
+    const { title, genre, synopsis, characterSheet, settingSheet, previousContent, lastChapterName, style } = request.data;
+
+    const styleGuides = {
+      happy:    "갈등이 완전히 해소되고 주요 인물들이 따뜻하고 희망찬 미래를 맞이하는 행복한 결말을 써라. 독자가 미소 짓고 마음이 따뜻해지는 마무리여야 한다.",
+      sad:      "독자의 눈물을 자극하는 비극적인 결말을 써라. 가슴 절절한 상실감이나 회한이 느껴지는 여운이 남아야 한다. 억지스럽지 않고 자연스럽게 슬픔이 스며들어야 한다.",
+      twist:    "누구도 예상하지 못한 충격적인 반전이 드러나는 결말을 써라. 복선을 활용하거나 완전히 새로운 사실을 밝혀내어 독자를 전율하게 만들어야 한다.",
+      open:     "명확한 결론을 내리지 않고 독자가 스스로 상상할 수 있는 여지를 남기는 열린 결말을 써라. 암시적이고 여운이 깊게 남아야 한다.",
+      circular: "소설의 첫 장면이나 도입부의 핵심 설정·분위기를 다시 불러와 구조적 완결성을 높이는 수미상관 결말을 써라. 이야기가 원점으로 돌아오면서도 성장이나 변화가 느껴져야 한다.",
+    };
+
+    const guide = styleGuides[style];
+    if (!guide) {
+      throw new HttpsError("invalid-argument", "유효하지 않은 스타일입니다.");
+    }
+
+    const systemInstruction = [
+      "너는 베스트셀러 소설가다. 기존 소설의 마지막 챕터만 새롭게 다시 쓰는 것이 임무다.",
+      "[절대 규칙] 소설의 앞부분(Synopsis·CharacterSheet·SettingSheet·이전 내용)은 절대 바꾸지 마라.",
+      "[절대 규칙] 마지막 챕터만 완전히 새롭게 써라. 이전 내용과 자연스럽게 이어져야 한다.",
+      "[절대 규칙] 마크다운 헤더, 라벨, 메타 정보 없이 오직 본문만 출력하라.",
+      "[절대 규칙] 반드시 한국어만 사용하라.",
+      "공백 포함 약 600~1,000자 분량으로 써라.",
+    ].join(" ");
+
+    const prompt = `[작품 정보]
+제목: ${title || ""}
+장르: ${genre || ""}
+
+[Synopsis]
+${synopsis || "없음"}
+
+[Character Sheet]
+${characterSheet || "없음"}
+
+[Setting Sheet]
+${settingSheet || "없음"}
+
+[이전 챕터 요약]
+${previousContent || "없음"}
+
+[새로 쓸 챕터명]
+${lastChapterName || "결말"}
+
+[결말 스타일 지침]
+${guide}
+
+위 소설의 마지막 챕터를 위 스타일에 맞게 새로 써라. 본문만 출력:`;
+
+    const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+    let newEnding = null;
+
+    for (const modelName of MODEL_FALLBACK_CHAIN) {
+      try {
+        const model = genAI.getGenerativeModel({
+          model: modelName,
+          systemInstruction,
+          generationConfig: { temperature: 0.85, maxOutputTokens: 4096 },
+        });
+        const result = await model.generateContent(prompt);
+        const text = result.response.text().trim();
+        if (text) { newEnding = text; break; }
+      } catch (err) {
+        logger.warn(`[regenerateEnding] ${modelName} 실패:`, err.message);
+      }
+    }
+
+    if (!newEnding) {
+      throw new HttpsError("internal", "결말 생성에 실패했습니다. 잠시 후 다시 시도해주세요.");
+    }
+
+    return { newEnding };
+  }
+);
+
 // 호환성 유지용 함수
 exports.generateStoryAI = onCall(
   {
@@ -1148,3 +1691,57 @@ exports.generateStoryAI = onCall(
     return exports.generateBookAI(request);
   }
 );
+
+// ─── generateBookSummary ─────────────────────────────────────────────────────
+// 책 소개글 생성 (basic: 2줄 무료 요약 / premium: 3~5줄 유료 홍보 문구)
+exports.generateBookSummary = onCall({ region: REGION, maxInstances: 10, timeoutSeconds: 60 }, async (request) => {
+  if (!request.auth) throw new HttpsError("unauthenticated", "로그인이 필요합니다.");
+
+  const { bookId, appId: rawAppId, type } = request.data; // type: 'basic' | 'premium'
+  if (!bookId || !rawAppId) throw new HttpsError("invalid-argument", "bookId와 appId가 필요합니다.");
+  if (type !== 'basic' && type !== 'premium') throw new HttpsError("invalid-argument", "type은 'basic' 또는 'premium'이어야 합니다.");
+
+  const safeAppId = rawAppId.replace(/\//g, '_');
+  const uid = request.auth.uid;
+
+  // 책 정보 조회
+  const bookRef = adminDb.collection('artifacts').doc(safeAppId).collection('books').doc(bookId);
+  const bookSnap = await bookRef.get();
+  if (!bookSnap.exists) throw new HttpsError("not-found", "책을 찾을 수 없습니다.");
+
+  const book = bookSnap.data();
+  if (book.authorId !== uid) throw new HttpsError("permission-denied", "내 작품만 소개글을 생성할 수 있습니다.");
+
+  const title = book.title || '제목 없음';
+  const genre = book.genre || '';
+  const synopsis = book.synopsis || '';
+  const content = (book.steps || []).map(s => s.content || '').join('\n').slice(0, 800);
+
+  const context = [
+    `제목: ${title}`,
+    genre ? `장르: ${genre}` : '',
+    synopsis ? `시놉시스: ${synopsis}` : '',
+    content ? `본문 일부:\n${content}` : '',
+  ].filter(Boolean).join('\n');
+
+  let systemPrompt, userPrompt;
+
+  if (type === 'basic') {
+    systemPrompt = '너는 소설 편집자야. 주어진 소설 정보를 바탕으로 간결하고 정확한 줄거리 요약을 작성해.';
+    userPrompt = `다음 소설을 2줄 이내(60자 이하)로 담백하게 요약해줘. 반드시 완성된 문장으로 끝내.\n\n${context}`;
+  } else {
+    systemPrompt = '너는 출판사 마케터야. 독자의 호기심을 강렬하게 자극하는 매력적인 소설 홍보 문구를 작성해. 문학적 수식어와 감성적 언어를 활용해.';
+    userPrompt = `다음 소설의 홍보 소개글을 3~5줄로 작성해줘. 독자가 당장 읽고 싶어지도록 강렬하고 매혹적으로 써줘. 문학적인 수식어를 활용해.\n\n${context}`;
+  }
+
+  const summaryResult = await callGemini(systemPrompt, userPrompt, 0.8, false);
+  const summary = (summaryResult.content || '').trim();
+
+  // Firestore 업데이트
+  await bookRef.update({
+    book_summary: summary,
+    summary_type: type === 'basic' ? 'BASIC' : 'PREMIUM',
+  });
+
+  return { summary: summary, summary_type: type === 'basic' ? 'BASIC' : 'PREMIUM' };
+});
