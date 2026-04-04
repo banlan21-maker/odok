@@ -17,14 +17,14 @@ const PAINT_STROKES = [
   { color: '#60a5fa', delay: '1s',    top: '78%',  height: '22%' },
 ];
 
-const PaintbrushModal = ({ user, userProfile, books, useItem, onClose }) => {
+const PaintbrushModal = ({ user, userProfile, books, useItem, onClose, t = {} }) => {
   const [phase, setPhase] = useState('books'); // 'books' | 'generating' | 'preview' | 'confirming' | 'done'
   const [selectedBook, setSelectedBook] = useState(null);
   const [previewUrl, setPreviewUrl] = useState(null);
   const [error, setError] = useState(null);
 
   const myBooks = (books || []).filter(b => b.authorId === user?.uid);
-  const authorNickname = userProfile?.nickname || '작가';
+  const authorNickname = userProfile?.nickname || t.paintbrush_default_author || '작가';
 
   const handleGenerate = async (book = selectedBook) => {
     if (!book) return;
@@ -39,7 +39,7 @@ const PaintbrushModal = ({ user, userProfile, books, useItem, onClose }) => {
       setPreviewUrl(result.data.previewUrl);
       setPhase('preview');
     } catch (err) {
-      setError(err.message || '표지 생성에 실패했습니다. 다시 시도해주세요.');
+      setError(err.message || t.paintbrush_gen_fail || '표지 생성에 실패했습니다. 다시 시도해주세요.');
       setPhase('books');
     }
   };
@@ -51,7 +51,7 @@ const PaintbrushModal = ({ user, userProfile, books, useItem, onClose }) => {
 
     const deductResult = await useItem('paint_brush', 1);
     if (!deductResult.success) {
-      setError(deductResult.error || '아이템 차감에 실패했습니다.');
+      setError(deductResult.error || t.item_deduct_fail || '아이템 차감에 실패했습니다.');
       setPhase('preview');
       return;
     }
@@ -64,7 +64,7 @@ const PaintbrushModal = ({ user, userProfile, books, useItem, onClose }) => {
       });
       setPhase('done');
     } catch (err) {
-      setError('표지 저장에 실패했습니다. 고객센터에 문의해주세요.');
+      setError(t.paintbrush_save_fail || '표지 저장에 실패했습니다. 고객센터에 문의해주세요.');
       setPhase('preview');
     }
   };
@@ -94,12 +94,12 @@ const PaintbrushModal = ({ user, userProfile, books, useItem, onClose }) => {
           <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 dark:border-slate-700 flex-none">
             <div className="flex items-center gap-2">
               <span className="text-lg">🖌️</span>
-              <p className="font-black text-slate-800 dark:text-slate-100">페인트붓</p>
-              {phase === 'books' && <span className="text-[10px] font-bold text-slate-400">책 선택</span>}
-              {phase === 'generating' && <span className="text-[10px] font-bold text-pink-500">표지 생성 중...</span>}
-              {phase === 'preview' && <span className="text-[10px] font-bold text-slate-400">미리보기</span>}
-              {phase === 'confirming' && <span className="text-[10px] font-bold text-pink-500">저장 중...</span>}
-              {phase === 'done' && <span className="text-[10px] font-bold text-pink-500">완성!</span>}
+              <p className="font-black text-slate-800 dark:text-slate-100">{t.paintbrush_title || '페인트붓'}</p>
+              {phase === 'books' && <span className="text-[10px] font-bold text-slate-400">{t.paintbrush_select_book || '책 선택'}</span>}
+              {phase === 'generating' && <span className="text-[10px] font-bold text-pink-500">{t.paintbrush_generating || '표지 생성 중...'}</span>}
+              {phase === 'preview' && <span className="text-[10px] font-bold text-slate-400">{t.paintbrush_preview || '미리보기'}</span>}
+              {phase === 'confirming' && <span className="text-[10px] font-bold text-pink-500">{t.paintbrush_confirming || '저장 중...'}</span>}
+              {phase === 'done' && <span className="text-[10px] font-bold text-pink-500">{t.paintbrush_done || '완성!'}</span>}
             </div>
             <button
               onClick={onClose}
@@ -117,13 +117,13 @@ const PaintbrushModal = ({ user, userProfile, books, useItem, onClose }) => {
             {phase === 'books' && (
               <div className="px-5 py-4 space-y-2">
                 <p className="text-xs font-bold text-slate-500 dark:text-slate-400 mb-3">
-                  표지를 새로 만들 작품을 선택하세요
+                  {t.paintbrush_select_book_desc || '표지를 새로 만들 작품을 선택하세요'}
                 </p>
                 {myBooks.length === 0 ? (
                   <div className="text-center py-10 space-y-2">
                     <p className="text-4xl">📚</p>
-                    <p className="text-sm font-bold text-slate-600 dark:text-slate-300">아직 작성한 작품이 없습니다.</p>
-                    <p className="text-xs text-slate-400">집필 탭에서 글을 써보세요!</p>
+                    <p className="text-sm font-bold text-slate-600 dark:text-slate-300">{t.rainbow_no_books || '아직 작성한 작품이 없습니다.'}</p>
+                    <p className="text-xs text-slate-400">{t.rainbow_no_books_desc || '집필 탭에서 글을 써보세요!'}</p>
                   </div>
                 ) : (
                   myBooks.map(book => (
@@ -146,7 +146,7 @@ const PaintbrushModal = ({ user, userProfile, books, useItem, onClose }) => {
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-black text-slate-800 dark:text-slate-100 truncate">{book.title}</p>
                         <p className="text-[11px] text-slate-400 dark:text-slate-500">
-                          {book.genre} · {book.steps?.length || 1}챕터
+                          {book.genre} · {book.steps?.length || 1}{t.chapter_unit || '챕터'}
                         </p>
                       </div>
                       <ChevronRight className="w-4 h-4 text-slate-400 shrink-0" />
@@ -188,20 +188,20 @@ const PaintbrushModal = ({ user, userProfile, books, useItem, onClose }) => {
                 </div>
                 <div className="text-center space-y-1.5">
                   <p className="text-sm font-black text-slate-700 dark:text-slate-200">
-                    AI가 표지를 그리는 중입니다...
+                    {t.paintbrush_in_progress || 'AI가 표지를 그리는 중입니다...'}
                   </p>
                   <p className="text-xs text-slate-400 dark:text-slate-500">
-                    소설의 분위기를 분석하고 있어요
+                    {t.paintbrush_analyzing || '소설의 분위기를 분석하고 있어요'}
                   </p>
                 </div>
-                <p className="text-[11px] text-slate-400 text-center">화면을 닫지 마세요.</p>
+                <p className="text-[11px] text-slate-400 text-center">{t.paintbrush_no_close || '화면을 닫지 마세요.'}</p>
               </div>
             )}
 
             {/* 미리보기 */}
             {phase === 'preview' && previewUrl && (
               <div className="px-5 py-4 space-y-3">
-                <p className="text-xs font-bold text-slate-500 dark:text-slate-400">생성된 표지 미리보기</p>
+                <p className="text-xs font-bold text-slate-500 dark:text-slate-400">{t.paintbrush_preview_label || '생성된 표지 미리보기'}</p>
                 {/* 표지 미리보기 — 텍스트 오버레이 포함 */}
                 <div
                   className="relative rounded-2xl overflow-hidden shadow-xl mx-auto"
@@ -226,13 +226,13 @@ const PaintbrushModal = ({ user, userProfile, books, useItem, onClose }) => {
                   {/* 미리보기 배지 */}
                   <div className="absolute top-2 right-2">
                     <span className="text-[9px] font-black text-white bg-pink-500/80 backdrop-blur-sm px-1.5 py-0.5 rounded-full">
-                      미리보기
+                      {t.paintbrush_preview_badge || '미리보기'}
                     </span>
                   </div>
                 </div>
                 <div className="bg-pink-50 dark:bg-pink-950/20 rounded-xl px-4 py-2.5 text-center">
                   <p className="text-[11px] text-pink-600 dark:text-pink-400">
-                    🖌️ 확정 시 페인트붓 1개가 차감됩니다
+                    {t.paintbrush_cost_desc || '🖌️ 확정 시 페인트붓 1개가 차감됩니다'}
                   </p>
                 </div>
                 {error && <p className="text-xs text-red-500 font-bold text-center">{error}</p>}
@@ -243,7 +243,7 @@ const PaintbrushModal = ({ user, userProfile, books, useItem, onClose }) => {
             {phase === 'confirming' && (
               <div className="px-5 py-16 text-center space-y-4">
                 <span className="text-6xl brush-wobble inline-block">🖌️</span>
-                <p className="text-sm font-black text-slate-700 dark:text-slate-200">표지를 저장하는 중...</p>
+                <p className="text-sm font-black text-slate-700 dark:text-slate-200">{t.paintbrush_saving || '표지를 저장하는 중...'}</p>
               </div>
             )}
 
@@ -260,15 +260,15 @@ const PaintbrushModal = ({ user, userProfile, books, useItem, onClose }) => {
                   </div>
                 </div>
                 <div className="space-y-1.5">
-                  <p className="text-base font-black text-slate-800 dark:text-slate-100">새 표지 완성!</p>
+                  <p className="text-base font-black text-slate-800 dark:text-slate-100">{t.paintbrush_complete || '새 표지 완성!'}</p>
                   <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
-                    <span className="font-bold text-pink-600 dark:text-pink-400">{selectedBook?.title}</span>의<br />
-                    표지가 새롭게 업데이트되었습니다.
+                    <span className="font-bold text-pink-600 dark:text-pink-400">{selectedBook?.title}</span>{t.paintbrush_title_suffix || '의'}<br />
+                    {t.paintbrush_saved || '표지가 새롭게 업데이트되었습니다.'}
                   </p>
                 </div>
                 <div className="bg-pink-50 dark:bg-pink-950/20 border border-pink-200 dark:border-pink-800 rounded-xl px-4 py-3">
                   <p className="text-xs text-pink-600 dark:text-pink-400 font-bold">
-                    🖌️ 페인트붓 1개가 사용되었습니다
+                    {t.paintbrush_used || '🖌️ 페인트붓 1개가 사용되었습니다'}
                   </p>
                 </div>
               </div>
@@ -282,7 +282,7 @@ const PaintbrushModal = ({ user, userProfile, books, useItem, onClose }) => {
                 onClick={onClose}
                 className="w-full py-3 rounded-xl text-sm font-bold bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300"
               >
-                닫기
+                {t.close || '닫기'}
               </button>
             )}
             {phase === 'preview' && (
@@ -291,14 +291,14 @@ const PaintbrushModal = ({ user, userProfile, books, useItem, onClose }) => {
                   onClick={handleConfirm}
                   className="w-full py-3.5 rounded-xl text-sm font-black bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 active:scale-95 text-white shadow-md shadow-pink-200 dark:shadow-pink-900/30 transition-all"
                 >
-                  🖌️ 이 표지로 확정하기
+                  {t.paintbrush_confirm_btn || '🖌️ 이 표지로 확정하기'}
                 </button>
                 <button
                   onClick={() => handleGenerate()}
                   className="w-full py-2.5 rounded-xl text-sm font-bold flex items-center justify-center gap-2 text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
                 >
                   <RotateCcw className="w-3.5 h-3.5" />
-                  다시 생성하기
+                  {t.paintbrush_regen_btn || '다시 생성하기'}
                 </button>
               </div>
             )}
@@ -307,7 +307,7 @@ const PaintbrushModal = ({ user, userProfile, books, useItem, onClose }) => {
                 onClick={onClose}
                 className="w-full py-3.5 rounded-xl text-sm font-black bg-orange-500 text-white"
               >
-                확인
+                {t.confirm || '확인'}
               </button>
             )}
           </div>

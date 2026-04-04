@@ -8,28 +8,28 @@ import { db, functions } from '../firebase';
 const rawAppId = typeof __app_id !== 'undefined' ? __app_id : 'odok-app-default';
 const appId = rawAppId.replace(/\//g, '_');
 
-const FEATURES = [
+const getFeatures = (t) => [
   {
     id: 'describe',
     emoji: '🖋️',
-    name: '묘사 디테일 강화',
-    desc: '오감을 자극하는 생생한 묘사를 덧입힙니다',
+    name: t.golden_feature_describe || '묘사 디테일 강화',
+    desc: t.golden_feature_describe_desc || '오감을 자극하는 생생한 묘사를 덧입힙니다',
   },
   {
     id: 'quotes',
     emoji: '💎',
-    name: '명대사/명문장 제조',
-    desc: '주제를 꿰뚫는 철학적 명문장을 삽입합니다',
+    name: t.golden_feature_quotes || '명대사/명문장 제조',
+    desc: t.golden_feature_quotes_desc || '주제를 꿰뚫는 철학적 명문장을 삽입합니다',
   },
   {
     id: 'polish',
     emoji: '🎩',
-    name: '전체 윤문 및 퇴고',
-    desc: '비문 수정·호흡 조절로 기성 작가 문체로 다듬습니다',
+    name: t.golden_feature_polish || '전체 윤문 및 퇴고',
+    desc: t.golden_feature_polish_desc || '비문 수정·호흡 조절로 기성 작가 문체로 다듬습니다',
   },
 ];
 
-const GoldenPenModal = ({ user, books, useItem, onClose }) => {
+const GoldenPenModal = ({ user, books, useItem, onClose, t = {} }) => {
   const [phase, setPhase] = useState('books'); // 'books' | 'feature' | 'processing' | 'preview' | 'done'
   const [selectedBook, setSelectedBook] = useState(null);
   const [selectedFeature, setSelectedFeature] = useState(null);
@@ -38,6 +38,7 @@ const GoldenPenModal = ({ user, books, useItem, onClose }) => {
   const [error, setError] = useState(null);
 
   const myBooks = (books || []).filter(b => b.authorId === user?.uid);
+  const FEATURES = getFeatures(t);
 
   const handleEnhance = async (feature = selectedFeature) => {
     if (!selectedBook || !feature) return;
@@ -63,14 +64,14 @@ const GoldenPenModal = ({ user, books, useItem, onClose }) => {
         }
       } else {
         const res = await enhanceFn({ content: selectedBook.content || '', feature: feature.id });
-        result = [{ name: '본문', content: res.data.enhancedContent }];
+        result = [{ name: t.book_main_text || '본문', content: res.data.enhancedContent }];
         setProgress({ current: 1, total: 1 });
       }
 
       setEnhancedSteps(result);
       setPhase('preview');
     } catch (err) {
-      setError(err.message || '개선에 실패했습니다. 다시 시도해주세요.');
+      setError(err.message || t.golden_enhance_fail || '개선에 실패했습니다. 다시 시도해주세요.');
       setPhase('feature');
     }
   };
@@ -81,7 +82,7 @@ const GoldenPenModal = ({ user, books, useItem, onClose }) => {
 
     const deductResult = await useItem('golden_pen', 1);
     if (!deductResult.success) {
-      setError(deductResult.error || '아이템 차감에 실패했습니다.');
+      setError(deductResult.error || t.item_deduct_fail || '아이템 차감에 실패했습니다.');
       return;
     }
 
@@ -114,7 +115,7 @@ const GoldenPenModal = ({ user, books, useItem, onClose }) => {
       await addDoc(collection(db, 'artifacts', appId, 'books'), bookData);
       setPhase('done');
     } catch (err) {
-      setError('저장에 실패했습니다. 다시 시도해주세요.');
+      setError(t.save_fail || '저장에 실패했습니다. 다시 시도해주세요.');
     }
   };
 
@@ -143,12 +144,12 @@ const GoldenPenModal = ({ user, books, useItem, onClose }) => {
           <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 dark:border-slate-700 flex-none">
             <div className="flex items-center gap-2">
               <span className="text-lg">🖋️</span>
-              <p className="font-black text-slate-800 dark:text-slate-100">황금만년필</p>
-              {phase === 'books' && <span className="text-[10px] font-bold text-slate-400">책 선택</span>}
-              {phase === 'feature' && <span className="text-[10px] font-bold text-slate-400">기능 선택</span>}
-              {phase === 'processing' && <span className="text-[10px] font-bold text-amber-500">품격 향상 중...</span>}
-              {phase === 'preview' && <span className="text-[10px] font-bold text-slate-400">미리보기</span>}
-              {phase === 'done' && <span className="text-[10px] font-bold text-amber-500">완성!</span>}
+              <p className="font-black text-slate-800 dark:text-slate-100">{t.golden_pen_title || '황금만년필'}</p>
+              {phase === 'books' && <span className="text-[10px] font-bold text-slate-400">{t.golden_select_book || '책 선택'}</span>}
+              {phase === 'feature' && <span className="text-[10px] font-bold text-slate-400">{t.golden_select_feature || '기능 선택'}</span>}
+              {phase === 'processing' && <span className="text-[10px] font-bold text-amber-500">{t.golden_processing || '품격 향상 중...'}</span>}
+              {phase === 'preview' && <span className="text-[10px] font-bold text-slate-400">{t.golden_preview || '미리보기'}</span>}
+              {phase === 'done' && <span className="text-[10px] font-bold text-amber-500">{t.golden_done || '완성!'}</span>}
             </div>
             <button
               onClick={onClose}
@@ -165,12 +166,12 @@ const GoldenPenModal = ({ user, books, useItem, onClose }) => {
             {/* 책 선택 */}
             {phase === 'books' && (
               <div className="px-5 py-4 space-y-2">
-                <p className="text-xs font-bold text-slate-500 dark:text-slate-400 mb-3">품격을 높일 내 작품을 선택하세요</p>
+                <p className="text-xs font-bold text-slate-500 dark:text-slate-400 mb-3">{t.golden_select_book_desc || '품격을 높일 내 작품을 선택하세요'}</p>
                 {myBooks.length === 0 ? (
                   <div className="text-center py-10 space-y-2">
                     <p className="text-4xl">📚</p>
-                    <p className="text-sm font-bold text-slate-600 dark:text-slate-300">아직 작성한 작품이 없습니다.</p>
-                    <p className="text-xs text-slate-400">집필 탭에서 글을 써보세요!</p>
+                    <p className="text-sm font-bold text-slate-600 dark:text-slate-300">{t.rainbow_no_books || '아직 작성한 작품이 없습니다.'}</p>
+                    <p className="text-xs text-slate-400">{t.rainbow_no_books_desc || '집필 탭에서 글을 써보세요!'}</p>
                   </div>
                 ) : (
                   myBooks.map(book => (
@@ -188,7 +189,7 @@ const GoldenPenModal = ({ user, books, useItem, onClose }) => {
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-black text-slate-800 dark:text-slate-100 truncate">{book.title}</p>
                         <p className="text-[11px] text-slate-400 dark:text-slate-500">
-                          {book.genre} · {book.steps?.length || 1}챕터
+                          {book.genre} · {book.steps?.length || 1}{t.chapter_unit || '챕터'}
                         </p>
                       </div>
                       <ChevronRight className="w-4 h-4 text-slate-400 shrink-0" />
@@ -202,10 +203,10 @@ const GoldenPenModal = ({ user, books, useItem, onClose }) => {
             {phase === 'feature' && (
               <div className="px-5 py-4 space-y-3">
                 <div className="bg-slate-50 dark:bg-slate-700 rounded-xl px-4 py-2.5 flex items-center gap-2">
-                  <span className="text-[11px] text-slate-500 dark:text-slate-400 shrink-0">선택된 작품:</span>
+                  <span className="text-[11px] text-slate-500 dark:text-slate-400 shrink-0">{t.rainbow_selected_book || '선택된 작품:'}</span>
                   <span className="text-[11px] font-black text-slate-700 dark:text-slate-200 truncate">{selectedBook?.title}</span>
                 </div>
-                <p className="text-xs font-bold text-slate-500 dark:text-slate-400">적용할 프리미엄 기능을 선택하세요</p>
+                <p className="text-xs font-bold text-slate-500 dark:text-slate-400">{t.golden_select_feature_desc || '적용할 프리미엄 기능을 선택하세요'}</p>
                 {FEATURES.map(feat => (
                   <button
                     key={feat.id}
@@ -241,7 +242,7 @@ const GoldenPenModal = ({ user, books, useItem, onClose }) => {
                 </div>
                 <div className="relative z-10 space-y-2">
                   <p className="text-base font-black text-amber-700 dark:text-amber-400">
-                    작품의 품격을 높이는 중입니다...
+                    {t.golden_in_progress || '작품의 품격을 높이는 중입니다...'}
                   </p>
                   <p className="text-xs text-amber-600 dark:text-amber-500">
                     {selectedFeature?.emoji} {selectedFeature?.name}
@@ -256,12 +257,12 @@ const GoldenPenModal = ({ user, books, useItem, onClose }) => {
                       />
                     </div>
                     <p className="text-[11px] text-amber-600 dark:text-amber-500">
-                      {progress.current} / {progress.total} 챕터 완료
+                      {(t.golden_chapter_progress || '{current} / {total} 챕터 완료').replace('{current}', progress.current).replace('{total}', progress.total)}
                     </p>
                   </div>
                 )}
                 <p className="relative z-10 text-[11px] text-slate-400 dark:text-slate-500">
-                  화면을 닫지 마세요.
+                  {t.golden_no_close || '화면을 닫지 마세요.'}
                 </p>
               </div>
             )}
@@ -272,24 +273,24 @@ const GoldenPenModal = ({ user, books, useItem, onClose }) => {
                 <div className="flex items-center gap-2">
                   <span className="text-base">{selectedFeature?.emoji}</span>
                   <p className="text-sm font-black text-slate-700 dark:text-slate-200">
-                    {selectedFeature?.name} 적용 결과
+                    {selectedFeature?.name} {t.golden_apply_result || '적용 결과'}
                   </p>
                 </div>
                 <div className="relative bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-xl px-4 py-4 max-h-64 overflow-y-auto">
                   <div className="absolute top-2 right-2">
                     <span className="text-[9px] font-black text-amber-600 bg-amber-100 dark:bg-amber-900/60 px-2 py-0.5 rounded-full">
-                      ✨ Golden Edition 미리보기
+                      {t.golden_preview_badge || '✨ Golden Edition 미리보기'}
                     </span>
                   </div>
                   <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed whitespace-pre-wrap mt-4">
                     {previewText}
                     {(enhancedSteps?.[0]?.content?.length || 0) > 300 && (
-                      <span className="text-slate-400"> ...(이하 생략)</span>
+                      <span className="text-slate-400"> {t.golden_preview_ellipsis || '...(이하 생략)'}</span>
                     )}
                   </p>
                 </div>
                 <p className="text-[11px] text-slate-400 dark:text-slate-500 text-center">
-                  확인 후 저장하면 황금만년필 1개가 차감됩니다.
+                  {t.golden_preview_desc || '확인 후 저장하면 황금만년필 1개가 차감됩니다.'}
                 </p>
                 {error && <p className="text-xs text-red-500 font-bold text-center">{error}</p>}
               </div>
@@ -305,20 +306,20 @@ const GoldenPenModal = ({ user, books, useItem, onClose }) => {
                   </div>
                 </div>
                 <div className="space-y-1.5">
-                  <p className="text-base font-black text-slate-800 dark:text-slate-100">명작 완성!</p>
+                  <p className="text-base font-black text-slate-800 dark:text-slate-100">{t.golden_complete || '명작 완성!'}</p>
                   <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
                     <span className="font-bold text-amber-600 dark:text-amber-400">
                       {selectedBook?.title} - Golden Edition
-                    </span>이<br />
-                    내 서재에 저장되었습니다.
+                    </span>{t.saved_subject_suffix || '이'}<br />
+                    {t.golden_saved || '내 서재에 저장되었습니다.'}
                   </p>
                 </div>
                 <div className="bg-gradient-to-r from-amber-50 to-yellow-50 dark:from-amber-950/30 dark:to-yellow-950/30 border border-amber-200 dark:border-amber-700 rounded-xl px-4 py-3">
                   <p className="text-xs text-amber-700 dark:text-amber-400 font-bold">
-                    ✨ Golden Edition 배지가 부여되었습니다
+                    {t.golden_badge || '✨ Golden Edition 배지가 부여되었습니다'}
                   </p>
                   <p className="text-[11px] text-amber-600 dark:text-amber-500 mt-0.5">
-                    🖋️ 황금만년필 1개가 사용되었습니다
+                    {t.golden_used || '🖋️ 황금만년필 1개가 사용되었습니다'}
                   </p>
                 </div>
               </div>
@@ -332,7 +333,7 @@ const GoldenPenModal = ({ user, books, useItem, onClose }) => {
                 onClick={onClose}
                 className="w-full py-3 rounded-xl text-sm font-bold bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300"
               >
-                닫기
+                {t.close || '닫기'}
               </button>
             )}
             {phase === 'feature' && (
@@ -342,13 +343,13 @@ const GoldenPenModal = ({ user, books, useItem, onClose }) => {
                   disabled={!selectedFeature}
                   className="w-full py-3.5 rounded-xl text-sm font-black bg-gradient-to-r from-amber-500 to-yellow-400 text-white disabled:opacity-40 disabled:cursor-not-allowed shadow-md shadow-amber-200 dark:shadow-amber-900/30 transition-all"
                 >
-                  {selectedFeature ? `${selectedFeature.emoji} ${selectedFeature.name} 적용하기` : '기능을 선택해 주세요'}
+                  {selectedFeature ? `${selectedFeature.emoji} ${(t.golden_apply_btn || '{feature} 적용하기').replace('{feature}', selectedFeature.name)}` : (t.golden_select_feature_plz || '기능을 선택해 주세요')}
                 </button>
                 <button
                   onClick={() => { setPhase('books'); setSelectedFeature(null); }}
                   className="w-full py-2.5 rounded-xl text-sm font-bold text-slate-400 dark:text-slate-500"
                 >
-                  ← 책 다시 선택
+                  {t.golden_back_to_books || '← 책 다시 선택'}
                 </button>
               </div>
             )}
@@ -358,14 +359,14 @@ const GoldenPenModal = ({ user, books, useItem, onClose }) => {
                   onClick={handleConfirm}
                   className="w-full py-3.5 rounded-xl text-sm font-black bg-gradient-to-r from-amber-500 to-yellow-400 hover:from-amber-600 hover:to-yellow-500 active:scale-95 text-white shadow-md shadow-amber-200 dark:shadow-amber-900/30 transition-all"
                 >
-                  🖋️ Golden Edition으로 저장하기
+                  {t.golden_save_btn || '🖋️ Golden Edition으로 저장하기'}
                 </button>
                 <button
                   onClick={() => handleEnhance()}
                   className="w-full py-2.5 rounded-xl text-sm font-bold flex items-center justify-center gap-2 text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
                 >
                   <RotateCcw className="w-3.5 h-3.5" />
-                  다시 생성하기
+                  {t.golden_regen_btn || '다시 생성하기'}
                 </button>
               </div>
             )}
@@ -374,7 +375,7 @@ const GoldenPenModal = ({ user, books, useItem, onClose }) => {
                 onClick={onClose}
                 className="w-full py-3.5 rounded-xl text-sm font-black bg-orange-500 text-white"
               >
-                확인
+                {t.confirm || '확인'}
               </button>
             )}
           </div>

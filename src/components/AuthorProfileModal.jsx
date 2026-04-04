@@ -28,6 +28,7 @@ const AuthorProfileModal = ({
   isFollowing,
   onBookClick,
   onClose,
+  t = {},
 }) => {
   const [profile, setProfile] = useState(null);
   const [isFollowLoading, setIsFollowLoading] = useState(false);
@@ -55,7 +56,7 @@ const AuthorProfileModal = ({
     ? authorBooks.filter(b => b.id !== representativeBook.id)
     : authorBooks;
 
-  const nickname = profile?.anonymousActivity ? '익명' : (profile?.nickname || '작가');
+  const nickname = profile?.anonymousActivity ? (t.anonymous || '익명') : (profile?.nickname || (t.author_modal_default_name || '작가'));
   const bio = profile?.bio || '';
   const profileImageUrl = profile?.anonymousActivity ? null : (profile?.profileImageUrl || null);
   const level = getLevelFromXp(profile?.xp ?? 0);
@@ -110,7 +111,7 @@ const AuthorProfileModal = ({
             {/* 닉네임 + 레벨 */}
             <div>
               <p className="text-xl font-black text-slate-800 dark:text-slate-100">{nickname}</p>
-              <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">Lv.{level} · 작품 {authorBooks.length}편</p>
+              <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">Lv.{level} · {(t.author_modal_works || '작품 {count}편').replace('{count}', authorBooks.length)}</p>
             </div>
 
             {/* 소개말 */}
@@ -131,7 +132,7 @@ const AuthorProfileModal = ({
                     : 'bg-orange-500 text-white hover:bg-orange-600'
                 }`}
               >
-                {isFollowLoading ? '...' : following ? '✓ 팔로잉' : '+ 팔로우'}
+                {isFollowLoading ? '...' : following ? (t.author_modal_following || '✓ 팔로잉') : (t.author_modal_follow || '+ 팔로우')}
               </button>
             )}
           </div>
@@ -152,7 +153,7 @@ const AuthorProfileModal = ({
                 {/* 대표작 라벨 */}
                 <div className="relative px-4 pt-4 pb-1">
                   <span className="inline-flex items-center gap-1 text-[10px] font-black text-amber-300 bg-amber-500/20 border border-amber-400/30 rounded-full px-2.5 py-1">
-                    ⭐ 대표작
+                    ⭐ {t.author_modal_rep || '대표작'}
                   </span>
                 </div>
 
@@ -178,7 +179,7 @@ const AuthorProfileModal = ({
                       onClick={() => { onBookClick(representativeBook); onClose(); }}
                       className="mt-1 px-4 py-1.5 bg-white text-slate-800 rounded-full text-xs font-black hover:bg-orange-50 transition-colors active:scale-95"
                     >
-                      📖 바로 읽기
+                      📖 {t.author_modal_read_btn || '바로 읽기'}
                     </button>
                   </div>
                 </div>
@@ -191,8 +192,8 @@ const AuthorProfileModal = ({
             <div className="px-4 space-y-2">
               <div className="flex items-center gap-2 mb-3">
                 <BookOpen className="w-4 h-4 text-slate-400" />
-                <p className="text-sm font-black text-slate-700 dark:text-slate-200">집필 목록</p>
-                <span className="text-xs text-slate-400">({otherBooks.length}편)</span>
+                <p className="text-sm font-black text-slate-700 dark:text-slate-200">{t.author_modal_list || '집필 목록'}</p>
+                <span className="text-xs text-slate-400">({(t.author_modal_works_suffix || '{count}편').replace('{count}', otherBooks.length)})</span>
               </div>
               {otherBooks.map(book => (
                 <button
@@ -223,7 +224,7 @@ const AuthorProfileModal = ({
           {authorBooks.length === 0 && profile && (
             <div className="text-center py-10 px-4 space-y-2">
               <p className="text-3xl">📝</p>
-              <p className="text-sm font-bold text-slate-500 dark:text-slate-400">아직 집필한 작품이 없어요</p>
+              <p className="text-sm font-bold text-slate-500 dark:text-slate-400">{t.author_modal_no_books || '아직 집필한 작품이 없어요'}</p>
             </div>
           )}
 

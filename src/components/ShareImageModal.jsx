@@ -11,7 +11,7 @@ const BACKGROUNDS = [
   '/sharing/bg5.jpeg',
 ];
 
-const ShareImageModal = ({ selectedText, bookTitle, authorName, onClose }) => {
+const ShareImageModal = ({ selectedText, bookTitle, authorName, onClose, t = {} }) => {
   const [selectedBg, setSelectedBg] = useState(0);
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState(null);
@@ -58,7 +58,7 @@ const ShareImageModal = ({ selectedText, bookTitle, authorName, onClose }) => {
         await navigator.share?.({ title: '오독오독', text: `"${displayText}"` });
       }
     } catch (err) {
-      if (err.name !== 'AbortError') setError('공유에 실패했습니다.');
+      if (err.name !== 'AbortError') setError(t.share_error_kakao || '공유에 실패했습니다.');
     } finally {
       setIsGenerating(false);
     }
@@ -76,10 +76,10 @@ const ShareImageModal = ({ selectedText, bookTitle, authorName, onClose }) => {
       if (navigator.share && navigator.canShare?.({ files: [file] })) {
         await navigator.share({ files: [file], title: '오독오독' });
       } else {
-        setError('인스타그램 공유는 모바일 앱에서만 가능합니다.');
+        setError(t.share_error_instagram_mobile || '인스타그램 공유는 모바일 앱에서만 가능합니다.');
       }
     } catch (err) {
-      if (err.name !== 'AbortError') setError('공유에 실패했습니다.');
+      if (err.name !== 'AbortError') setError(t.share_error_instagram || '공유에 실패했습니다.');
     } finally {
       setIsGenerating(false);
     }
@@ -99,7 +99,7 @@ const ShareImageModal = ({ selectedText, bookTitle, authorName, onClose }) => {
       a.click();
       URL.revokeObjectURL(url);
     } catch (err) {
-      setError('이미지 저장에 실패했습니다.');
+      setError(t.share_error_download || '이미지 저장에 실패했습니다.');
     } finally {
       setIsGenerating(false);
     }
@@ -123,7 +123,7 @@ const ShareImageModal = ({ selectedText, bookTitle, authorName, onClose }) => {
 
           {/* 헤더 */}
           <div className="flex items-center justify-between px-5 pt-5 pb-4">
-            <h2 className="text-base font-black text-slate-800 dark:text-slate-100">📢 이미지로 공유하기</h2>
+            <h2 className="text-base font-black text-slate-800 dark:text-slate-100">📢 {t.share_title || '이미지로 공유하기'}</h2>
             <button onClick={onClose} className="p-1.5 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-400">
               <X className="w-5 h-5" />
             </button>
@@ -133,7 +133,7 @@ const ShareImageModal = ({ selectedText, bookTitle, authorName, onClose }) => {
 
             {/* 선택 문구 */}
             <div className="bg-slate-50 dark:bg-slate-700 rounded-2xl px-4 py-3 border border-slate-100 dark:border-slate-600">
-              <p className="text-xs text-slate-400 dark:text-slate-500 mb-1">선택한 문구</p>
+              <p className="text-xs text-slate-400 dark:text-slate-500 mb-1">{t.share_selected_text || '선택한 문구'}</p>
               <p className="text-sm font-bold text-slate-700 dark:text-slate-200 leading-relaxed line-clamp-3" style={{ fontFamily: 'serif' }}>
                 "{displayText}"
               </p>
@@ -141,7 +141,7 @@ const ShareImageModal = ({ selectedText, bookTitle, authorName, onClose }) => {
 
             {/* 배경 선택 */}
             <div>
-              <p className="text-xs font-bold text-slate-500 dark:text-slate-400 mb-2">배경 선택</p>
+              <p className="text-xs font-bold text-slate-500 dark:text-slate-400 mb-2">{t.share_bg_label || '배경 선택'}</p>
               <div className="flex gap-2 overflow-x-auto pb-1">
                 {BACKGROUNDS.map((bg, i) => (
                   <button
@@ -153,7 +153,7 @@ const ShareImageModal = ({ selectedText, bookTitle, authorName, onClose }) => {
                         : 'border-transparent opacity-60'
                     }`}
                   >
-                    <img src={bg} alt={`배경 ${i + 1}`} className="w-full h-full object-cover" />
+                    <img src={bg} alt={`${t.share_bg_alt || '배경'} ${i + 1}`} className="w-full h-full object-cover" />
                   </button>
                 ))}
               </div>
@@ -227,7 +227,7 @@ const ShareImageModal = ({ selectedText, bookTitle, authorName, onClose }) => {
                 ) : (
                   <span className="text-2xl">💬</span>
                 )}
-                <span className="text-[11px] font-black text-[#3A1D1D]">카카오톡</span>
+                <span className="text-[11px] font-black text-[#3A1D1D]">{t.share_kakao || '카카오톡'}</span>
               </button>
 
               {/* 인스타그램 */}
@@ -241,7 +241,7 @@ const ShareImageModal = ({ selectedText, bookTitle, authorName, onClose }) => {
                 ) : (
                   <span className="text-2xl">📸</span>
                 )}
-                <span className="text-[11px] font-black text-white">인스타그램</span>
+                <span className="text-[11px] font-black text-white">{t.share_instagram || '인스타그램'}</span>
               </button>
 
               {/* 내려받기 */}
@@ -255,7 +255,7 @@ const ShareImageModal = ({ selectedText, bookTitle, authorName, onClose }) => {
                 ) : (
                   <Download className="w-5 h-5 text-white" />
                 )}
-                <span className="text-[11px] font-black text-white">내려받기</span>
+                <span className="text-[11px] font-black text-white">{t.share_download || '내려받기'}</span>
               </button>
             </div>
 

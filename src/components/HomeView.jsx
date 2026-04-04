@@ -55,7 +55,7 @@ const PromoCarousel = ({ promotions, books, authorProfiles, handleBookClick, t }
     const exp = expiresAt?.toDate?.() || (expiresAt?.seconds ? new Date(expiresAt.seconds * 1000) : null);
     if (!exp) return '';
     const h = Math.max(0, Math.floor((exp - new Date()) / 3600000));
-    return `${h}시간 남음`;
+    return (t?.promo_time_remaining || '{hours}시간 남음').replace('{hours}', h);
   };
 
   return (
@@ -63,7 +63,7 @@ const PromoCarousel = ({ promotions, books, authorProfiles, handleBookClick, t }
       {/* 섹션 헤더 */}
       <div className="flex items-center gap-2 px-1">
         <Megaphone className="w-5 h-5 text-violet-500" />
-        <h3 className="text-xl font-black text-slate-800 dark:text-slate-100">프리미엄 홍보</h3>
+        <h3 className="text-xl font-black text-slate-800 dark:text-slate-100">{t?.promo_section_label || '프리미엄 홍보'}</h3>
         <span className="text-[10px] font-bold text-violet-400 bg-violet-50 dark:bg-violet-950/40 px-2 py-0.5 rounded-full">
           {items.length}
         </span>

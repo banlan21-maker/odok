@@ -3,7 +3,7 @@ import React from 'react';
 import { X } from 'lucide-react';
 import { STORE_ITEMS } from '../hooks/useInventory';
 
-const BagModal = ({ inventory, onClose, onUseItem }) => {
+const BagModal = ({ inventory, onClose, onUseItem, t = {} }) => {
   const ownedItems = STORE_ITEMS.filter(item => (inventory[item.id] ?? 0) > 0);
   const isEmpty = ownedItems.length === 0;
 
@@ -15,10 +15,10 @@ const BagModal = ({ inventory, onClose, onUseItem }) => {
         <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 dark:border-slate-700">
           <div className="flex items-center gap-2">
             <span className="text-lg">🎒</span>
-            <p className="font-black text-slate-800 dark:text-slate-100">내 가방</p>
+            <p className="font-black text-slate-800 dark:text-slate-100">{t.bag_title || '내 가방'}</p>
             {!isEmpty && (
               <span className="text-[10px] font-black text-orange-600 bg-orange-50 dark:bg-orange-950/40 px-2 py-0.5 rounded-full">
-                {ownedItems.reduce((sum, i) => sum + (inventory[i.id] ?? 0), 0)}개 보유
+                {(t.bag_owned_count || '{count}개 보유').replace('{count}', ownedItems.reduce((sum, i) => sum + (inventory[i.id] ?? 0), 0))}
               </span>
             )}
           </div>
@@ -35,9 +35,9 @@ const BagModal = ({ inventory, onClose, onUseItem }) => {
           {isEmpty ? (
             <div className="text-center py-8 space-y-2">
               <p className="text-4xl">👜</p>
-              <p className="text-sm font-bold text-slate-700 dark:text-slate-200">아직 가방이 비어있습니다.</p>
+              <p className="text-sm font-bold text-slate-700 dark:text-slate-200">{t.bag_empty_title || '아직 가방이 비어있습니다.'}</p>
               <p className="text-xs text-slate-400 dark:text-slate-500 leading-relaxed">
-                문방구에서 아이템을 구매해 보세요!
+                {t.bag_empty_desc || '문방구에서 아이템을 구매해 보세요!'}
               </p>
             </div>
           ) : (
@@ -52,22 +52,22 @@ const BagModal = ({ inventory, onClose, onUseItem }) => {
                     <span className="text-2xl">{item.emoji}</span>
                     <div className="flex-1">
                       <p className="text-sm font-black text-slate-800 dark:text-slate-100">{item.name}</p>
-                      <p className="text-[11px] text-slate-400 dark:text-slate-500">글쓰기 에디터에서 사용 가능</p>
+                      <p className="text-[11px] text-slate-400 dark:text-slate-500">{t.bag_item_usable || '글쓰기 에디터에서 사용 가능'}</p>
                     </div>
                     <div className="flex items-center gap-2">
                       <span className="text-sm font-black text-orange-600 bg-orange-50 dark:bg-orange-950/40 px-3 py-1 rounded-full">
-                        {qty}개
+                        {qty}{t.bag_qty_suffix ?? '개'}
                       </span>
                       {item.id === 'sharp' ? (
                         <span className="text-[10px] font-bold text-sky-500 bg-sky-50 dark:bg-sky-950/40 px-2.5 py-1 rounded-full">
-                          책 미리보기에서 사용
+                          {t.bag_sharp_usable || '책 미리보기에서 사용'}
                         </span>
                       ) : item.id === 'megaphone' ? (
                         <button
                           onClick={() => { onClose(); onUseItem?.('megaphone'); }}
                           className="text-xs font-black px-3 py-1 rounded-full transition-colors text-violet-600 bg-violet-50 dark:bg-violet-950/40 hover:bg-violet-100 dark:hover:bg-violet-900/50"
                         >
-                          사용하기
+                          {t.bag_use_btn || '사용하기'}
                         </button>
                       ) : (item.id === 'rainbow_ink' || item.id === 'magic_eraser' || item.id === 'golden_pen' || item.id === 'paint_brush') && (
                         <button
@@ -82,7 +82,7 @@ const BagModal = ({ inventory, onClose, onUseItem }) => {
                               : 'text-pink-600 bg-pink-50 dark:bg-pink-950/40 hover:bg-pink-100 dark:hover:bg-pink-900/50'
                           }`}
                         >
-                          사용하기
+                          {t.bag_use_btn || '사용하기'}
                         </button>
                       )}
                     </div>
@@ -97,7 +97,7 @@ const BagModal = ({ inventory, onClose, onUseItem }) => {
         <div className="px-5 pb-10">
           <div className="bg-slate-50 dark:bg-slate-700 rounded-xl px-4 py-3 text-center">
             <p className="text-xs text-slate-400 dark:text-slate-500">
-              ✏️ 아이템은 <span className="font-bold text-slate-500 dark:text-slate-400">글쓰기 에디터</span>에서 사용할 수 있습니다
+              ✏️ {t.bag_footer || '아이템은 글쓰기 에디터에서 사용할 수 있습니다'}
             </p>
           </div>
         </div>

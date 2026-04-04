@@ -4,7 +4,7 @@ import { Droplets, Minus, Plus, X, CheckCircle, Video } from 'lucide-react';
 import { STORE_ITEMS } from '../hooks/useInventory';
 import { showRewardVideoAd } from '../utils/admobService';
 
-const StoreView = ({ userProfile, purchaseItem, isPurchasing, getItemQuantity, onGiftItem, addInk }) => {
+const StoreView = ({ userProfile, purchaseItem, isPurchasing, getItemQuantity, onGiftItem, addInk, t = {} }) => {
   const [selectedItem, setSelectedItem] = useState(null);
   const [quantity, setQuantity] = useState(1);
   const [phase, setPhase] = useState('select'); // 'select' | 'confirm' | 'done'
@@ -44,7 +44,7 @@ const StoreView = ({ userProfile, purchaseItem, isPurchasing, getItemQuantity, o
     if (!selectedItem) return;
     const totalCost = selectedItem.price * quantity;
     if (currentInk < totalCost) {
-      setError(`잉크가 부족해요! (보유: ${currentInk}개, 필요: ${totalCost}개)`);
+      setError(t.store_no_ink ? `${t.store_no_ink} (${currentInk}/${totalCost})` : `잉크가 부족해요! (보유: ${currentInk}개, 필요: ${totalCost}개)`);
       return;
     }
     setError(null);
@@ -57,7 +57,7 @@ const StoreView = ({ userProfile, purchaseItem, isPurchasing, getItemQuantity, o
     if (result.success) {
       setPhase('done');
     } else {
-      setError(result.error || '구매에 실패했습니다.');
+      setError(result.error || (t.store_no_ink || '구매에 실패했습니다.'));
       setPhase('select');
     }
   };
@@ -79,14 +79,14 @@ const StoreView = ({ userProfile, purchaseItem, isPurchasing, getItemQuantity, o
             : 'bg-blue-500 hover:bg-blue-600 active:scale-95 text-white'
           }`}
         >
-          {isCharging ? <span className="animate-pulse">광고 로딩 중...</span>
-          : chargeSuccess ? <><Droplets className="w-4 h-4" /><span>+10 충전 완료!</span></>
-          : <><Video className="w-4 h-4" /><span>광고 보고 잉크 얻기 (+10)</span></>}
+          {isCharging ? <span className="animate-pulse">{t.store_charge_loading || '광고 로딩 중...'}</span>
+          : chargeSuccess ? <><Droplets className="w-4 h-4" /><span>{t.store_charge_success || '+10 충전 완료!'}</span></>
+          : <><Video className="w-4 h-4" /><span>{t.store_charge_btn || '광고 보고 잉크 얻기 (+10)'}</span></>}
         </button>
 
         {/* 아이템 목록 */}
         <div className="space-y-2.5">
-          <p className="text-xs font-bold text-slate-500 dark:text-slate-400 px-1">판매 중인 아이템</p>
+          <p className="text-xs font-bold text-slate-500 dark:text-slate-400 px-1">{t.store_items_label || '판매 중인 아이템'}</p>
 
           {STORE_ITEMS.map((item) => {
             const owned = getItemQuantity(item.id);
@@ -104,7 +104,7 @@ const StoreView = ({ userProfile, purchaseItem, isPurchasing, getItemQuantity, o
                       <p className="text-sm font-black text-slate-800 dark:text-slate-100">{item.name}</p>
                       {owned > 0 && (
                         <span className="text-[10px] font-black text-orange-600 bg-orange-50 dark:bg-orange-950/40 px-2 py-0.5 rounded-full">
-                          보유 {owned}개
+                          {(t.store_owned || '보유 {count}개').replace('{count}', owned)}
                         </span>
                       )}
                     </div>
@@ -114,21 +114,21 @@ const StoreView = ({ userProfile, purchaseItem, isPurchasing, getItemQuantity, o
                 <div className="flex items-center justify-between mt-3 pt-3 border-t border-slate-100 dark:border-slate-700">
                   <div className="flex items-center gap-1">
                     <Droplets className="w-3.5 h-3.5 text-blue-500 fill-blue-400" />
-                    <span className="text-sm font-black text-blue-600 dark:text-blue-400">{item.price}개</span>
+                    <span className="text-sm font-black text-blue-600 dark:text-blue-400">{item.price}{t.store_total_unit ?? '개'}</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <button
                       onClick={() => onGiftItem?.(item)}
                       className="px-3 py-1.5 rounded-xl text-xs font-black border border-slate-200 dark:border-slate-600 text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 active:scale-95 transition-all"
-                      title="팔로우한 작가에게 선물하기"
+                      title={t.store_gift_tooltip || '팔로우한 작가에게 선물하기'}
                     >
-                      🎁 선물
+                      {t.store_gift_btn || '🎁 선물'}
                     </button>
                     <button
                       onClick={() => openPurchaseModal(item)}
                       className="px-5 py-1.5 rounded-xl text-xs font-black bg-orange-500 hover:bg-orange-600 active:scale-95 text-white transition-all"
                     >
-                      구매하기
+                      {t.store_buy_btn || '구매하기'}
                     </button>
                   </div>
                 </div>
@@ -140,7 +140,7 @@ const StoreView = ({ userProfile, purchaseItem, isPurchasing, getItemQuantity, o
         {/* 안내 */}
         <div className="bg-white dark:bg-slate-800 rounded-xl px-4 py-3 border border-dashed border-slate-200 dark:border-slate-600 text-center">
           <p className="text-xs text-slate-400 dark:text-slate-500">
-            💡 구매한 아이템은 <span className="font-bold text-slate-500 dark:text-slate-400">글쓰기 에디터</span>에서 사용할 수 있어요
+            💡 {t.store_footer || '구매한 아이템은 글쓰기 에디터에서 사용할 수 있어요'}
           </p>
         </div>
       </div>
@@ -153,7 +153,7 @@ const StoreView = ({ userProfile, purchaseItem, isPurchasing, getItemQuantity, o
             {/* 헤더 */}
             <div className="flex justify-between items-center mb-5">
               <p className="font-black text-slate-800 dark:text-slate-100">
-                {phase === 'done' ? '🎉 구매 완료!' : `${selectedItem.emoji} ${selectedItem.name}`}
+                {phase === 'done' ? (t.store_purchase_complete || '🎉 구매 완료!') : `${selectedItem.emoji} ${selectedItem.name}`}
               </p>
               <button onClick={closeModal} className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
                 <X className="w-5 h-5" />
@@ -165,14 +165,14 @@ const StoreView = ({ userProfile, purchaseItem, isPurchasing, getItemQuantity, o
               <div className="text-center py-4 space-y-3">
                 <CheckCircle className="w-14 h-14 text-emerald-500 mx-auto" />
                 <p className="text-sm font-bold text-slate-700 dark:text-slate-200">
-                  {selectedItem.name} {quantity}개를 구매했습니다!
+                  {(t.store_purchased_desc || '{name} {count}개를 구매했습니다!').replace('{name}', selectedItem.name).replace('{count}', quantity)}
                 </p>
-                <p className="text-xs text-slate-400">글쓰기 에디터에서 사용해보세요 ✏️</p>
+                <p className="text-xs text-slate-400">{t.store_use_desc || '글쓰기 에디터에서 사용해보세요 ✏️'}</p>
                 <button
                   onClick={closeModal}
                   className="w-full py-3 rounded-xl text-sm font-black bg-orange-500 text-white"
                 >
-                  확인
+                  {t.confirm || '확인'}
                 </button>
               </div>
             )}
@@ -182,29 +182,29 @@ const StoreView = ({ userProfile, purchaseItem, isPurchasing, getItemQuantity, o
               <div className="space-y-4">
                 <div className="bg-slate-50 dark:bg-slate-700 rounded-xl p-4 text-center">
                   <p className="text-sm font-bold text-slate-700 dark:text-slate-200">
-                    {selectedItem.emoji} {selectedItem.name} {quantity}개
+                    {selectedItem.emoji} {selectedItem.name} {quantity}{t.store_total_unit ?? '개'}
                   </p>
                   <div className="flex items-center justify-center gap-1.5 mt-1">
                     <Droplets className="w-4 h-4 text-blue-500 fill-blue-400" />
-                    <span className="text-lg font-black text-blue-600 dark:text-blue-400">{totalCost}개 차감</span>
+                    <span className="text-lg font-black text-blue-600 dark:text-blue-400">{totalCost}{t.store_confirm_label || '개 차감'}</span>
                   </div>
                 </div>
                 <p className="text-xs text-slate-500 dark:text-slate-400 text-center">
-                  총 {totalCost}잉크로 구매하시겠습니까?
+                  {(t.store_confirm_question || '총 {count}잉크로 구매하시겠습니까?').replace('{count}', totalCost)}
                 </p>
                 <div className="flex gap-2">
                   <button
                     onClick={() => setPhase('select')}
                     className="flex-1 py-3 rounded-xl text-sm font-bold bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300"
                   >
-                    돌아가기
+                    {t.store_back || '돌아가기'}
                   </button>
                   <button
                     onClick={handlePurchase}
                     disabled={isPurchasing}
                     className="flex-1 py-3 rounded-xl text-sm font-black bg-orange-500 text-white disabled:opacity-60"
                   >
-                    {isPurchasing ? '처리 중...' : '구매 확정'}
+                    {isPurchasing ? (t.store_processing || '처리 중...') : (t.store_buy_confirm || '구매 확정')}
                   </button>
                 </div>
               </div>
@@ -214,7 +214,7 @@ const StoreView = ({ userProfile, purchaseItem, isPurchasing, getItemQuantity, o
             {phase === 'select' && (
               <div className="space-y-4">
                 <div>
-                  <p className="text-xs font-bold text-slate-500 dark:text-slate-400 mb-2">몇 개를 구매하시겠습니까?</p>
+                  <p className="text-xs font-bold text-slate-500 dark:text-slate-400 mb-2">{t.store_qty_desc || '몇 개를 구매하시겠습니까?'}</p>
                   <div className="bg-slate-50 dark:bg-slate-700 rounded-xl p-3 flex items-center justify-between">
                     <button
                       onClick={() => setQuantity(q => Math.max(1, q - 1))}
@@ -234,13 +234,13 @@ const StoreView = ({ userProfile, purchaseItem, isPurchasing, getItemQuantity, o
 
                 {/* 총 금액 */}
                 <div className="bg-slate-50 dark:bg-slate-700 rounded-xl px-4 py-3 flex items-center justify-between">
-                  <span className="text-sm font-bold text-slate-600 dark:text-slate-300">총 금액</span>
+                  <span className="text-sm font-bold text-slate-600 dark:text-slate-300">{t.store_total || '총 금액'}</span>
                   <div className="flex items-center gap-1.5">
                     <Droplets className="w-4 h-4 text-blue-500 fill-blue-400" />
                     <span className={`text-base font-black ${canAfford ? 'text-blue-600 dark:text-blue-400' : 'text-red-500'}`}>
-                      {totalCost}개
+                      {totalCost}{t.store_total_unit ?? '개'}
                     </span>
-                    <span className="text-xs text-slate-400">(보유 {currentInk}개)</span>
+                    <span className="text-xs text-slate-400">{(t.store_cur_owned || '(보유 {count}개)').replace('{count}', currentInk)}</span>
                   </div>
                 </div>
 
@@ -253,7 +253,7 @@ const StoreView = ({ userProfile, purchaseItem, isPurchasing, getItemQuantity, o
                   disabled={!canAfford}
                   className="w-full py-3.5 rounded-xl text-sm font-black bg-orange-500 hover:bg-orange-600 text-white disabled:opacity-40 disabled:cursor-not-allowed transition-all"
                 >
-                  {canAfford ? `${totalCost}잉크로 구매하기` : '잉크가 부족합니다'}
+                  {canAfford ? (t.store_buy_with_ink || `${totalCost}잉크로 구매하기`).replace('{count}', totalCost) : (t.store_no_ink || '잉크가 부족합니다')}
                 </button>
               </div>
             )}

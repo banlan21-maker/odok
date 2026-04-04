@@ -8,15 +8,15 @@ import { db, functions } from '../firebase';
 const rawAppId = typeof __app_id !== 'undefined' ? __app_id : 'odok-app-default';
 const appId = rawAppId.replace(/\//g, '_');
 
-const STYLES = [
-  { id: 'dialect',    emoji: '🌊', name: '경상도 사투리', desc: '투박하고 정감 넘치는 바이브' },
-  { id: 'historical', emoji: '📜', name: '정통 사극',     desc: '고풍스러운 어휘와 문체' },
-  { id: 'literary',   emoji: '🖋️', name: '고전 명작',     desc: '유려하고 깊이 있는 문학적 묘사' },
-  { id: 'trendy',     emoji: '✨', name: '트렌디 MZ',     desc: '최신 유행어와 힙한 감성' },
-  { id: 'cyber',      emoji: '🤖', name: '사이버네틱',    desc: '냉철하고 기술적인 AI 보고서 스타일' },
+const getStyles = (t) => [
+  { id: 'dialect',    emoji: '🌊', name: t.rainbow_style_dialect    || '경상도 사투리', desc: t.rainbow_style_dialect_desc    || '투박하고 정감 넘치는 바이브' },
+  { id: 'historical', emoji: '📜', name: t.rainbow_style_historical || '정통 사극',     desc: t.rainbow_style_historical_desc || '고풍스러운 어휘와 문체' },
+  { id: 'literary',   emoji: '🖋️', name: t.rainbow_style_literary   || '고전 명작',     desc: t.rainbow_style_literary_desc   || '유려하고 깊이 있는 문학적 묘사' },
+  { id: 'trendy',     emoji: '✨', name: t.rainbow_style_trendy     || '트렌디 MZ',     desc: t.rainbow_style_trendy_desc     || '최신 유행어와 힙한 감성' },
+  { id: 'cyber',      emoji: '🤖', name: t.rainbow_style_cyber      || '사이버네틱',    desc: t.rainbow_style_cyber_desc      || '냉철하고 기술적인 AI 보고서 스타일' },
 ];
 
-const RainbowInkModal = ({ user, books, useItem, onClose }) => {
+const RainbowInkModal = ({ user, books, useItem, onClose, t = {} }) => {
   const [phase, setPhase] = useState('books'); // 'books' | 'style' | 'transforming' | 'done'
   const [selectedBook, setSelectedBook] = useState(null);
   const [selectedStyle, setSelectedStyle] = useState(null);
@@ -24,6 +24,7 @@ const RainbowInkModal = ({ user, books, useItem, onClose }) => {
   const [error, setError] = useState(null);
 
   const myBooks = (books || []).filter(b => b.authorId === user?.uid);
+  const STYLES = getStyles(t);
 
   const handleTransform = async () => {
     if (!selectedBook || !selectedStyle) return;
@@ -49,14 +50,14 @@ const RainbowInkModal = ({ user, books, useItem, onClose }) => {
       } else {
         // steps가 없는 경우 content 전체를 변환
         const result = await transformFn({ content: selectedBook.content || '', style: selectedStyle.id });
-        transformedSteps = [{ name: '본문', content: result.data.transformedContent }];
+        transformedSteps = [{ name: t.book_main_text || '본문', content: result.data.transformedContent }];
         setProgress({ current: 1, total: 1 });
       }
 
       // 아이템 차감
       const deductResult = await useItem('rainbow_ink', 1);
       if (!deductResult.success) {
-        setError(deductResult.error || '아이템 차감에 실패했습니다.');
+        setError(deductResult.error || t.item_deduct_fail || '아이템 차감에 실패했습니다.');
         setPhase('style');
         return;
       }
@@ -65,7 +66,7 @@ const RainbowInkModal = ({ user, books, useItem, onClose }) => {
       const styleName = STYLES.find(s => s.id === selectedStyle.id)?.name || selectedStyle.id;
       const transformedContent = transformedSteps.map(s => s.content).join('\n\n');
       const bookData = {
-        title: `${selectedBook.title} - ${styleName} 에디션`,
+        title: `${selectedBook.title} - ${styleName} ${t.edition_suffix || '에디션'}`,
         content: transformedContent,
         steps: transformedSteps,
         synopsis: selectedBook.synopsis || '',
@@ -91,7 +92,7 @@ const RainbowInkModal = ({ user, books, useItem, onClose }) => {
       await addDoc(collection(db, 'artifacts', appId, 'books'), bookData);
       setPhase('done');
     } catch (err) {
-      setError(err.message || '변환에 실패했습니다. 다시 시도해주세요.');
+      setError(err.message || t.rainbow_transform_fail || '변환에 실패했습니다. 다시 시도해주세요.');
       setPhase('style');
     }
   };
@@ -104,11 +105,11 @@ const RainbowInkModal = ({ user, books, useItem, onClose }) => {
         <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 dark:border-slate-700 flex-none">
           <div className="flex items-center gap-2">
             <span className="text-lg">🌈</span>
-            <p className="font-black text-slate-800 dark:text-slate-100">무지개 잉크</p>
-            {phase === 'books' && <span className="text-[10px] font-bold text-slate-400">책 선택</span>}
-            {phase === 'style' && <span className="text-[10px] font-bold text-slate-400">스타일 선택</span>}
-            {phase === 'transforming' && <span className="text-[10px] font-bold text-violet-500">변환 중...</span>}
-            {phase === 'done' && <span className="text-[10px] font-bold text-emerald-500">완료!</span>}
+            <p className="font-black text-slate-800 dark:text-slate-100">{t.rainbow_ink_title || '무지개 잉크'}</p>
+            {phase === 'books' && <span className="text-[10px] font-bold text-slate-400">{t.rainbow_select_book || '책 선택'}</span>}
+            {phase === 'style' && <span className="text-[10px] font-bold text-slate-400">{t.rainbow_select_style || '스타일 선택'}</span>}
+            {phase === 'transforming' && <span className="text-[10px] font-bold text-violet-500">{t.rainbow_transforming || '변환 중...'}</span>}
+            {phase === 'done' && <span className="text-[10px] font-bold text-emerald-500">{t.rainbow_done || '완료!'}</span>}
           </div>
           <button
             onClick={onClose}
@@ -125,12 +126,12 @@ const RainbowInkModal = ({ user, books, useItem, onClose }) => {
           {/* 책 선택 */}
           {phase === 'books' && (
             <div className="px-5 py-4 space-y-2">
-              <p className="text-xs font-bold text-slate-500 dark:text-slate-400 mb-3">변환할 내 작품을 선택하세요</p>
+              <p className="text-xs font-bold text-slate-500 dark:text-slate-400 mb-3">{t.rainbow_select_book_desc || '변환할 내 작품을 선택하세요'}</p>
               {myBooks.length === 0 ? (
                 <div className="text-center py-10 space-y-2">
                   <p className="text-4xl">📚</p>
-                  <p className="text-sm font-bold text-slate-600 dark:text-slate-300">아직 작성한 작품이 없습니다.</p>
-                  <p className="text-xs text-slate-400">집필 탭에서 글을 써보세요!</p>
+                  <p className="text-sm font-bold text-slate-600 dark:text-slate-300">{t.rainbow_no_books || '아직 작성한 작품이 없습니다.'}</p>
+                  <p className="text-xs text-slate-400">{t.rainbow_no_books_desc || '집필 탭에서 글을 써보세요!'}</p>
                 </div>
               ) : (
                 myBooks.map(book => (
@@ -142,7 +143,7 @@ const RainbowInkModal = ({ user, books, useItem, onClose }) => {
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-black text-slate-800 dark:text-slate-100 truncate">{book.title}</p>
                       <p className="text-[11px] text-slate-400 dark:text-slate-500">
-                        {book.genre} · {book.steps?.length || 1}챕터
+                        {book.genre} · {book.steps?.length || 1}{t.chapter_unit || '챕터'}
                       </p>
                     </div>
                     <ChevronRight className="w-4 h-4 text-slate-400 shrink-0" />
@@ -156,10 +157,10 @@ const RainbowInkModal = ({ user, books, useItem, onClose }) => {
           {phase === 'style' && (
             <div className="px-5 py-4 space-y-3">
               <div className="bg-slate-50 dark:bg-slate-700 rounded-xl px-4 py-2.5 flex items-center gap-2">
-                <span className="text-[11px] text-slate-500 dark:text-slate-400 shrink-0">선택된 작품:</span>
+                <span className="text-[11px] text-slate-500 dark:text-slate-400 shrink-0">{t.rainbow_selected_book || '선택된 작품:'}</span>
                 <span className="text-[11px] font-black text-slate-700 dark:text-slate-200 truncate">{selectedBook?.title}</span>
               </div>
-              <p className="text-xs font-bold text-slate-500 dark:text-slate-400">변환 스타일을 선택하세요</p>
+              <p className="text-xs font-bold text-slate-500 dark:text-slate-400">{t.rainbow_select_style_desc || '변환 스타일을 선택하세요'}</p>
               {STYLES.map(style => (
                 <button
                   key={style.id}
@@ -189,11 +190,11 @@ const RainbowInkModal = ({ user, books, useItem, onClose }) => {
             <div className="px-5 py-12 text-center space-y-6">
               <span className="text-6xl animate-bounce inline-block">🌈</span>
               <div className="space-y-2">
-                <p className="text-sm font-black text-slate-700 dark:text-slate-200">스타일 변환 중...</p>
+                <p className="text-sm font-black text-slate-700 dark:text-slate-200">{t.rainbow_in_progress || '스타일 변환 중...'}</p>
                 <p className="text-xs text-slate-400 dark:text-slate-500">
                   {progress.total > 0
-                    ? `${progress.current} / ${progress.total} 챕터 완료`
-                    : '준비 중...'}
+                    ? (t.rainbow_chapter_progress || '{current} / {total} 챕터 완료').replace('{current}', progress.current).replace('{total}', progress.total)
+                    : (t.rainbow_preparing || '준비 중...')}
                 </p>
               </div>
               {progress.total > 0 && (
@@ -205,7 +206,7 @@ const RainbowInkModal = ({ user, books, useItem, onClose }) => {
                 </div>
               )}
               <p className="text-[11px] text-slate-400 dark:text-slate-500">
-                잠시 기다려 주세요. 화면을 닫지 마세요.
+                {t.rainbow_wait || '잠시 기다려 주세요. 화면을 닫지 마세요.'}
               </p>
             </div>
           )}
@@ -215,17 +216,17 @@ const RainbowInkModal = ({ user, books, useItem, onClose }) => {
             <div className="px-5 py-10 text-center space-y-4">
               <CheckCircle className="w-16 h-16 text-emerald-500 mx-auto" />
               <div className="space-y-1.5">
-                <p className="text-base font-black text-slate-800 dark:text-slate-100">변환 완료!</p>
+                <p className="text-base font-black text-slate-800 dark:text-slate-100">{t.rainbow_complete || '변환 완료!'}</p>
                 <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
                   <span className="font-bold text-violet-600 dark:text-violet-400">
-                    {selectedBook?.title} - {selectedStyle?.name} 에디션
-                  </span>이<br />
-                  내 서재에 저장되었습니다.
+                    {selectedBook?.title} - {selectedStyle?.name} {t.edition_suffix || '에디션'}
+                  </span>{t.saved_subject_suffix || '이'}<br />
+                  {t.rainbow_saved || '내 서재에 저장되었습니다.'}
                 </p>
               </div>
               <div className="bg-violet-50 dark:bg-violet-950/30 rounded-xl px-4 py-3">
                 <p className="text-xs text-violet-600 dark:text-violet-400">
-                  🌈 무지개 잉크 1개가 사용되었습니다
+                  {t.rainbow_used || '🌈 무지개 잉크 1개가 사용되었습니다'}
                 </p>
               </div>
             </div>
@@ -239,7 +240,7 @@ const RainbowInkModal = ({ user, books, useItem, onClose }) => {
               onClick={onClose}
               className="w-full py-3 rounded-xl text-sm font-bold bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300"
             >
-              닫기
+              {t.close || '닫기'}
             </button>
           )}
           {phase === 'style' && (
@@ -250,14 +251,14 @@ const RainbowInkModal = ({ user, books, useItem, onClose }) => {
                 className="w-full py-3.5 rounded-xl text-sm font-black bg-gradient-to-r from-violet-500 to-pink-500 text-white disabled:opacity-40 disabled:cursor-not-allowed transition-all"
               >
                 {selectedStyle
-                  ? `${selectedStyle.emoji} ${selectedStyle.name}으로 변환하기`
-                  : '스타일을 선택해 주세요'}
+                  ? `${selectedStyle.emoji} ${(t.rainbow_transform_btn || '{style}으로 변환하기').replace('{style}', selectedStyle.name)}`
+                  : (t.rainbow_select_style_plz || '스타일을 선택해 주세요')}
               </button>
               <button
                 onClick={() => { setPhase('books'); setSelectedStyle(null); }}
                 className="w-full py-2.5 rounded-xl text-sm font-bold text-slate-400 dark:text-slate-500"
               >
-                ← 책 다시 선택
+                {t.rainbow_back_to_books || '← 책 다시 선택'}
               </button>
             </div>
           )}
@@ -266,7 +267,7 @@ const RainbowInkModal = ({ user, books, useItem, onClose }) => {
               onClick={onClose}
               className="w-full py-3.5 rounded-xl text-sm font-black bg-orange-500 text-white"
             >
-              확인
+              {t.confirm || '확인'}
             </button>
           )}
         </div>

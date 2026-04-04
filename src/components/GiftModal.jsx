@@ -7,7 +7,7 @@ import { functions } from '../firebase';
 const rawAppId = typeof __app_id !== 'undefined' ? __app_id : 'odok-app-default';
 const appId = rawAppId.replace(/\//g, '_');
 
-const GiftModal = ({ item, follows, userProfile, onClose }) => {
+const GiftModal = ({ item, follows, userProfile, onClose, t = {} }) => {
   const [phase, setPhase] = useState('author'); // 'author' | 'qty' | 'sending' | 'done'
   const [selectedAuthor, setSelectedAuthor] = useState(null); // { uid, nickname, profileImageUrl }
   const [quantity, setQuantity] = useState(1);
@@ -15,7 +15,7 @@ const GiftModal = ({ item, follows, userProfile, onClose }) => {
 
   const followedAuthors = Object.entries(follows || {}).map(([uid, data]) => ({
     uid,
-    nickname: data.nickname || '익명',
+    nickname: data.nickname || t.anonymous || '익명',
     profileImageUrl: data.profileImageUrl || null,
   }));
 
@@ -39,7 +39,7 @@ const GiftModal = ({ item, follows, userProfile, onClose }) => {
       });
       setPhase('done');
     } catch (err) {
-      setError(err.message || '선물 전송에 실패했습니다. 다시 시도해주세요.');
+      setError(err.message || t.gift_send_fail || '선물 전송에 실패했습니다. 다시 시도해주세요.');
       setPhase('qty');
     }
   };
@@ -52,12 +52,12 @@ const GiftModal = ({ item, follows, userProfile, onClose }) => {
         <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 dark:border-slate-700 flex-none">
           <div className="flex items-center gap-2">
             <span className="text-lg">🎁</span>
-            <p className="font-black text-slate-800 dark:text-slate-100">선물하기</p>
+            <p className="font-black text-slate-800 dark:text-slate-100">{t.gift_title || '선물하기'}</p>
             <span className="text-[10px] font-bold text-slate-400">
-              {phase === 'author' && '받을 작가 선택'}
-              {phase === 'qty' && '수량 선택'}
-              {phase === 'sending' && '전송 중...'}
-              {phase === 'done' && '완료!'}
+              {phase === 'author' && (t.gift_select_author || '받을 작가 선택')}
+              {phase === 'qty' && (t.gift_select_qty || '수량 선택')}
+              {phase === 'sending' && (t.gift_sending || '전송 중...')}
+              {phase === 'done' && (t.gift_done || '완료!')}
             </span>
           </div>
           <button
@@ -78,12 +78,12 @@ const GiftModal = ({ item, follows, userProfile, onClose }) => {
                 <p className="text-sm font-black text-slate-800 dark:text-slate-100">{item.name}</p>
                 <div className="flex items-center gap-1">
                   <Droplets className="w-3 h-3 text-blue-500 fill-blue-400" />
-                  <span className="text-[11px] font-black text-blue-600 dark:text-blue-400">{item.price}개 / 1개</span>
+                  <span className="text-[11px] font-black text-blue-600 dark:text-blue-400">{item.price}{t.gift_per_item || '개 / 1개'}</span>
                 </div>
               </div>
               {selectedAuthor && phase !== 'author' && (
                 <div className="text-right">
-                  <p className="text-[10px] text-slate-400">받는 사람</p>
+                  <p className="text-[10px] text-slate-400">{t.gift_recipient || '받는 사람'}</p>
                   <p className="text-xs font-black text-slate-600 dark:text-slate-300 truncate max-w-[80px]">{selectedAuthor.nickname}</p>
                 </div>
               )}
@@ -98,14 +98,14 @@ const GiftModal = ({ item, follows, userProfile, onClose }) => {
           {phase === 'author' && (
             <div className="px-5 py-4 space-y-2">
               <p className="text-xs font-bold text-slate-500 dark:text-slate-400 mb-2">
-                선물 받을 팔로우 작가를 선택하세요
+                {t.gift_select_author_desc || '선물 받을 팔로우 작가를 선택하세요'}
               </p>
               {followedAuthors.length === 0 ? (
                 <div className="text-center py-10 space-y-2">
                   <p className="text-4xl">👤</p>
-                  <p className="text-sm font-bold text-slate-600 dark:text-slate-300">팔로우한 작가가 없습니다.</p>
+                  <p className="text-sm font-bold text-slate-600 dark:text-slate-300">{t.gift_no_follows || '팔로우한 작가가 없습니다.'}</p>
                   <p className="text-xs text-slate-400 leading-relaxed">
-                    다른 작가의 책 상세에서 팔로우한 후<br />선물을 보내보세요!
+                    {t.gift_no_follows_desc || '다른 작가의 책 상세에서 팔로우한 후 선물을 보내보세요!'}
                   </p>
                 </div>
               ) : (
@@ -121,7 +121,7 @@ const GiftModal = ({ item, follows, userProfile, onClose }) => {
                     <p className="text-sm font-black text-slate-800 dark:text-slate-100 flex-1 truncate">
                       {author.nickname}
                     </p>
-                    <span className="text-xs text-slate-400 dark:text-slate-500">선택</span>
+                    <span className="text-xs text-slate-400 dark:text-slate-500">{t.gift_select || '선택'}</span>
                   </button>
                 ))
               )}
@@ -132,7 +132,7 @@ const GiftModal = ({ item, follows, userProfile, onClose }) => {
           {phase === 'qty' && (
             <div className="px-5 py-4 space-y-4">
               <div>
-                <p className="text-xs font-bold text-slate-500 dark:text-slate-400 mb-2">몇 개를 선물하시겠습니까?</p>
+                <p className="text-xs font-bold text-slate-500 dark:text-slate-400 mb-2">{t.gift_qty_desc || '몇 개를 선물하시겠습니까?'}</p>
                 <div className="bg-slate-50 dark:bg-slate-700 rounded-xl p-3 flex items-center justify-between">
                   <button
                     onClick={() => setQuantity(q => Math.max(1, q - 1))}
@@ -152,13 +152,13 @@ const GiftModal = ({ item, follows, userProfile, onClose }) => {
 
               {/* 총 비용 */}
               <div className="bg-slate-50 dark:bg-slate-700 rounded-xl px-4 py-3 flex items-center justify-between">
-                <span className="text-sm font-bold text-slate-600 dark:text-slate-300">총 금액</span>
+                <span className="text-sm font-bold text-slate-600 dark:text-slate-300">{t.gift_total || '총 금액'}</span>
                 <div className="flex items-center gap-1.5">
                   <Droplets className="w-4 h-4 text-blue-500 fill-blue-400" />
                   <span className={`text-base font-black ${canAfford ? 'text-blue-600 dark:text-blue-400' : 'text-red-500'}`}>
-                    {totalCost}개
+                    {totalCost}{t.gift_total_unit ?? '개'}
                   </span>
-                  <span className="text-xs text-slate-400">(보유 {currentInk}개)</span>
+                  <span className="text-xs text-slate-400">{(t.gift_owned || '보유 {count}개').replace('{count}', currentInk)}</span>
                 </div>
               </div>
 
@@ -171,9 +171,9 @@ const GiftModal = ({ item, follows, userProfile, onClose }) => {
             <div className="px-5 py-14 text-center space-y-5">
               <span className="text-6xl animate-bounce inline-block">🎁</span>
               <div className="space-y-1.5">
-                <p className="text-sm font-black text-slate-700 dark:text-slate-200">선물을 전달하는 중...</p>
+                <p className="text-sm font-black text-slate-700 dark:text-slate-200">{t.gift_in_progress || '선물을 전달하는 중...'}</p>
                 <p className="text-xs text-slate-400 dark:text-slate-500">
-                  {selectedAuthor?.nickname}님에게 {item.name} {quantity}개
+                  {(t.gift_in_progress_desc || '{author}님에게 {item} {count}개').replace('{author}', selectedAuthor?.nickname || '').replace('{item}', item.name).replace('{count}', quantity)}
                 </p>
               </div>
             </div>
@@ -187,18 +187,18 @@ const GiftModal = ({ item, follows, userProfile, onClose }) => {
                 <span className="absolute -top-1 -right-1 text-3xl animate-bounce">✨</span>
               </div>
               <div className="space-y-1.5">
-                <p className="text-base font-black text-slate-800 dark:text-slate-100">선물 완료!</p>
+                <p className="text-base font-black text-slate-800 dark:text-slate-100">{t.gift_complete || '선물 완료!'}</p>
                 <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
-                  <span className="font-bold text-orange-500">{selectedAuthor?.nickname}</span>님에게<br />
-                  <span className="font-bold text-slate-700 dark:text-slate-200">{item.emoji} {item.name} {quantity}개</span>를<br />
-                  선물했습니다 🎉
+                  <span className="font-bold text-orange-500">{selectedAuthor?.nickname}</span>{t.gift_to_suffix || '님에게'}<br />
+                  <span className="font-bold text-slate-700 dark:text-slate-200">{item.emoji} {item.name} {quantity}{t.gift_item_count_unit || '개'}</span>{t.gift_obj_suffix || '를'}<br />
+                  {t.gift_complete_desc || '선물했습니다'} 🎉
                 </p>
               </div>
               <div className="bg-orange-50 dark:bg-orange-950/30 rounded-xl px-4 py-3">
                 <div className="flex items-center justify-center gap-1.5">
                   <Droplets className="w-4 h-4 text-blue-500 fill-blue-400" />
                   <span className="text-xs font-black text-blue-600 dark:text-blue-400">
-                    {totalCost}개 차감 완료
+                    {totalCost}{t.gift_deducted || '개 차감 완료'}
                   </span>
                 </div>
               </div>
@@ -213,7 +213,7 @@ const GiftModal = ({ item, follows, userProfile, onClose }) => {
               onClick={onClose}
               className="w-full py-3 rounded-xl text-sm font-bold bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300"
             >
-              닫기
+              {t.close || '닫기'}
             </button>
           )}
           {phase === 'qty' && (
@@ -224,14 +224,14 @@ const GiftModal = ({ item, follows, userProfile, onClose }) => {
                 className="w-full py-3.5 rounded-xl text-sm font-black bg-orange-500 hover:bg-orange-600 active:scale-95 text-white disabled:opacity-40 disabled:cursor-not-allowed transition-all"
               >
                 {canAfford
-                  ? `🎁 ${selectedAuthor?.nickname}님께 선물하기`
-                  : '잉크가 부족합니다'}
+                  ? `🎁 ${selectedAuthor?.nickname}${t.gift_send_suffix || '님께 선물하기'}`
+                  : (t.gift_no_ink || '잉크가 부족합니다')}
               </button>
               <button
                 onClick={() => { setPhase('author'); setSelectedAuthor(null); }}
                 className="w-full py-2.5 rounded-xl text-sm font-bold text-slate-400 dark:text-slate-500"
               >
-                ← 작가 다시 선택
+                {t.gift_back_to_author || '← 작가 다시 선택'}
               </button>
             </div>
           )}
@@ -240,7 +240,7 @@ const GiftModal = ({ item, follows, userProfile, onClose }) => {
               onClick={onClose}
               className="w-full py-3.5 rounded-xl text-sm font-black bg-orange-500 text-white"
             >
-              확인
+              {t.confirm || '확인'}
             </button>
           )}
         </div>

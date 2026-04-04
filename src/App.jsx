@@ -391,10 +391,10 @@ const App = () => {
           {storyReaderHook.isHelpModalOpen && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-6">
               <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 w-full max-w-md shadow-xl">
-                <div className="flex justify-between items-center mb-4"><h3 className="font-bold text-lg dark:text-slate-100">사용 설명서</h3><button onClick={() => storyReaderHook.setIsHelpModalOpen(false)}><X className="w-5 h-5 text-slate-400" /></button></div>
+                <div className="flex justify-between items-center mb-4"><h3 className="font-bold text-lg dark:text-slate-100">{t.help_title}</h3><button onClick={() => storyReaderHook.setIsHelpModalOpen(false)}><X className="w-5 h-5 text-slate-400" /></button></div>
                 <div className="text-sm text-slate-600 dark:text-slate-300 space-y-4 max-h-[60vh] overflow-y-auto pr-2">
                   <section>
-                    <h4 className="font-bold text-slate-800 dark:text-slate-100 mb-1">1. 🖊️ 집필 시스템</h4>
+                    <h4 className="font-bold text-slate-800 dark:text-slate-100 mb-1">{t.help_section_write}</h4>
                     <ul className="list-disc list-inside space-y-1 text-xs text-slate-600 dark:text-slate-400">
                       <li><strong>1일 2회 집필:</strong> 매일 최대 2번 글을 쓸 수 있습니다. (첫 번째 무료, 두 번째는 잉크 소모·레벨에 따라 3~5개)</li>
                       <li><strong>선착순 발행:</strong> 장르별로 <strong>하루에 단 한 권</strong>만 발행됩니다. 서둘러 집필해보세요!</li>
@@ -403,7 +403,7 @@ const App = () => {
                   </section>
 
                   <section>
-                    <h4 className="font-bold text-slate-800 dark:text-slate-100 mb-1">2. 💧 잉크 시스템</h4>
+                    <h4 className="font-bold text-slate-800 dark:text-slate-100 mb-1">{t.help_section_ink}</h4>
                     <ul className="list-disc list-inside space-y-1 text-xs text-slate-600 dark:text-slate-400">
                       <li><strong>획득:</strong> 출석(레벨별 2~5개), 레벨업 보너스, 집필 완료 보상, 월간 챌린지 달성(10개).</li>
                       <li><strong>사용:</strong> 책 읽기(1~2개), 추가 집필, 키워드 변경, 작가 후원, 문방구 아이템 구매.</li>
@@ -412,7 +412,7 @@ const App = () => {
                   </section>
 
                   <section>
-                    <h4 className="font-bold text-slate-800 dark:text-slate-100 mb-1">3. 🏆 레벨 &amp; 칭호 (7단계)</h4>
+                    <h4 className="font-bold text-slate-800 dark:text-slate-100 mb-1">{t.help_section_level}</h4>
                     <p className="text-xs mb-1 text-slate-500 dark:text-slate-400">잉크 사용 시 XP 적립 → 레벨 상승 → 칭호·아이콘이 책 표지 등에 표시됩니다.</p>
                     <ul className="list-disc list-inside space-y-1 text-xs text-slate-600 dark:text-slate-400">
                       <li>🌱 새싹 → ✏️ 작가 → 🪶 숙련 작가 → 🖊️ 베스트 작가 → ✒️ 스타 작가 → 🖋️ 거장 → 🌈 마스터</li>
@@ -421,7 +421,7 @@ const App = () => {
                   </section>
 
                   <section>
-                    <h4 className="font-bold text-slate-800 dark:text-slate-100 mb-1">4. 🏪 문방구 &amp; 아이템</h4>
+                    <h4 className="font-bold text-slate-800 dark:text-slate-100 mb-1">{t.help_section_store}</h4>
                     <ul className="list-disc list-inside space-y-1 text-xs text-slate-600 dark:text-slate-400">
                       <li><strong>🌈 무지개 잉크 (5개):</strong> 글쓰기 에디터에서 글자 색상 변경.</li>
                       <li><strong>✨ 마법 지우개 (3개):</strong> 에디터 내 전체 텍스트 초기화.</li>
@@ -434,7 +434,7 @@ const App = () => {
                   </section>
 
                   <section>
-                    <h4 className="font-bold text-slate-800 dark:text-slate-100 mb-1">5. 📢 확성기 홍보</h4>
+                    <h4 className="font-bold text-slate-800 dark:text-slate-100 mb-1">{t.help_section_megaphone}</h4>
                     <ul className="list-disc list-inside space-y-1 text-xs text-slate-600 dark:text-slate-400">
                       <li>가방(🎒)에서 확성기 아이템 사용 → 홍보할 책 선택 → 홍보 문구 입력.</li>
                       <li>등록 후 <strong>24시간 동안</strong> 홈 화면 상단 캐러셀에 노출됩니다.</li>
@@ -444,7 +444,7 @@ const App = () => {
                   </section>
 
                   <section>
-                    <h4 className="font-bold text-slate-800 dark:text-slate-100 mb-1">6. 🖍️ 하이라이트 &amp; 공유</h4>
+                    <h4 className="font-bold text-slate-800 dark:text-slate-100 mb-1">{t.help_section_highlight}</h4>
                     <ul className="list-disc list-inside space-y-1 text-xs text-slate-600 dark:text-slate-400">
                       <li>책 뷰어에서 원하는 문장을 <strong>길게 누르고 드래그</strong>하면 팝업이 나타납니다.</li>
                       <li><strong>🎨 하이라이트 저장:</strong> 마음에 드는 문장을 내 프로필에 저장.</li>
@@ -454,7 +454,7 @@ const App = () => {
                   </section>
 
                   <section>
-                    <h4 className="font-bold text-slate-800 dark:text-slate-100 mb-1">7. 📅 월간 챌린지</h4>
+                    <h4 className="font-bold text-slate-800 dark:text-slate-100 mb-1">{t.help_section_challenge}</h4>
                     <ul className="list-disc list-inside space-y-1 text-xs text-slate-600 dark:text-slate-400">
                       <li>매달 1일 리셋 · <strong>이번 달 5권 완독</strong>이 목표입니다.</li>
                       <li>완독 버튼(책 뷰어에서 3분 이상 읽은 후 활성화)을 눌러야 카운트됩니다.</li>
@@ -463,7 +463,7 @@ const App = () => {
                   </section>
 
                   <section>
-                    <h4 className="font-bold text-slate-800 dark:text-slate-100 mb-1">8. 👤 작가 프로필</h4>
+                    <h4 className="font-bold text-slate-800 dark:text-slate-100 mb-1">{t.help_section_author_profile}</h4>
                     <ul className="list-disc list-inside space-y-1 text-xs text-slate-600 dark:text-slate-400">
                       <li>홈 집필왕 목록, 책 상세 작가 이름, 댓글 닉네임을 탭하면 작가 프로필 모달이 열립니다.</li>
                       <li>대표작(점수 최고 작품), 집필 목록, 팔로우/언팔로우 기능 제공.</li>
@@ -472,7 +472,7 @@ const App = () => {
                   </section>
 
                   <section>
-                    <h4 className="font-bold text-slate-800 dark:text-slate-100 mb-1">9. 📚 릴레이 시리즈</h4>
+                    <h4 className="font-bold text-slate-800 dark:text-slate-100 mb-1">{t.help_section_series}</h4>
                     <ul className="list-disc list-inside space-y-1 text-xs text-slate-600 dark:text-slate-400">
                       <li><strong>이어쓰기:</strong> 시리즈는 <strong>누구나</strong> 다음 화를 이어 쓸 수 있는 릴레이 소설입니다.</li>
                       <li><strong>연재/완결:</strong> 2화부터 독자 투표로 「연재」 또는 「완결」을 선택할 수 있습니다.</li>
@@ -567,7 +567,7 @@ const App = () => {
                 <div className="text-5xl mb-2">💧</div>
                 <h2 className="text-2xl font-black text-slate-800">{t.attendance_check}</h2>
                 <p className="text-lg font-bold text-sky-600">+{lastAttendanceInk} {t.ink || '잉크'}</p>
-                <p className="text-xs text-slate-500">{language === 'en' ? 'Daily check-in reward' : '매일 접속하면 잉크가 지급돼요!'}</p>
+                <p className="text-xs text-slate-500">{t.attendance_daily_desc}</p>
                 <button onClick={() => setShowAttendanceModal(false)} className="w-full bg-slate-900 text-white py-3 rounded-xl font-black mt-4">{t.confirm}</button>
               </div>
             </div>
@@ -714,6 +714,7 @@ const App = () => {
                   getItemQuantity={getItemQuantity}
                   onGiftItem={(item) => setGiftTargetItem(item)}
                   addInk={addInk}
+                  t={t}
                 />
               )}
 
@@ -741,13 +742,13 @@ const App = () => {
                       onClick={() => setProfileSubTab('profile')}
                       className={`flex-1 py-3 text-sm font-bold transition-colors ${profileSubTab === 'profile' ? 'text-orange-600 border-b-2 border-orange-500' : 'text-slate-400'}`}
                     >
-                      👤 프로필
+                      {t.profile_subtab_profile}
                     </button>
                     <button
                       onClick={() => setProfileSubTab('store')}
                       className={`flex-1 py-3 text-sm font-bold transition-colors ${profileSubTab === 'store' ? 'text-amber-600 border-b-2 border-amber-500' : 'text-slate-400'}`}
                     >
-                      🏪 문방구
+                      {t.profile_subtab_store}
                     </button>
                   </div>
 
@@ -775,6 +776,7 @@ const App = () => {
                       getItemQuantity={getItemQuantity}
                       onGiftItem={(item) => setGiftTargetItem(item)}
                       addInk={addInk}
+                      t={t}
                     />
                   )}
                 </div>
@@ -807,6 +809,7 @@ const App = () => {
         {showBagModal && (
           <BagModal
             inventory={getInventory()}
+            t={t}
             onClose={() => setShowBagModal(false)}
             onUseItem={(itemId) => {
               if (itemId === 'rainbow_ink') setShowRainbowInkModal(true);
@@ -823,6 +826,7 @@ const App = () => {
             user={user}
             books={books}
             useItem={useItem}
+            t={t}
             onClose={() => setShowRainbowInkModal(false)}
           />
         )}
@@ -832,6 +836,7 @@ const App = () => {
             user={user}
             books={books}
             useItem={useItem}
+            t={t}
             onClose={() => setShowMagicEraserModal(false)}
           />
         )}
@@ -841,6 +846,7 @@ const App = () => {
             user={user}
             books={books}
             useItem={useItem}
+            t={t}
             onClose={() => setShowGoldenPenModal(false)}
           />
         )}
@@ -851,6 +857,7 @@ const App = () => {
             userProfile={userProfile}
             books={books}
             useItem={useItem}
+            t={t}
             onClose={() => setShowPaintbrushModal(false)}
           />
         )}
@@ -860,6 +867,7 @@ const App = () => {
             item={giftTargetItem}
             follows={follows}
             userProfile={userProfile}
+            t={t}
             onClose={() => setGiftTargetItem(null)}
           />
         )}
@@ -895,6 +903,7 @@ const App = () => {
             monthKey={challengeResult.monthKey}
             reads={challengeResult.reads}
             goal={challengeResult.goal}
+            t={t}
             onClose={() => setChallengeResult(null)}
           />
         )}
@@ -908,6 +917,7 @@ const App = () => {
             unfollowAuthor={unfollowAuthor}
             isFollowing={isFollowing}
             onBookClick={handleBookClick}
+            t={t}
             onClose={() => setAuthorProfileUserId(null)}
           />
         )}
@@ -919,6 +929,7 @@ const App = () => {
             userProfile={userProfile}
             useItem={useItem}
             authorProfiles={authorProfiles}
+            t={t}
             onRead={(book) => { setPreviewBook(null); handleBookClick(book); }}
             onClose={() => setPreviewBook(null)}
             onGoToStore={() => { setProfileSubTab('store'); setView('profile'); }}
@@ -932,8 +943,8 @@ const App = () => {
               {/* 상단 그래픽 */}
               <div className="bg-gradient-to-br from-orange-400 to-orange-600 px-6 pt-8 pb-6 text-center">
                 <div className="text-5xl mb-3">🚀</div>
-                <h2 className="text-xl font-black text-white">업데이트 필요</h2>
-                <p className="text-orange-100 text-xs mt-1">오독오독이 새롭게 변했어요!</p>
+                <h2 className="text-xl font-black text-white">{t.force_update_title}</h2>
+                <p className="text-orange-100 text-xs mt-1">{t.force_update_subtitle}</p>
               </div>
               {/* 내용 */}
               <div className="px-6 py-5 space-y-4">
@@ -941,13 +952,13 @@ const App = () => {
                   {forceUpdate.updateMsg}
                 </p>
                 <div className="bg-orange-50 rounded-2xl px-4 py-3 text-center">
-                  <p className="text-xs text-orange-500 font-bold">현재 버전 {APP_VERSION} → 최신 버전으로 업데이트 필요</p>
+                  <p className="text-xs text-orange-500 font-bold">{(t.force_update_version || '').replace('{version}', APP_VERSION)}</p>
                 </div>
                 <button
                   onClick={() => window.open(forceUpdate.storeUrl, '_system')}
                   className="w-full py-4 bg-orange-500 hover:bg-orange-600 active:scale-95 text-white font-black text-base rounded-2xl transition-all shadow-lg shadow-orange-200"
                 >
-                  📲 업데이트하러 가기
+                  {t.force_update_btn}
                 </button>
               </div>
             </div>
@@ -957,10 +968,10 @@ const App = () => {
         {showExitModal && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-6">
             <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 w-full max-w-sm shadow-xl space-y-4 text-center">
-              <h3 className="text-lg font-black text-slate-800 dark:text-slate-100">오독오독을 종료하시겠습니까?</h3>
+              <h3 className="text-lg font-black text-slate-800 dark:text-slate-100">{t.exit_modal_title}</h3>
               <div className="flex gap-3">
-                <button onClick={() => setShowExitModal(false)} className="flex-1 bg-orange-500 text-white py-3 rounded-xl font-black">머물기</button>
-                <button onClick={() => CapApp.exitApp()} className="flex-1 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-200 py-3 rounded-xl font-bold">나가기</button>
+                <button onClick={() => setShowExitModal(false)} className="flex-1 bg-orange-500 text-white py-3 rounded-xl font-black">{t.exit_modal_stay}</button>
+                <button onClick={() => CapApp.exitApp()} className="flex-1 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-200 py-3 rounded-xl font-bold">{t.exit_modal_leave}</button>
               </div>
             </div>
           </div>
