@@ -52,6 +52,8 @@ import { useHighlights } from './hooks/useHighlights';
 import { usePushNotifications } from './hooks/usePushNotifications';
 import { useMailbox } from './hooks/useMailbox';
 import MailboxModal from './components/MailboxModal';
+import { useLastReadBook } from './hooks/useLastReadBook';
+import ContinueReadingBar from './components/ContinueReadingBar';
 import { db } from './firebase';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 
@@ -267,6 +269,8 @@ const App = () => {
   usePushNotifications({ user });
   const { mailboxItems, unclaimedCount } = useMailbox({ user });
   const [showMailbox, setShowMailbox] = useState(false);
+
+  const { lastReadBook, lastReadRatio, dismiss: dismissLastRead, clearLastRead } = useLastReadBook({ user, books });
 
   // 책 클릭 시 미리보기 모달 먼저 열기
   const handleBookClickWithPreview = (book) => {
@@ -641,14 +645,29 @@ const App = () => {
           {user && userProfile && userProfile.nickname && (
             <>
               {view === 'home' && (
-                <HomeView
-                  userProfile={userProfile} t={t} levelInfo={levelInfo} notices={notices}
-                  setView={setView} todayBooks={todayBooks} weeklyBestBooks={weeklyBestBooks} allTimeBestBooks={allTimeBestBooks}
-                  topWriters={topWriters} isLoadingHomeData={isLoadingHomeData}
-                  handleBookClick={handleBookClickWithPreview} authorProfiles={authorProfiles}
-                  promotions={promotions} books={books}
-                  onAuthorClick={(uid) => setAuthorProfileUserId(uid)}
-                />
+                <>
+                  <HomeView
+                    userProfile={userProfile} t={t} levelInfo={levelInfo} notices={notices}
+                    setView={setView} todayBooks={todayBooks} weeklyBestBooks={weeklyBestBooks} allTimeBestBooks={allTimeBestBooks}
+                    topWriters={topWriters} isLoadingHomeData={isLoadingHomeData}
+                    handleBookClick={handleBookClickWithPreview} authorProfiles={authorProfiles}
+                    promotions={promotions} books={books}
+                    onAuthorClick={(uid) => setAuthorProfileUserId(uid)}
+                  />
+                  {lastReadBook && (
+                    <ContinueReadingBar
+                      book={lastReadBook}
+                      ratio={lastReadRatio}
+                      t={t}
+                      onContinue={() => {
+                        clearLastRead();
+                        setCurrentBook(lastReadBook);
+                        setView('reader');
+                      }}
+                      onDismiss={dismissLastRead}
+                    />
+                  )}
+                </>
               )}
 
               {view === 'notice_list' && (

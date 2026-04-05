@@ -8,13 +8,15 @@ const rawAppId = typeof __app_id !== 'undefined' ? __app_id : 'odok-app-default'
 const appId = rawAppId.replace(/\//g, '_');
 
 const SCROLL_CONTAINER_ID = 'main-content';
-const DEBOUNCE_MS = 1500;     // 스크롤 멈춘 후 1.5초 뒤 저장
-const MIN_RATIO = 0.02;       // 2% 미만은 처음으로 간주 → 저장 안 함
-const COMPLETE_RATIO = 0.95;  // 95% 이상은 완독으로 간주 → 저장 안 함
+const DEBOUNCE_MS = 1500;        // 스크롤 멈춘 후 1.5초 뒤 저장
+const MIN_RATIO = 0.02;          // 2% 미만은 처음으로 간주 → 저장 안 함
+const COMPLETE_RATIO = 0.95;     // 95% 이상은 완독으로 간주 → 저장 안 함
+const MIN_READ_TIME_MS = 60000;  // 최소 1분 이상 머물러야 저장
 
 export const useReadingProgress = ({ user, bookId, enabled = true }) => {
   const timerRef = useRef(null);
   const restoredRef = useRef(false);
+  const startTimeRef = useRef(Date.now());
 
   const getContainer = () => document.getElementById(SCROLL_CONTAINER_ID);
 
@@ -34,6 +36,8 @@ export const useReadingProgress = ({ user, bookId, enabled = true }) => {
       if (maxScroll <= 0) return;
       const ratio = el.scrollTop / maxScroll;
       if (ratio < MIN_RATIO || ratio > COMPLETE_RATIO) return;
+      // 1분 미만 체류는 저장하지 않음 (이어읽기 바에 노출 방지)
+      if (Date.now() - startTimeRef.current < MIN_READ_TIME_MS) return;
       try {
         const ref = getProgressRef();
         if (!ref) return;
