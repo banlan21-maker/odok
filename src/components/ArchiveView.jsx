@@ -1,7 +1,7 @@
 // src/components/ArchiveView.jsx
 // 보관함: 내가 쓴 책 + 즐겨찾기 한 책
 import React, { useState, useMemo } from 'react';
-import { Bookmark, Book, Heart, Eye, Search, X } from 'lucide-react';
+import { Bookmark, Book, Heart, Eye, CheckCircle, MessageCircle, Search, X } from 'lucide-react';
 import { formatDate } from '../utils/dateUtils';
 import { getCoverImageFromBook } from '../utils/bookCovers';
 import { formatCount } from '../utils/numberFormat';
@@ -61,12 +61,21 @@ const BookGridCard = ({ book, onBookClick, t, authorProfiles }) => {
           {book?.isAnonymous ? (t?.anonymous || '익명') : (authorProfiles[book.authorId]?.nickname || book?.authorName || (t?.anonymous || '익명'))}
           {' · '}{dateString}
         </p>
-        <div className="flex items-center gap-2 text-[10px] text-slate-400">
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[9px] text-slate-400">
           <span className="flex items-center gap-0.5">
-            <Eye className="w-2.5 h-2.5" />{formatCount(book.views)}
+            <Eye className="w-2 h-2" />{formatCount(book.views)}
           </span>
           <span className="flex items-center gap-0.5">
-            <Heart className="w-2.5 h-2.5" />{formatCount(book.likes)}
+            <Heart className="w-2 h-2" />{formatCount(book.likes)}
+          </span>
+          <span className="flex items-center gap-0.5">
+            <Bookmark className="w-2 h-2" />{formatCount(book.favorites)}
+          </span>
+          <span className="flex items-center gap-0.5">
+            <CheckCircle className="w-2 h-2" />{formatCount(book.completions)}
+          </span>
+          <span className="flex items-center gap-0.5">
+            <MessageCircle className="w-2 h-2" />{formatCount(book.commentCount)}
           </span>
         </div>
       </div>

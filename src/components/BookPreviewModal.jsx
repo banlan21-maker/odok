@@ -131,11 +131,9 @@ const BookPreviewModal = ({ book, user, userProfile, useItem, onRead, onClose, o
               <span className="flex items-center gap-1">
                 <CheckCircle className="w-3 h-3" />{formatCount(book.completions)}
               </span>
-              {book.commentCount > 0 && (
-                <span className="flex items-center gap-1">
-                  <MessageCircle className="w-3 h-3" />{formatCount(book.commentCount)}
-                </span>
-              )}
+              <span className="flex items-center gap-1">
+                <MessageCircle className="w-3 h-3" />{formatCount(book.commentCount)}
+              </span>
             </div>
 
             {/* 책 소개글 (synopsis) */}

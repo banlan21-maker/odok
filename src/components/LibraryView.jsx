@@ -1,6 +1,6 @@
 // src/components/LibraryView.jsx
 import React, { useMemo, useState } from 'react';
-import { Book, Calendar, Eye, Heart, Bookmark, CheckCircle, Search, ChevronLeft, ChevronDown } from 'lucide-react';
+import { Book, Calendar, Eye, Heart, Bookmark, CheckCircle, MessageCircle, Search, ChevronLeft, ChevronDown } from 'lucide-react';
 import { formatDate } from '../utils/dateUtils';
 import { getCoverImageFromBook } from '../utils/bookCovers';
 import { formatCount } from '../utils/numberFormat';
@@ -366,6 +366,10 @@ const BookList = ({ books, onBookClick, t, authorProfiles }) => (
                 <span className="flex items-center gap-0.5">
                   <CheckCircle className="w-2.5 h-2.5" />
                   {formatCount(book.completions)}
+                </span>
+                <span className="flex items-center gap-0.5">
+                  <MessageCircle className="w-2.5 h-2.5" />
+                  {formatCount(book.commentCount)}
                 </span>
               </div>
             </div>
