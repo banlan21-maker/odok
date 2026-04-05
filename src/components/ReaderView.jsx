@@ -6,6 +6,7 @@ import {
 import { formatGenreTag } from '../utils/formatGenre';
 import { formatDate } from '../utils/dateUtils';
 import ShareImageModal from './ShareImageModal';
+import { useReadingProgress } from '../hooks/useReadingProgress';
 
 // ─── 커스텀 선택 메뉴 ────────────────────────────────────────────
 const SelectionMenu = ({ position, onHighlight, onShare, onClose }) => (
@@ -46,12 +47,32 @@ const SelectionMenu = ({ position, onHighlight, onShare, onClose }) => (
 );
 
 // ─── Mode 1: User Generated Book Reader ─────────────────────────
-const BookReader = ({ book, onBack, fontSize, addHighlight }) => {
+const BookReader = ({ book, onBack, fontSize, addHighlight, user }) => {
   const [menuInfo, setMenuInfo] = useState(null);   // { x, y, text }
   const [shareText, setShareText] = useState(null);
   const [savedToast, setSavedToast] = useState(false);
+  const [resumeToast, setResumeToast] = useState(false);
   const contentRef = useRef(null);
   const selectionTimerRef = useRef(null);
+
+  const { clearProgress } = useReadingProgress({ user, bookId: book?.id, enabled: !!book?.id });
+
+  // 진행률 복원 시 토스트 표시
+  useEffect(() => {
+    const el = document.getElementById('main-content');
+    if (!el) return;
+    const onScroll = () => {
+      if (el.scrollTop > 50 && !resumeToast) {
+        setResumeToast(true);
+        setTimeout(() => setResumeToast(false), 2000);
+        el.removeEventListener('scroll', onScroll);
+      }
+    };
+    // 300ms 후 스크롤이 복원되면 토스트 표시
+    const t = setTimeout(() => el.addEventListener('scroll', onScroll, { once: true }), 400);
+    return () => { clearTimeout(t); el.removeEventListener('scroll', onScroll); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [book?.id]);
 
   const showMenuForSelection = useCallback(() => {
     const selection = window.getSelection();
@@ -191,6 +212,13 @@ const BookReader = ({ book, onBack, fontSize, addHighlight }) => {
         </div>
       )}
 
+      {/* 이어읽기 복원 토스트 */}
+      {resumeToast && (
+        <div className="fixed top-20 left-1/2 -translate-x-1/2 z-50 bg-slate-800/90 text-white text-xs font-bold px-4 py-2.5 rounded-full shadow-lg animate-in fade-in slide-in-from-top-2 flex items-center gap-1.5">
+          📖 이어읽기 위치로 이동했어요
+        </div>
+      )}
+
       {/* 하이라이트 저장 완료 토스트 */}
       {savedToast && (
         <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-50 bg-slate-900 text-white text-xs font-bold px-4 py-2.5 rounded-full shadow-lg animate-in fade-in slide-in-from-bottom-2">
@@ -215,8 +243,8 @@ const BookReader = ({ book, onBack, fontSize, addHighlight }) => {
 const ReaderView = (props) => {
   // Mode 1: Simple Book Reader (User Generated)
   if (props.book && !props.currentStory) {
-    const { book, onBack, fontSize = 'text-base', addHighlight } = props;
-    return <BookReader book={book} onBack={onBack} fontSize={fontSize} addHighlight={addHighlight} />;
+    const { book, onBack, fontSize = 'text-base', addHighlight, user } = props;
+    return <BookReader book={book} onBack={onBack} fontSize={fontSize} addHighlight={addHighlight} user={user} />;
   }
 
   // Mode 2: AI Story Reader

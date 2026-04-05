@@ -685,7 +685,7 @@ const App = () => {
               )}
 
               {view === 'reader' && currentBook && !storyReaderHook.currentStory && (
-                <ReaderView book={currentBook} onBack={() => { setCurrentBook(null); setView('library'); }} fontSize={fontSize} addHighlight={addHighlight} />
+                <ReaderView book={currentBook} onBack={() => { setCurrentBook(null); setView('library'); }} fontSize={fontSize} addHighlight={addHighlight} user={user} />
               )}
 
               {view === 'reader' && storyReaderHook.currentStory && !currentBook && (
