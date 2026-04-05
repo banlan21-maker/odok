@@ -1008,8 +1008,8 @@ const BookDetail = ({ book, onClose, onBookUpdate, fontSize = 'text-base', user,
                     <div className="text-xs text-slate-400 dark:text-slate-500 mb-1 space-y-0.5">
                       <div className="flex items-center gap-2">
                         <span
-                          className={`font-bold text-slate-600 dark:text-slate-300 ${c.userId && c.userId !== user?.uid ? 'cursor-pointer hover:text-orange-500 transition-colors' : ''}`}
-                          onClick={() => c.userId && c.userId !== user?.uid && onAuthorClick?.(c.userId)}
+                          className={`font-bold text-slate-600 dark:text-slate-300 ${c.userId && c.userId !== user?.uid && !c.isAnonymous ? 'cursor-pointer hover:text-orange-500 transition-colors' : ''}`}
+                          onClick={() => c.userId && c.userId !== user?.uid && !c.isAnonymous && onAuthorClick?.(c.userId)}
                         >{c.authorName || (t?.anonymous || '익명')}</span>
                         <span>·</span>
                         <span>{c.createdAt?.toDate?.()?.toLocaleString('ko-KR') || (t?.just_now || '방금 전')}</span>
