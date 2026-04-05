@@ -50,6 +50,8 @@ import AuthorProfileModal from './components/AuthorProfileModal';
 import { useInventory } from './hooks/useInventory';
 import { useHighlights } from './hooks/useHighlights';
 import { usePushNotifications } from './hooks/usePushNotifications';
+import { useMailbox } from './hooks/useMailbox';
+import MailboxModal from './components/MailboxModal';
 import { db } from './firebase';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 
@@ -263,6 +265,8 @@ const App = () => {
 
   const { highlights, addHighlight, deleteHighlight } = useHighlights({ user });
   usePushNotifications({ user });
+  const { mailboxItems, unclaimedCount } = useMailbox({ user });
+  const [showMailbox, setShowMailbox] = useState(false);
 
   // 책 클릭 시 미리보기 모달 먼저 열기
   const handleBookClickWithPreview = (book) => {
@@ -365,6 +369,18 @@ const App = () => {
                 <div className="flex items-center gap-1 bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300 px-2 py-1 rounded-lg">
                   <span className="text-xs font-black">Lv.{levelInfo.level}</span>
                 </div>
+                {/* 우편함 버튼 */}
+                <button
+                  onClick={() => setShowMailbox(true)}
+                  className="relative flex items-center justify-center w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-950 hover:bg-blue-100 dark:hover:bg-blue-900 transition-colors"
+                >
+                  <span className="text-sm">📬</span>
+                  {unclaimedCount > 0 && (
+                    <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-red-500 text-white text-[9px] font-black flex items-center justify-center leading-none">
+                      {unclaimedCount > 9 ? '9+' : unclaimedCount}
+                    </span>
+                  )}
+                </button>
                 <button
                   onClick={() => setShowBagModal(true)}
                   className="relative flex items-center justify-center w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-950 hover:bg-blue-100 dark:hover:bg-blue-900 transition-colors"
@@ -935,6 +951,15 @@ const App = () => {
             onRead={(book) => { setPreviewBook(null); handleBookClick(book); }}
             onClose={() => setPreviewBook(null)}
             onGoToStore={() => { setProfileSubTab('store'); setView('profile'); }}
+          />
+        )}
+
+        {/* 우편함 모달 */}
+        {showMailbox && (
+          <MailboxModal
+            mailboxItems={mailboxItems}
+            onClose={() => setShowMailbox(false)}
+            t={t}
           />
         )}
 

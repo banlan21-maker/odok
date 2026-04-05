@@ -9,6 +9,8 @@ import { getCoverImageFromBook, hasPremiumCover } from '../utils/bookCovers';
 import { collection, addDoc, deleteDoc, doc, onSnapshot, serverTimestamp, setDoc, updateDoc, increment, runTransaction, getDoc } from 'firebase/firestore';
 import { deleteBookAdmin } from '../utils/aiService';
 import { db } from '../firebase';
+import { httpsCallable } from 'firebase/functions';
+import { functions } from '../firebase';
 import { generateSeriesEpisode } from '../utils/aiService';
 import { getTodayDateKey } from '../utils/dateUtils';
 import { getExtraWriteInkCost, getFreeWriteRewardInk, canDonate, getLevelFromXp, getXpPerInk } from '../utils/levelUtils';
@@ -383,18 +385,9 @@ const BookDetail = ({ book, onClose, onBookUpdate, fontSize = 'text-base', user,
   };
 
   const sendInkToAuthor = async () => {
-    if (!user) {
-      alert('로그인 후 사용할 수 있어요.');
-      return;
-    }
-    if (!book?.authorId) {
-      alert('작가 정보를 찾을 수 없습니다.');
-      return;
-    }
-    if (book.authorId === user.uid) {
-      alert('본인에게는 잉크를 보낼 수 없어요.');
-      return;
-    }
+    if (!user) { alert('로그인 후 사용할 수 있어요.'); return; }
+    if (!book?.authorId) { alert('작가 정보를 찾을 수 없습니다.'); return; }
+    if (book.authorId === user.uid) { alert('본인에게는 잉크를 보낼 수 없어요.'); return; }
     const senderLevel = getLevelFromXp(userProfile?.xp ?? 0);
     if (!canDonate(senderLevel)) {
       alert('작가 등급(Lv.11)부터 선물하기가 가능합니다.');
@@ -404,44 +397,9 @@ const BookDetail = ({ book, onClose, onBookUpdate, fontSize = 'text-base', user,
     if (!appId) return;
     setIsSendingInk(true);
     try {
-      const senderRef = doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'info');
-      const receiverRef = doc(db, 'artifacts', appId, 'users', book.authorId, 'profile', 'info');
-      await runTransaction(db, async (tx) => {
-        const senderSnap = await tx.get(senderRef);
-        const receiverSnap = await tx.get(receiverRef);
-        const senderInk = senderSnap.exists() ? (senderSnap.data().ink || 0) : 0;
-        const receiverInk = receiverSnap.exists() ? (receiverSnap.data().ink || 0) : 0;
-        if (senderInk < amount) {
-          throw new Error('잉크가 부족합니다.');
-        }
-        const senderXp = senderSnap.exists() ? (senderSnap.data().xp ?? 0) : 0;
-        const xpGain = amount * getXpPerInk();
-        const newXp = senderXp + xpGain;
-        const newLevel = getLevelFromXp(newXp);
-        const nextReceiverInk = Math.min(INK_MAX, receiverInk + amount);
-        tx.update(senderRef, {
-          ink: senderInk - amount,
-          xp: newXp,
-          total_ink_spent: increment(amount),
-          level: newLevel
-        });
-        tx.set(receiverRef, { ink: nextReceiverInk }, { merge: true });
-        tx.set(doc(db, 'artifacts', appId, 'users', user.uid, 'ink_history', `donation_${Date.now()}_${book.id}`), {
-          reason: 'donation_sent',
-          amount: -amount,
-          toUserId: book.authorId,
-          bookId: book.id,
-          createdAt: serverTimestamp()
-        });
-        tx.set(doc(db, 'artifacts', appId, 'users', book.authorId, 'ink_history', `donation_${Date.now()}_${user.uid}`), {
-          reason: 'donation_received',
-          amount,
-          fromUserId: user.uid,
-          bookId: book.id,
-          createdAt: serverTimestamp()
-        });
-      });
-      alert(`잉크 ${amount}개를 보냈습니다!`);
+      const giftInkFn = httpsCallable(functions, 'giftInk');
+      await giftInkFn({ recipientUid: book.authorId, amount, appId });
+      alert(`잉크 ${amount}개를 우편함으로 보냈습니다! 💧`);
     } catch (err) {
       console.error('잉크 보내기 실패:', err);
       alert(err?.message || '잉크 보내기에 실패했습니다.');

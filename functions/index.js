@@ -1400,7 +1400,7 @@ Requirements:
   }
 );
 
-// ── 아이템 선물하기 ──────────────────────────────────────────────────
+// ── 아이템 선물하기 (우편함으로 전달) ─────────────────────────────────
 exports.giftItem = onCall(
   {
     region: REGION,
@@ -1434,38 +1434,221 @@ exports.giftItem = onCall(
       .collection("users").doc(senderUid)
       .collection("profile").doc("info");
 
-    const recipientRef = adminDb
-      .collection("artifacts").doc(safeAppId)
-      .collection("users").doc(recipientUid)
-      .collection("profile").doc("info");
-
     try {
+      let senderName = "누군가";
       await adminDb.runTransaction(async (transaction) => {
         const senderSnap = await transaction.get(senderRef);
         if (!senderSnap.exists) throw new Error("보내는 사람 프로필을 찾을 수 없습니다.");
 
         const senderData = senderSnap.data();
+        senderName = senderData.nickname || "누군가";
         const currentInk = senderData.ink ?? 0;
         if (currentInk < totalCost) {
           throw new Error(`잉크가 부족해요! (보유: ${currentInk}개, 필요: ${totalCost}개)`);
         }
 
-        const recipientSnap = await transaction.get(recipientRef);
-        if (!recipientSnap.exists) throw new Error("받는 사람 프로필을 찾을 수 없습니다.");
-
-        const recipientData = recipientSnap.data();
-        const currentRecipientQty = recipientData.inventory?.[itemId] ?? 0;
-
+        // 잉크 차감
         transaction.update(senderRef, { ink: currentInk - totalCost });
-        transaction.update(recipientRef, {
-          [`inventory.${itemId}`]: currentRecipientQty + qty,
+
+        // 우편함에 선물 추가
+        const mailboxRef = adminDb
+          .collection("artifacts").doc(safeAppId)
+          .collection("users").doc(recipientUid)
+          .collection("mailbox").doc();
+        transaction.set(mailboxRef, {
+          type: "item",
+          itemId,
+          itemName: item.name,
+          quantity: qty,
+          senderUid,
+          senderName,
+          claimed: false,
+          createdAt: admin.firestore.FieldValue.serverTimestamp(),
         });
+      });
+
+      // 푸시 알림
+      await sendPushToUser(recipientUid, {
+        title: "🎁 선물이 도착했어요!",
+        body: `${senderName}님이 ${item.name} ${qty}개를 선물했습니다. 우편함을 확인하세요!`,
+        data: { type: "gift", giftType: "item", itemId },
       });
 
       logger.info(`[giftItem] ${senderUid} → ${recipientUid}: ${itemId} x${qty}`);
       return { success: true };
     } catch (err) {
       throw new HttpsError("internal", err.message || "선물 전송에 실패했습니다.");
+    }
+  }
+);
+
+// ── 잉크 선물하기 (우편함으로 전달) ──────────────────────────────────
+exports.giftInk = onCall(
+  {
+    region: REGION,
+    maxInstances: 10,
+    timeoutSeconds: 30,
+  },
+  async (request) => {
+    if (!request.auth) {
+      throw new HttpsError("unauthenticated", "로그인이 필요합니다.");
+    }
+
+    const { recipientUid, amount, appId: rawAppId } = request.data;
+    const senderUid = request.auth.uid;
+
+    if (!recipientUid || !amount) {
+      throw new HttpsError("invalid-argument", "필수 파라미터가 누락되었습니다.");
+    }
+    if (senderUid === recipientUid) {
+      throw new HttpsError("invalid-argument", "자신에게는 선물할 수 없습니다.");
+    }
+
+    const qty = Math.min(Math.max(1, parseInt(amount) || 1), 100);
+    const safeAppId = (rawAppId || "odok-app-default").replace(/\//g, "_");
+
+    const senderRef = adminDb
+      .collection("artifacts").doc(safeAppId)
+      .collection("users").doc(senderUid)
+      .collection("profile").doc("info");
+
+    try {
+      let senderName = "누군가";
+      await adminDb.runTransaction(async (transaction) => {
+        const senderSnap = await transaction.get(senderRef);
+        if (!senderSnap.exists) throw new Error("보내는 사람 프로필을 찾을 수 없습니다.");
+
+        const senderData = senderSnap.data();
+        senderName = senderData.nickname || "누군가";
+        const currentInk = senderData.ink ?? 0;
+        if (currentInk < qty) {
+          throw new Error(`잉크가 부족해요! (보유: ${currentInk}개, 필요: ${qty}개)`);
+        }
+
+        // 잉크 차감 + XP 부여
+        const currentXp = senderData.xp ?? 0;
+        const xpGain = qty * 10;
+        transaction.update(senderRef, {
+          ink: currentInk - qty,
+          xp: currentXp + xpGain,
+          total_ink_spent: admin.firestore.FieldValue.increment(qty),
+        });
+
+        // 우편함에 잉크 추가
+        const mailboxRef = adminDb
+          .collection("artifacts").doc(safeAppId)
+          .collection("users").doc(recipientUid)
+          .collection("mailbox").doc();
+        transaction.set(mailboxRef, {
+          type: "ink",
+          quantity: qty,
+          senderUid,
+          senderName,
+          claimed: false,
+          createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+      });
+
+      // 푸시 알림
+      await sendPushToUser(recipientUid, {
+        title: "💧 잉크가 도착했어요!",
+        body: `${senderName}님이 잉크 ${qty}개를 선물했습니다. 우편함을 확인하세요!`,
+        data: { type: "gift", giftType: "ink" },
+      });
+
+      logger.info(`[giftInk] ${senderUid} → ${recipientUid}: ink x${qty}`);
+      return { success: true };
+    } catch (err) {
+      throw new HttpsError("internal", err.message || "잉크 선물 전송에 실패했습니다.");
+    }
+  }
+);
+
+// ── 우편함 수령 (단건 or 전체) ────────────────────────────────────────
+exports.claimMailbox = onCall(
+  {
+    region: REGION,
+    maxInstances: 10,
+    timeoutSeconds: 30,
+  },
+  async (request) => {
+    if (!request.auth) {
+      throw new HttpsError("unauthenticated", "로그인이 필요합니다.");
+    }
+
+    const { mailboxId, appId: rawAppId } = request.data; // mailboxId = null이면 전체 수령
+    const uid = request.auth.uid;
+    const safeAppId = (rawAppId || "odok-app-default").replace(/\//g, "_");
+
+    const mailboxCol = adminDb
+      .collection("artifacts").doc(safeAppId)
+      .collection("users").doc(uid)
+      .collection("mailbox");
+
+    const profileRef = adminDb
+      .collection("artifacts").doc(safeAppId)
+      .collection("users").doc(uid)
+      .collection("profile").doc("info");
+
+    try {
+      // 수령할 아이템 조회
+      let docsToProcess;
+      if (mailboxId) {
+        const single = await mailboxCol.doc(mailboxId).get();
+        if (!single.exists || single.data().claimed) {
+          throw new Error("이미 수령했거나 존재하지 않는 선물입니다.");
+        }
+        docsToProcess = [single];
+      } else {
+        const snap = await mailboxCol.where("claimed", "==", false).get();
+        docsToProcess = snap.docs;
+      }
+
+      if (docsToProcess.length === 0) {
+        return { success: true, claimed: 0 };
+      }
+
+      // 트랜잭션으로 수령 처리
+      await adminDb.runTransaction(async (transaction) => {
+        const profileSnap = await transaction.get(profileRef);
+        const profileData = profileSnap.exists ? profileSnap.data() : {};
+
+        let inkDelta = 0;
+        const itemDeltas = {};
+
+        for (const mailDoc of docsToProcess) {
+          const gift = mailDoc.data();
+          if (gift.type === "ink") {
+            inkDelta += gift.quantity;
+          } else if (gift.type === "item" && gift.itemId) {
+            itemDeltas[gift.itemId] = (itemDeltas[gift.itemId] || 0) + gift.quantity;
+          }
+          transaction.update(mailboxCol.doc(mailDoc.id), { claimed: true });
+        }
+
+        const updates = {};
+        if (inkDelta > 0) {
+          const INK_MAX = 9999;
+          const currentInk = profileData.ink ?? 0;
+          updates.ink = Math.min(INK_MAX, currentInk + inkDelta);
+        }
+        for (const [itemId, qty] of Object.entries(itemDeltas)) {
+          const current = profileData.inventory?.[itemId] ?? 0;
+          updates[`inventory.${itemId}`] = current + qty;
+        }
+
+        if (Object.keys(updates).length > 0) {
+          if (profileSnap.exists) {
+            transaction.update(profileRef, updates);
+          } else {
+            transaction.set(profileRef, updates, { merge: true });
+          }
+        }
+      });
+
+      return { success: true, claimed: docsToProcess.length };
+    } catch (err) {
+      throw new HttpsError("internal", err.message || "수령에 실패했습니다.");
     }
   }
 );
