@@ -1,8 +1,11 @@
 // src/components/BookPreviewModal.jsx
 import React, { useState } from 'react';
-import { X, BookOpen, Pencil, Sparkles } from 'lucide-react';
+import { X, BookOpen, Sparkles, Eye, Heart, Bookmark, CheckCircle, MessageCircle } from 'lucide-react';
 import { httpsCallable } from 'firebase/functions';
 import { functions } from '../firebase';
+import { getCoverImageFromBook } from '../utils/bookCovers';
+import { formatCount } from '../utils/numberFormat';
+import { formatGenreTag } from '../utils/formatGenre';
 
 const rawAppId = typeof __app_id !== 'undefined' ? __app_id : 'odok-app-default';
 const appId = rawAppId.replace(/\//g, '_');
@@ -82,32 +85,68 @@ const BookPreviewModal = ({ book, user, userProfile, useItem, onRead, onClose, o
             {/* 표지 + 제목 */}
             <div className="flex gap-4 mb-4">
               <div className="shrink-0">
-                {book.cover_url ? (
-                  <img
-                    src={book.cover_url}
-                    alt={book.title}
-                    className="w-20 h-28 rounded-xl object-cover shadow-md"
-                  />
-                ) : (
-                  <div className="w-20 h-28 rounded-xl bg-gradient-to-br from-orange-200 to-pink-200 dark:from-orange-800 dark:to-pink-900 flex items-center justify-center shadow-md">
-                    <span className="text-3xl">📖</span>
-                  </div>
-                )}
+                <img
+                  src={getCoverImageFromBook(book)}
+                  alt={book.title}
+                  className="w-20 h-28 rounded-xl object-cover shadow-md"
+                  onError={(e) => {
+                    e.target.src = 'https://images.unsplash.com/photo-1543002588-bfa74002ed7e?w=400&h=600&fit=crop&auto=format';
+                  }}
+                />
               </div>
-              <div className="flex-1 min-w-0 flex flex-col justify-center">
-                <p className="text-base font-black text-slate-800 dark:text-slate-100 leading-snug mb-1">
+              <div className="flex-1 min-w-0 flex flex-col justify-center gap-1.5">
+                <p className="text-base font-black text-slate-800 dark:text-slate-100 leading-snug">
                   {book.title}
                 </p>
                 <p className="text-xs text-slate-500 dark:text-slate-400">
                   {book.isAnonymous ? (t.anonymous || '익명') : (authorProfiles[book.authorId]?.nickname || book.authorNickname || (t.preview_unknown_author || '알 수 없는 작가'))}
                 </p>
-                {book.genre && (
-                  <span className="mt-1.5 inline-block text-[10px] font-bold bg-orange-100 dark:bg-orange-900/40 text-orange-600 dark:text-orange-400 px-2 py-0.5 rounded-full w-fit">
-                    {book.genre}
-                  </span>
-                )}
+                {/* 카테고리 + 장르 */}
+                <div className="flex flex-wrap gap-1">
+                  {book.category && (
+                    <span className="text-[10px] font-bold bg-orange-100 dark:bg-orange-900/40 text-orange-600 dark:text-orange-400 px-2 py-0.5 rounded-full">
+                      {formatGenreTag(book.category)}
+                    </span>
+                  )}
+                  {(book.subCategory || book.genre) && (
+                    <span className="text-[10px] font-bold bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400 px-2 py-0.5 rounded-full">
+                      {formatGenreTag(book.subCategory || book.genre)}
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
+
+            {/* 통계 */}
+            <div className="flex items-center gap-3 text-[11px] text-slate-400 dark:text-slate-500 bg-slate-50 dark:bg-slate-700/50 rounded-xl px-3 py-2.5 mb-4">
+              <span className="flex items-center gap-1">
+                <Eye className="w-3 h-3" />{formatCount(book.views)}
+              </span>
+              <span className="flex items-center gap-1">
+                <Heart className="w-3 h-3" />{formatCount(book.likes)}
+              </span>
+              <span className="flex items-center gap-1">
+                <Bookmark className="w-3 h-3" />{formatCount(book.favorites)}
+              </span>
+              <span className="flex items-center gap-1">
+                <CheckCircle className="w-3 h-3" />{formatCount(book.completions)}
+              </span>
+              {book.commentCount > 0 && (
+                <span className="flex items-center gap-1">
+                  <MessageCircle className="w-3 h-3" />{formatCount(book.commentCount)}
+                </span>
+              )}
+            </div>
+
+            {/* 책 소개글 (synopsis) */}
+            {book.synopsis && (
+              <div className="bg-slate-50 dark:bg-slate-700/50 rounded-xl px-4 py-3 mb-4 border border-slate-100 dark:border-slate-700">
+                <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 mb-1.5">{t.preview_synopsis_label || '책 소개'}</p>
+                <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed line-clamp-4">
+                  {book.synopsis}
+                </p>
+              </div>
+            )}
 
             {/* 소개글 구역 */}
             <div className="mb-4">
