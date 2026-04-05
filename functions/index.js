@@ -5,6 +5,7 @@
 
 const admin = require("firebase-admin");
 const { onCall, HttpsError } = require("firebase-functions/v2/https");
+const { onDocumentCreated } = require("firebase-functions/v2/firestore");
 const logger = require("firebase-functions/logger");
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 
@@ -1745,3 +1746,106 @@ exports.generateBookSummary = onCall({ region: REGION, maxInstances: 10, timeout
 
   return { summary: summary, summary_type: type === 'basic' ? 'BASIC' : 'PREMIUM' };
 });
+
+// ─── 푸시 알림 헬퍼 ────────────────────────────────────────────────────────
+const APP_ID = "odok-app-default";
+
+/**
+ * 특정 유저에게 FCM 푸시 알림 전송
+ */
+async function sendPushToUser(targetUid, { title, body, data = {} }) {
+  try {
+    const tokenDoc = await adminDb
+      .collection("artifacts").doc(APP_ID)
+      .collection("users").doc(targetUid)
+      .collection("fcm_tokens").doc("device")
+      .get();
+
+    if (!tokenDoc.exists) return;
+    const { token } = tokenDoc.data();
+    if (!token) return;
+
+    await admin.messaging().send({
+      token,
+      notification: { title, body },
+      data: { ...data },
+      android: {
+        notification: {
+          sound: "default",
+          channelId: "odok_default",
+        },
+      },
+    });
+
+    logger.info(`[Push] 전송 완료 → uid:${targetUid}`);
+  } catch (err) {
+    // 토큰 만료 등 오류는 무시
+    logger.warn(`[Push] 전송 실패 uid:${targetUid}`, err.message);
+  }
+}
+
+// ─── 트리거 1: 댓글 작성 → 책 작가에게 알림 ────────────────────────────────
+exports.onCommentCreated = onDocumentCreated(
+  {
+    document: "artifacts/{appId}/public/data/book_comments/{commentId}",
+    region: REGION,
+  },
+  async (event) => {
+    const comment = event.data?.data();
+    if (!comment) return;
+
+    const { bookId, authorName, text, userId: commenterId } = comment;
+    if (!bookId) return;
+
+    // 책 정보 조회 (작가 uid 필요)
+    const bookDoc = await adminDb
+      .collection("artifacts").doc(event.params.appId)
+      .collection("public").doc("data")
+      .collection("books").doc(bookId)
+      .get();
+
+    if (!bookDoc.exists) return;
+    const book = bookDoc.data();
+    const authorUid = book.authorId;
+
+    // 자기 책에 자기가 댓글 달면 알림 안 보냄
+    if (!authorUid || authorUid === commenterId) return;
+    // 익명 댓글이면 작성자명 마스킹
+    const displayName = comment.isAnonymous ? "익명" : (authorName || "누군가");
+    const shortText = text?.length > 30 ? text.slice(0, 30) + "…" : text;
+
+    await sendPushToUser(authorUid, {
+      title: `📖 "${book.title}"에 새 댓글`,
+      body: `${displayName}: ${shortText}`,
+      data: { type: "comment", bookId },
+    });
+  }
+);
+
+// ─── 트리거 2: 팔로우 → 팔로우 대상에게 알림 ───────────────────────────────
+exports.onFollowCreated = onDocumentCreated(
+  {
+    document: "artifacts/{appId}/users/{targetUid}/followers/{followerUid}",
+    region: REGION,
+  },
+  async (event) => {
+    const { targetUid, followerUid } = event.params;
+    if (targetUid === followerUid) return;
+
+    // 팔로워 프로필 조회
+    const followerDoc = await adminDb
+      .collection("artifacts").doc(event.params.appId)
+      .collection("users").doc(followerUid)
+      .get();
+
+    const followerName = followerDoc.exists
+      ? (followerDoc.data()?.nickname || "누군가")
+      : "누군가";
+
+    await sendPushToUser(targetUid, {
+      title: "✨ 새 팔로워",
+      body: `${followerName}님이 팔로우했습니다`,
+      data: { type: "follow", followerUid },
+    });
+  }
+);

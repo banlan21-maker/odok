@@ -49,6 +49,7 @@ import ChallengeResultModal from './components/ChallengeResultModal';
 import AuthorProfileModal from './components/AuthorProfileModal';
 import { useInventory } from './hooks/useInventory';
 import { useHighlights } from './hooks/useHighlights';
+import { usePushNotifications } from './hooks/usePushNotifications';
 import { db } from './firebase';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 
@@ -261,6 +262,7 @@ const App = () => {
   const [forceUpdate, setForceUpdate] = useState(null); // null | { storeUrl, updateMsg }
 
   const { highlights, addHighlight, deleteHighlight } = useHighlights({ user });
+  usePushNotifications({ user });
 
   // 책 클릭 시 미리보기 모달 먼저 열기
   const handleBookClickWithPreview = (book) => {
