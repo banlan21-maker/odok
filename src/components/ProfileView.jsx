@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import imageCompression from 'browser-image-compression';
-import { Droplets, Save, Camera, Video, Lock } from 'lucide-react';
+import { Droplets, Save, Camera, Video, Lock, BookOpen, Flame, TrendingUp } from 'lucide-react';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { showRewardVideoAd } from '../utils/admobService';
 import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
@@ -28,6 +28,7 @@ const ProfileView = ({
   unfollowAuthor,
   highlights = [],
   deleteHighlight,
+  readingStats = null,
 }) => {
   const [isCharging, setIsCharging] = useState(false);
   const [showChargeSuccess, setShowChargeSuccess] = useState(false);
@@ -370,7 +371,46 @@ const ProfileView = ({
           </div>
         )}
 
-        {/* 6. 월간 챌린지 */}
+        {/* 6. 독서 통계 */}
+        {readingStats && (
+          <div className="bg-white dark:bg-slate-800 rounded-2xl p-4 border border-slate-100 dark:border-slate-700 shadow-sm">
+            <h3 className="text-sm font-black text-slate-800 dark:text-slate-100 mb-3">📊 {t.reading_stats_title || '독서 통계'}</h3>
+            <div className="grid grid-cols-3 gap-2 mb-3">
+              <div className="bg-orange-50 dark:bg-orange-900/20 rounded-xl p-3 text-center">
+                <BookOpen className="w-5 h-5 text-orange-500 mx-auto mb-1" />
+                <p className="text-lg font-black text-slate-800 dark:text-slate-100">{readingStats.totalReads}</p>
+                <p className="text-[10px] text-slate-400 font-bold">{t.reading_stats_total || '총 완독'}</p>
+              </div>
+              <div className="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-3 text-center">
+                <TrendingUp className="w-5 h-5 text-blue-500 mx-auto mb-1" />
+                <p className="text-lg font-black text-slate-800 dark:text-slate-100">{readingStats.thisMonthReads}</p>
+                <p className="text-[10px] text-slate-400 font-bold">{t.reading_stats_month || '이번 달'}</p>
+              </div>
+              <div className="bg-red-50 dark:bg-red-900/20 rounded-xl p-3 text-center">
+                <Flame className="w-5 h-5 text-red-500 mx-auto mb-1" />
+                <p className="text-lg font-black text-slate-800 dark:text-slate-100">{readingStats.streak}</p>
+                <p className="text-[10px] text-slate-400 font-bold">{t.reading_stats_streak || '연속 일'}</p>
+              </div>
+            </div>
+            {readingStats.recentBooks.length > 0 && (
+              <div>
+                <p className="text-xs font-bold text-slate-500 dark:text-slate-400 mb-2">{t.reading_stats_inprogress || '읽는 중'}</p>
+                <div className="space-y-1.5">
+                  {readingStats.recentBooks.slice(0, 3).map((b) => (
+                    <div key={b.bookId} className="flex items-center gap-2">
+                      <div className="flex-1 bg-slate-100 dark:bg-slate-700 rounded-full h-2 overflow-hidden">
+                        <div className="h-full bg-gradient-to-r from-orange-400 to-pink-500 rounded-full" style={{ width: `${Math.round((b.ratio || 0) * 100)}%` }} />
+                      </div>
+                      <span className="text-[10px] font-bold text-slate-400 w-8 text-right">{Math.round((b.ratio || 0) * 100)}%</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* 7. 월간 챌린지 */}
         {userProfile && (
           <div className="bg-white dark:bg-slate-800 rounded-2xl p-4 border border-slate-100 dark:border-slate-700 shadow-sm">
             <div className="flex items-center justify-between mb-3">

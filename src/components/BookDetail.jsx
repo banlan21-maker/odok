@@ -387,7 +387,11 @@ const BookDetail = ({ book, onClose, onBookUpdate, fontSize = 'text-base', user,
     try {
       if (isLiked) {
         await deleteDoc(likeRef);
-        await updateDoc(bookRef, { likes: increment(-1) });
+        await runTransaction(db, async (tx) => {
+          const snap = await tx.get(bookRef);
+          const cur = snap.data()?.likes || 0;
+          tx.update(bookRef, { likes: Math.max(0, cur - 1) });
+        });
       } else {
         await setDoc(likeRef, { bookId, createdAt: serverTimestamp() });
         await updateDoc(bookRef, { likes: increment(1) });
@@ -438,7 +442,11 @@ const BookDetail = ({ book, onClose, onBookUpdate, fontSize = 'text-base', user,
     try {
       if (isBookFavorited) {
         await deleteDoc(favoriteRef);
-        await updateDoc(bookRef, { favorites: increment(-1) });
+        await runTransaction(db, async (tx) => {
+          const snap = await tx.get(bookRef);
+          const cur = snap.data()?.favorites || 0;
+          tx.update(bookRef, { favorites: Math.max(0, cur - 1) });
+        });
       } else {
         await setDoc(favoriteRef, { userId: user.uid, bookId, createdAt: serverTimestamp() });
         await updateDoc(bookRef, { favorites: increment(1) });
@@ -692,8 +700,13 @@ const BookDetail = ({ book, onClose, onBookUpdate, fontSize = 'text-base', user,
     if (!ok) return;
     try {
       await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'book_comments', commentId));
-      // book 문서의 commentCount 동기화
-      await updateDoc(doc(db, 'artifacts', appId, 'books', bookId), { commentCount: increment(-1) }).catch(() => {});
+      // book 문서의 commentCount 동기화 (음수 방지)
+      const bookRef = doc(db, 'artifacts', appId, 'books', bookId);
+      await runTransaction(db, async (tx) => {
+        const snap = await tx.get(bookRef);
+        const cur = snap.data()?.commentCount || 0;
+        tx.update(bookRef, { commentCount: Math.max(0, cur - 1) });
+      }).catch(() => {});
     } catch (err) {
       console.error('댓글 삭제 실패:', err);
     }

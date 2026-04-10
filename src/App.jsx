@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, lazy, Suspense } from 'react';
 import {
   BookOpen, Coffee, Lightbulb, ChevronLeft,
   RefreshCw, Book, Calendar, List, ArrowRight, User, PenTool, Save,
@@ -23,36 +23,41 @@ import { getTodayDateKey } from './utils/dateUtils';
 import { Capacitor } from '@capacitor/core';
 import { App as CapApp } from '@capacitor/app';
 
-// Components
+// Components — 초기 로딩 필수
 import HomeView from './components/HomeView';
-import GenreSelectView from './components/GenreSelectView';
-import StoryListView from './components/StoryListView';
-import ReaderView from './components/ReaderView';
-import LibraryView from './components/LibraryView';
-import LibraryMainView from './components/LibraryMainView';
-import ProfileView from './components/ProfileView';
-import WriteView from './components/WriteView';
-import ArchiveView from './components/ArchiveView';
-import BookDetail from './components/BookDetail';
-import PremiumCoverModal from './components/PremiumCoverModal';
-import StoreView from './components/StoreView';
-import BagModal from './components/BagModal';
-import RainbowInkModal from './components/RainbowInkModal';
-import MagicEraserModal from './components/MagicEraserModal';
-import GoldenPenModal from './components/GoldenPenModal';
-import GiftModal from './components/GiftModal';
-import PaintbrushModal from './components/PaintbrushModal';
-import BookPreviewModal from './components/BookPreviewModal';
-import SettingsModal from './components/SettingsModal';
-import MegaphoneModal from './components/MegaphoneModal';
-import ChallengeResultModal from './components/ChallengeResultModal';
-import AuthorProfileModal from './components/AuthorProfileModal';
+
+// Components — Lazy (조건부 렌더링, 코드 스플리팅)
+const GenreSelectView = lazy(() => import('./components/GenreSelectView'));
+const StoryListView = lazy(() => import('./components/StoryListView'));
+const ReaderView = lazy(() => import('./components/ReaderView'));
+const LibraryView = lazy(() => import('./components/LibraryView'));
+const LibraryMainView = lazy(() => import('./components/LibraryMainView'));
+const ProfileView = lazy(() => import('./components/ProfileView'));
+const WriteView = lazy(() => import('./components/WriteView'));
+const ArchiveView = lazy(() => import('./components/ArchiveView'));
+const BookDetail = lazy(() => import('./components/BookDetail'));
+const PremiumCoverModal = lazy(() => import('./components/PremiumCoverModal'));
+const StoreView = lazy(() => import('./components/StoreView'));
+const BagModal = lazy(() => import('./components/BagModal'));
+const RainbowInkModal = lazy(() => import('./components/RainbowInkModal'));
+const MagicEraserModal = lazy(() => import('./components/MagicEraserModal'));
+const GoldenPenModal = lazy(() => import('./components/GoldenPenModal'));
+const GiftModal = lazy(() => import('./components/GiftModal'));
+const PaintbrushModal = lazy(() => import('./components/PaintbrushModal'));
+const BookPreviewModal = lazy(() => import('./components/BookPreviewModal'));
+const SettingsModal = lazy(() => import('./components/SettingsModal'));
+const MegaphoneModal = lazy(() => import('./components/MegaphoneModal'));
+const ChallengeResultModal = lazy(() => import('./components/ChallengeResultModal'));
+const AuthorProfileModal = lazy(() => import('./components/AuthorProfileModal'));
 import { useInventory } from './hooks/useInventory';
 import { useHighlights } from './hooks/useHighlights';
 import { usePushNotifications } from './hooks/usePushNotifications';
 import { useMailbox } from './hooks/useMailbox';
-import MailboxModal from './components/MailboxModal';
+const MailboxModal = lazy(() => import('./components/MailboxModal'));
 import { useLastReadBook } from './hooks/useLastReadBook';
+import { useNotificationHistory } from './hooks/useNotificationHistory';
+import { useReadingStats } from './hooks/useReadingStats';
+const NotificationModal = lazy(() => import('./components/NotificationModal'));
 import ContinueReadingBar from './components/ContinueReadingBar';
 import { db } from './firebase';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
@@ -60,7 +65,7 @@ import { doc, getDoc, setDoc } from 'firebase/firestore';
 const rawAppId = typeof __app_id !== 'undefined' ? __app_id : 'odok-app-default';
 const appId = rawAppId.replace(/\//g, '_');
 
-const APP_VERSION = "2.1.0";
+const APP_VERSION = "2.1.1";
 
 const App = () => {
 
@@ -268,6 +273,9 @@ const App = () => {
   usePushNotifications({ user });
   const { mailboxItems, unclaimedCount } = useMailbox({ user });
   const [showMailbox, setShowMailbox] = useState(false);
+  const { notifications, unreadCount } = useNotificationHistory({ user });
+  const [showNotifications, setShowNotifications] = useState(false);
+  const { stats: readingStats } = useReadingStats({ user });
 
   const [lastReadRefresh, setLastReadRefresh] = useState(0);
   const { lastReadBook, lastReadRatio, dismiss: dismissLastRead, clearLastRead } = useLastReadBook({ user, books, refreshTrigger: lastReadRefresh });
@@ -295,6 +303,9 @@ const App = () => {
         setSelectedBook(null);
         setView('home');
         setLastReadRefresh(prev => prev + 1);
+      } else if (v === 'write') {
+        if (!confirm('작성 중인 내용이 사라집니다. 나가시겠습니까?')) return;
+        setView('home');
       } else if (v === 'genre_select' || v === 'story_list') {
         setView('home');
       } else if (v !== 'home' && v !== 'login' && v !== 'profile_setup') {
@@ -343,6 +354,9 @@ const App = () => {
                   setSelectedBook(null);
                   setView(isMyBook ? 'archive' : 'library');
                   setLastReadRefresh(prev => prev + 1);
+                } else if (view === 'write') {
+                  if (!confirm(t.write_exit_confirm || '작성 중인 내용이 사라집니다. 나가시겠습니까?')) return;
+                  setView('home');
                 } else {
                   setView('home');
                 }
@@ -375,6 +389,18 @@ const App = () => {
                 <div className="flex items-center gap-1 bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300 px-2 py-1 rounded-lg">
                   <span className="text-xs font-black">Lv.{levelInfo.level}</span>
                 </div>
+                {/* 알림 버튼 */}
+                <button
+                  onClick={() => setShowNotifications(true)}
+                  className="relative flex items-center justify-center w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-950 hover:bg-blue-100 dark:hover:bg-blue-900 transition-colors"
+                >
+                  <span className="text-sm">🔔</span>
+                  {unreadCount > 0 && (
+                    <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-red-500 text-white text-[9px] font-black flex items-center justify-center leading-none">
+                      {unreadCount > 9 ? '9+' : unreadCount}
+                    </span>
+                  )}
+                </button>
                 {/* 우편함 버튼 */}
                 <button
                   onClick={() => setShowMailbox(true)}
@@ -411,6 +437,7 @@ const App = () => {
 
         {/* Main Content */}
         <main id="main-content" className="flex-1 overflow-y-auto scrollbar-hide pb-20 px-5 relative">
+        <Suspense fallback={<div className="flex items-center justify-center py-20"><div className="w-8 h-8 border-4 border-slate-200 border-t-orange-500 rounded-full animate-spin" /></div>}>
 
           {storyReaderHook.isHelpModalOpen && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-6">
@@ -801,6 +828,7 @@ const App = () => {
                         onOpenHelp={() => storyReaderHook.setIsHelpModalOpen(true)}
                         follows={follows} unfollowAuthor={unfollowAuthor}
                         highlights={highlights} deleteHighlight={deleteHighlight}
+                        readingStats={readingStats}
                       />
                     </div>
                   )}
@@ -820,8 +848,10 @@ const App = () => {
               )}
             </>
           )}
+        </Suspense>
         </main>
 
+        <Suspense fallback={null}>
         {showWritingCompleteModal && (
           <PremiumCoverModal
             book={books.find(b => b.id === showWritingCompleteModal.book.id) || showWritingCompleteModal.book}
@@ -973,6 +1003,16 @@ const App = () => {
           />
         )}
 
+        {/* 알림 내역 모달 */}
+        {showNotifications && (
+          <NotificationModal
+            notifications={notifications}
+            userId={user?.uid}
+            onClose={() => setShowNotifications(false)}
+            t={t}
+          />
+        )}
+
         {/* 우편함 모달 */}
         {showMailbox && (
           <MailboxModal
@@ -1022,6 +1062,7 @@ const App = () => {
             </div>
           </div>
         )}
+        </Suspense>
 
         {user && userProfile && userProfile.nickname && view !== 'reader' && view !== 'book_detail' && (
           <nav className="flex-none bg-white dark:bg-slate-800 border-t border-slate-100 dark:border-slate-700 flex items-center px-1 pt-1 z-40" style={{ paddingBottom: 'calc(8px + env(safe-area-inset-bottom, 0px))' }}>

@@ -1471,7 +1471,7 @@ exports.giftItem = onCall(
       await sendPushToUser(recipientUid, {
         title: "🎁 선물이 도착했어요!",
         body: `${senderName}님이 ${item.name} ${qty}개를 선물했습니다. 우편함을 확인하세요!`,
-        data: { type: "gift", giftType: "item", itemId },
+        data: { type: "gift", giftType: "item", itemId, senderName },
       });
 
       logger.info(`[giftItem] ${senderUid} → ${recipientUid}: ${itemId} x${qty}`);
@@ -1553,7 +1553,7 @@ exports.giftInk = onCall(
       await sendPushToUser(recipientUid, {
         title: "💧 잉크가 도착했어요!",
         body: `${senderName}님이 잉크 ${qty}개를 선물했습니다. 우편함을 확인하세요!`,
-        data: { type: "gift", giftType: "ink" },
+        data: { type: "gift", giftType: "ink", senderName },
       });
 
       logger.info(`[giftInk] ${senderUid} → ${recipientUid}: ink x${qty}`);
@@ -1937,6 +1937,25 @@ const APP_ID = "odok-app-default";
  * 특정 유저에게 FCM 푸시 알림 전송
  */
 async function sendPushToUser(targetUid, { title, body, data = {} }) {
+  // 1) 인앱 알림 내역 저장 (FCM 전송 실패해도 내역은 남음)
+  try {
+    await adminDb
+      .collection("artifacts").doc(APP_ID)
+      .collection("users").doc(targetUid)
+      .collection("notifications").add({
+        type: data.type || "general",
+        senderName: data.senderName || null,
+        bookTitle: data.bookTitle || null,
+        message: body,
+        read: false,
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        data,
+      });
+  } catch (err) {
+    logger.warn(`[Notification] 저장 실패 uid:${targetUid}`, err.message);
+  }
+
+  // 2) FCM 푸시 전송
   try {
     const tokenDoc = await adminDb
       .collection("artifacts").doc(APP_ID)
@@ -1962,7 +1981,6 @@ async function sendPushToUser(targetUid, { title, body, data = {} }) {
 
     logger.info(`[Push] 전송 완료 → uid:${targetUid}`);
   } catch (err) {
-    // 토큰 만료 등 오류는 무시
     logger.warn(`[Push] 전송 실패 uid:${targetUid}`, err.message);
   }
 }
@@ -2000,7 +2018,7 @@ exports.onCommentCreated = onDocumentCreated(
     await sendPushToUser(authorUid, {
       title: `📖 "${book.title}"에 새 댓글`,
       body: `${displayName}: ${shortText}`,
-      data: { type: "comment", bookId },
+      data: { type: "comment", bookId, senderName: displayName, bookTitle: book.title },
     });
   }
 );
@@ -2028,7 +2046,7 @@ exports.onFollowCreated = onDocumentCreated(
     await sendPushToUser(targetUid, {
       title: "✨ 새 팔로워",
       body: `${followerName}님이 팔로우했습니다`,
-      data: { type: "follow", followerUid },
+      data: { type: "follow", followerUid, senderName: followerName },
     });
   }
 );

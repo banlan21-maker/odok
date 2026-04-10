@@ -785,6 +785,22 @@ export const T = {
     exit_modal_title: "오독오독을 종료하시겠습니까?",
     exit_modal_stay: "머물기",
     exit_modal_leave: "나가기",
+    write_exit_confirm: "작성 중인 내용이 사라집니다. 나가시겠습니까?",
+
+    // NotificationModal
+    notification_title: "알림",
+    notification_empty: "아직 알림이 없어요",
+    notification_comment: "님이 댓글을 남겼어요",
+    notification_like: "님이 좋아요를 눌렀어요",
+    notification_follow: "님이 팔로우했어요",
+    notification_gift: "님이 선물을 보냈어요",
+
+    // ProfileView - 독서 통계
+    reading_stats_title: "독서 통계",
+    reading_stats_total: "총 완독",
+    reading_stats_month: "이번 달",
+    reading_stats_streak: "연속 일",
+    reading_stats_inprogress: "읽는 중",
 
     // App.jsx - 출석체크 (기존 attendance_check 있으나 상세 보완)
     attendance_daily_desc: "매일 접속하면 잉크가 지급돼요!",
@@ -1583,6 +1599,22 @@ export const T = {
     exit_modal_title: "Exit Odok-Odok?",
     exit_modal_stay: "Stay",
     exit_modal_leave: "Exit",
+    write_exit_confirm: "Your draft will be lost. Leave anyway?",
+
+    // NotificationModal
+    notification_title: "Notifications",
+    notification_empty: "No notifications yet",
+    notification_comment: " left a comment",
+    notification_like: " liked your book",
+    notification_follow: " followed you",
+    notification_gift: " sent you a gift",
+
+    // ProfileView - Reading Stats
+    reading_stats_title: "Reading Stats",
+    reading_stats_total: "Total",
+    reading_stats_month: "This Month",
+    reading_stats_streak: "Streak",
+    reading_stats_inprogress: "In Progress",
 
     // App.jsx - Attendance
     attendance_daily_desc: "You earn ink every day you check in!",
