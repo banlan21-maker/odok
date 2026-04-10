@@ -416,6 +416,8 @@ const BookDetail = ({ book, onClose, onBookUpdate, fontSize = 'text-base', user,
         parentAuthorName: replyTo?.authorName || null,
         createdAt: serverTimestamp()
       });
+      // book 문서의 commentCount 동기화
+      await updateDoc(doc(db, 'artifacts', appId, 'books', bookId), { commentCount: increment(1) }).catch(() => {});
       setCommentInput('');
       setReplyTo(null);
     } catch (err) {
@@ -690,6 +692,8 @@ const BookDetail = ({ book, onClose, onBookUpdate, fontSize = 'text-base', user,
     if (!ok) return;
     try {
       await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'book_comments', commentId));
+      // book 문서의 commentCount 동기화
+      await updateDoc(doc(db, 'artifacts', appId, 'books', bookId), { commentCount: increment(-1) }).catch(() => {});
     } catch (err) {
       console.error('댓글 삭제 실패:', err);
     }
