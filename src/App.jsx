@@ -121,7 +121,6 @@ const App = () => {
 
   const [error, setError] = useState(null);
   const [selectedBook, setSelectedBook] = useState(null);
-  const [currentBook, setCurrentBook] = useState(null);
   const [showExitModal, setShowExitModal] = useState(false);
 
   // 1. Auth Hook
@@ -270,7 +269,8 @@ const App = () => {
   const { mailboxItems, unclaimedCount } = useMailbox({ user });
   const [showMailbox, setShowMailbox] = useState(false);
 
-  const { lastReadBook, lastReadRatio, dismiss: dismissLastRead, clearLastRead } = useLastReadBook({ user, books });
+  const [lastReadRefresh, setLastReadRefresh] = useState(0);
+  const { lastReadBook, lastReadRatio, dismiss: dismissLastRead, clearLastRead } = useLastReadBook({ user, books, refreshTrigger: lastReadRefresh });
 
   // 책 클릭 시 미리보기 모달 먼저 열기
   const handleBookClickWithPreview = (book) => {
@@ -289,8 +289,12 @@ const App = () => {
     if (!Capacitor.isNativePlatform()) return;
     const handler = CapApp.addListener('backButton', () => {
       const v = viewRef.current;
-      if (v === 'reader' || v === 'book_detail') {
+      if (v === 'reader') {
         setView('home');
+      } else if (v === 'book_detail') {
+        setSelectedBook(null);
+        setView('home');
+        setLastReadRefresh(prev => prev + 1);
       } else if (v === 'genre_select' || v === 'story_list') {
         setView('home');
       } else if (v !== 'home' && v !== 'login' && v !== 'profile_setup') {
@@ -332,15 +336,13 @@ const App = () => {
         {/* Header */}
         <header className="flex-none bg-white/90 dark:bg-slate-800/90 backdrop-blur-md border-b border-slate-100 dark:border-slate-700 z-40 px-4 h-14 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            {(view === 'write' || view === 'library' || view === 'archive' || view === 'profile' || view === 'book_detail' || (view === 'reader' && currentBook)) ? (
+            {(view === 'write' || view === 'library' || view === 'archive' || view === 'profile' || view === 'book_detail') ? (
               <button onClick={() => {
-                if (view === 'reader' && currentBook) {
-                  setCurrentBook(null);
-                  setView('library');
-                } else if (view === 'book_detail') {
+                if (view === 'book_detail') {
                   const isMyBook = selectedBook?.authorId === user?.uid;
                   setSelectedBook(null);
                   setView(isMyBook ? 'archive' : 'library');
+                  setLastReadRefresh(prev => prev + 1);
                 } else {
                   setView('home');
                 }
@@ -661,8 +663,8 @@ const App = () => {
                       t={t}
                       onContinue={() => {
                         clearLastRead();
-                        setCurrentBook(lastReadBook);
-                        setView('reader');
+                        setSelectedBook(lastReadBook);
+                        setView('book_detail');
                       }}
                       onDismiss={dismissLastRead}
                     />
@@ -703,11 +705,7 @@ const App = () => {
                 />
               )}
 
-              {view === 'reader' && currentBook && !storyReaderHook.currentStory && (
-                <ReaderView book={currentBook} onBack={() => { setCurrentBook(null); setView('library'); }} fontSize={fontSize} addHighlight={addHighlight} user={user} />
-              )}
-
-              {view === 'reader' && storyReaderHook.currentStory && !currentBook && (
+              {view === 'reader' && storyReaderHook.currentStory && (
                 <ReaderView
                   t={t} user={user} currentStory={storyReaderHook.currentStory}
                   readerLang={storyReaderHook.readerLang} isTranslating={storyReaderHook.isTranslating}
@@ -763,10 +761,12 @@ const App = () => {
                   promotions={promotions} createPromotion={createPromotion}
                   followAuthor={followAuthor} unfollowAuthor={unfollowAuthor} isFollowing={isFollowing}
                   onAuthorClick={(uid) => setAuthorProfileUserId(uid)}
+                  addHighlight={addHighlight}
                   onClose={() => {
                     const isMyBook = selectedBook.authorId === user?.uid;
                     setSelectedBook(null);
                     setView(isMyBook ? 'archive' : 'library');
+                    setLastReadRefresh(prev => prev + 1);
                   }}
                 />
               )}

@@ -40,4 +40,14 @@ public class MainActivity extends BridgeActivity {
     public ActionMode onWindowStartingActionMode(ActionMode.Callback callback, int type) {
         return null;
     }
+
+    // API 23+ 플로팅 ActionMode 포함 모든 유형을 확실히 제거
+    // onWindowStartingActionMode의 null 리턴은 "기본 동작 사용" 의미이므로
+    // 생성된 ActionMode를 즉시 finish()하여 네이티브 툴바 표시를 차단합니다.
+    @Override
+    public void onActionModeStarted(ActionMode mode) {
+        if (mode != null) {
+            mode.finish();
+        }
+    }
 }

@@ -1,6 +1,6 @@
 // src/components/BookDetail.jsx
 // 책 상세/뷰어 페이지 컴포넌트
-import React, { useEffect, useMemo, useState, useRef } from 'react';
+import React, { useEffect, useMemo, useState, useRef, useCallback } from 'react';
 import { Capacitor } from '@capacitor/core';
 import { KeepAwake } from '@capacitor-community/keep-awake';
 import { ChevronLeft, ChevronRight, Book, Calendar, User, Heart, Send, Bookmark, CheckCircle, PenTool, RefreshCw, Trash2, Eye, Megaphone } from 'lucide-react';
@@ -15,12 +15,14 @@ import { generateSeriesEpisode } from '../utils/aiService';
 import { getTodayDateKey } from '../utils/dateUtils';
 import { getExtraWriteInkCost, getFreeWriteRewardInk, canDonate, getLevelFromXp, getXpPerInk } from '../utils/levelUtils';
 import { formatGenreTag } from '../utils/formatGenre';
+import { useReadingProgress } from '../hooks/useReadingProgress';
+import ShareImageModal from './ShareImageModal';
 
 const DAILY_WRITE_LIMIT = 2;
 const DAILY_FREE_WRITES = 1;
 const INK_MAX = 999;
 
-const BookDetail = ({ book, onClose, onBookUpdate, fontSize = 'text-base', user, userProfile, appId, slotStatus, deductInk, t, isAdmin, authorProfiles = {}, promotions = [], createPromotion, followAuthor, unfollowAuthor, isFollowing, onAuthorClick }) => {
+const BookDetail = ({ book, onClose, onBookUpdate, fontSize = 'text-base', user, userProfile, appId, slotStatus, deductInk, t, isAdmin, authorProfiles = {}, promotions = [], createPromotion, followAuthor, unfollowAuthor, isFollowing, onAuthorClick, addHighlight }) => {
   if (!book) return null;
 
   // 관리자: 모든 책 수정/삭제 가능. 일반 사용자: 본인 책만 수정/삭제 가능
@@ -63,6 +65,106 @@ const BookDetail = ({ book, onClose, onBookUpdate, fontSize = 'text-base', user,
   const [episodeLoadingMessageIndex, setEpisodeLoadingMessageIndex] = useState(0);
   const [showSeriesCompleteModal, setShowSeriesCompleteModal] = useState(null); // { isFinale } | null
   const contentAreaRef = useRef(null);
+
+  // 읽기 진행률 저장/복원
+  const { clearProgress } = useReadingProgress({ user, bookId: book?.id, enabled: !!book?.id });
+
+  // ─── 하이라이트/공유 커스텀 선택 메뉴 ───
+  const [selMenuInfo, setSelMenuInfo] = useState(null);
+  const [shareText, setShareText] = useState(null);
+  const [savedToast, setSavedToast] = useState(false);
+  const selTimerRef = useRef(null);
+  const clearMenuTimerRef = useRef(null);
+  const savedTextRef = useRef('');
+
+  const showMenuForSelection = useCallback(() => {
+    const selection = window.getSelection();
+    const text = selection?.toString().trim();
+    if (!text || text.length < 2) return;
+    try {
+      const range = selection.getRangeAt(0);
+      let rect = range.getBoundingClientRect();
+      if (!rect.width && !rect.height) {
+        const fallback = contentAreaRef.current?.getBoundingClientRect();
+        if (!fallback) return;
+        rect = { left: fallback.left + fallback.width / 2, top: fallback.top + 60, width: 0 };
+      }
+      savedTextRef.current = text;
+      setSelMenuInfo({ x: rect.left + rect.width / 2, y: rect.top, text });
+    } catch { /* ignore */ }
+  }, []);
+
+  useEffect(() => {
+    const handleSelectionChange = () => {
+      clearTimeout(selTimerRef.current);
+      const selection = window.getSelection();
+      if (!selection?.toString().trim()) {
+        clearMenuTimerRef.current = setTimeout(() => setSelMenuInfo(null), 200);
+        return;
+      }
+      clearTimeout(clearMenuTimerRef.current);
+      selTimerRef.current = setTimeout(showMenuForSelection, 300);
+    };
+    document.addEventListener('selectionchange', handleSelectionChange);
+    return () => {
+      document.removeEventListener('selectionchange', handleSelectionChange);
+      clearTimeout(selTimerRef.current);
+      clearTimeout(clearMenuTimerRef.current);
+    };
+  }, [showMenuForSelection]);
+
+  const closeSelMenu = useCallback(() => {
+    setSelMenuInfo(null);
+    window.getSelection()?.removeAllRanges();
+  }, []);
+
+  useEffect(() => {
+    if (!selMenuInfo) return;
+    const handleOutside = (e) => {
+      if (!e.target.closest('.sel-menu-container')) closeSelMenu();
+    };
+    document.addEventListener('pointerdown', handleOutside);
+    return () => document.removeEventListener('pointerdown', handleOutside);
+  }, [selMenuInfo, closeSelMenu]);
+
+  const handleSaveHighlight = async () => {
+    const textToSave = selMenuInfo?.text || savedTextRef.current;
+    if (!textToSave) return;
+    clearTimeout(clearMenuTimerRef.current);
+    const success = await addHighlight?.({
+      text: textToSave,
+      bookId: book.id,
+      bookTitle: book.title,
+      authorNickname: book?.isAnonymous ? '익명' : (book.authorNickname || '익명'),
+    });
+    if (success !== false) {
+      setSavedToast(true);
+      setTimeout(() => setSavedToast(false), 2000);
+    }
+    closeSelMenu();
+  };
+
+  const handleShareMenu = () => {
+    const textToShare = selMenuInfo?.text || savedTextRef.current;
+    if (!textToShare) return;
+    clearTimeout(clearMenuTimerRef.current);
+    setShareText(textToShare);
+    closeSelMenu();
+  };
+
+  // 완독(95%+) 감지 시 진행률 삭제
+  useEffect(() => {
+    const el = document.getElementById('main-content');
+    if (!el) return;
+    const checkComplete = () => {
+      const maxScroll = el.scrollHeight - el.clientHeight;
+      if (maxScroll <= 0) return;
+      if (el.scrollTop / maxScroll > 0.95) clearProgress();
+    };
+    el.addEventListener('scroll', checkComplete, { passive: true });
+    return () => el.removeEventListener('scroll', checkComplete);
+  }, [clearProgress]);
+
   const episodeLoadingMessages = [
     '다음 화를 구상하고 있습니다...',
     '이전 내용과 연결 중...',
@@ -775,7 +877,7 @@ const BookDetail = ({ book, onClose, onBookUpdate, fontSize = 'text-base', user,
         )}
 
         {/* 본문 내용 - 관리자 수정 모드 */}
-        <div ref={contentAreaRef} className="bg-white dark:bg-slate-800 rounded-2xl p-6 border border-slate-100 dark:border-slate-700 shadow-sm">
+        <div ref={contentAreaRef} className="bg-white dark:bg-slate-800 rounded-2xl p-6 border border-slate-100 dark:border-slate-700 shadow-sm" onContextMenu={(e) => e.preventDefault()} style={{ WebkitTouchCallout: 'none' }}>
           {isEditingContent ? (
             <div className="space-y-3">
               <textarea
@@ -1173,6 +1275,53 @@ const BookDetail = ({ book, onClose, onBookUpdate, fontSize = 'text-base', user,
           </div>
         )}
       </div>
+
+      {/* 커스텀 선택 메뉴 (하이라이트/공유) */}
+      {selMenuInfo && (
+        <div className="sel-menu-container">
+          <div
+            className="fixed z-40 flex gap-0.5 bg-slate-900 dark:bg-slate-700 rounded-2xl shadow-2xl px-1 py-1"
+            style={{
+              top: selMenuInfo.y,
+              left: Math.min(Math.max(selMenuInfo.x, 100), window.innerWidth - 100),
+              transform: 'translate(-50%, -100%)',
+              marginTop: '-8px',
+            }}
+          >
+            <div style={{ position: 'absolute', bottom: '-6px', left: '50%', transform: 'translateX(-50%)', width: 0, height: 0, borderLeft: '6px solid transparent', borderRight: '6px solid transparent', borderTop: '6px solid #0f172a' }} />
+            <button
+              className="px-3 py-2 rounded-xl text-xs font-black text-white hover:bg-slate-700 dark:hover:bg-slate-600 transition-colors whitespace-nowrap"
+              onPointerDown={(e) => { e.preventDefault(); e.stopPropagation(); handleSaveHighlight(); }}
+            >
+              🎨 하이라이트 저장
+            </button>
+            <div className="w-px bg-slate-700 dark:bg-slate-500 my-1.5" />
+            <button
+              className="px-3 py-2 rounded-xl text-xs font-black text-orange-400 hover:bg-orange-500 hover:text-white transition-colors whitespace-nowrap"
+              onPointerDown={(e) => { e.preventDefault(); e.stopPropagation(); handleShareMenu(); }}
+            >
+              📢 공유하기
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* 하이라이트 저장 토스트 */}
+      {savedToast && (
+        <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-50 bg-slate-900 text-white text-xs font-bold px-4 py-2.5 rounded-full shadow-lg animate-in fade-in slide-in-from-bottom-2">
+          🎨 하이라이트가 저장됐어요!
+        </div>
+      )}
+
+      {/* 공유 이미지 모달 */}
+      {shareText && (
+        <ShareImageModal
+          selectedText={shareText}
+          bookTitle={book.title}
+          authorName={book?.isAnonymous ? '익명' : (book.authorNickname || '익명')}
+          onClose={() => setShareText(null)}
+        />
+      )}
     </>
   );
 };

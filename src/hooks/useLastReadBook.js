@@ -10,13 +10,16 @@ const appId = rawAppId.replace(/\//g, '_');
 const MIN_RATIO = 0.02;
 const COMPLETE_RATIO = 0.95;
 
-export const useLastReadBook = ({ user, books }) => {
+export const useLastReadBook = ({ user, books, refreshTrigger }) => {
   const [lastReadBook, setLastReadBook] = useState(null);   // book 객체
   const [lastReadRatio, setLastReadRatio] = useState(0);   // 진행률 (0~1)
   const [dismissed, setDismissed] = useState(false);
 
   useEffect(() => {
     if (!user || !books || books.length === 0) return;
+
+    // refreshTrigger 변화 시: 언마운트 fire-and-forget 저장이 Firestore에 도달할 시간 확보
+    const delay = refreshTrigger > 0 ? 1500 : 0;
 
     const fetchLastRead = async () => {
       try {
@@ -43,8 +46,9 @@ export const useLastReadBook = ({ user, books }) => {
       }
     };
 
-    fetchLastRead();
-  }, [user, books]);
+    const timerId = setTimeout(fetchLastRead, delay);
+    return () => clearTimeout(timerId);
+  }, [user, books, refreshTrigger]);
 
   const dismiss = () => setDismissed(true);
 
