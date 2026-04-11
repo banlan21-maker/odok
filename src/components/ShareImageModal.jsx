@@ -84,45 +84,59 @@ const ShareImageModal = ({ selectedText, bookTitle, authorName, onClose, t = {} 
     ctx.fillStyle = grad;
     ctx.fillRect(0, 0, W, H);
 
-    // 3) 큰따옴표
-    ctx.font = '88px Georgia, serif';
-    ctx.fillStyle = 'rgba(255,255,255,0.4)';
+    // 3~6) 텍스트 블록 전체를 세로 중앙 정렬
     ctx.textAlign = 'center';
-    const quoteY = H * 0.32;
-    ctx.fillText('"', W / 2, quoteY);
 
-    // 4) 본문 텍스트
+    // 본문 줄바꿈 계산
+    ctx.font = '600 34px "Noto Serif KR","Nanum Myeongjo","Malgun Gothic",serif';
+    const lines = wrapText(ctx, displayText, W - 128);
+    const lineHeight = 60;
+
+    // 전체 블록 높이: 여는따옴표 + 간격 + 본문 + 간격 + 닫는따옴표 + 간격 + 출처
+    const quoteSize = 70;
+    const gapAfterOpenQuote = 20;
+    const gapBeforeCloseQuote = 24;
+    const gapBeforeCredit = 36;
+    const creditHeight = bookTitle ? 30 : 0;
+    const totalHeight = quoteSize + gapAfterOpenQuote + (lines.length * lineHeight) + gapBeforeCloseQuote + quoteSize + gapBeforeCredit + creditHeight;
+
+    // 블록 시작 Y (세로 중앙)
+    const blockStartY = (H - totalHeight) / 2;
+    let curY = blockStartY;
+
+    // 여는 따옴표
+    ctx.font = `${quoteSize}px Georgia, serif`;
+    ctx.fillStyle = 'rgba(255,255,255,0.35)';
+    ctx.fillText('"', W / 2, curY + quoteSize * 0.8);
+    curY += quoteSize + gapAfterOpenQuote;
+
+    // 본문
     ctx.font = '600 34px "Noto Serif KR","Nanum Myeongjo","Malgun Gothic",serif';
     ctx.fillStyle = '#ffffff';
-    ctx.textAlign = 'center';
     ctx.shadowColor = 'rgba(0,0,0,0.55)';
     ctx.shadowBlur = 16;
-
-    const lines = wrapText(ctx, displayText, W - 128);
-    const lineHeight = 62;
-    const textStartY = H / 2 - (lines.length * lineHeight) / 2 + 20;
     lines.forEach((line, i) => {
-      ctx.fillText(line, W / 2, textStartY + i * lineHeight);
+      ctx.fillText(line, W / 2, curY + i * lineHeight + lineHeight * 0.7);
     });
-
-    // 5) 닫는 따옴표
+    curY += lines.length * lineHeight + gapBeforeCloseQuote;
     ctx.shadowBlur = 0;
-    ctx.font = '88px Georgia, serif';
-    ctx.fillStyle = 'rgba(255,255,255,0.4)';
-    const closeQuoteY = textStartY + lines.length * lineHeight + 30;
+
+    // 닫는 따옴표
+    ctx.font = `${quoteSize}px Georgia, serif`;
+    ctx.fillStyle = 'rgba(255,255,255,0.35)';
     ctx.save();
-    ctx.translate(W / 2, closeQuoteY);
+    ctx.translate(W / 2, curY + quoteSize * 0.3);
     ctx.rotate(Math.PI);
     ctx.fillText('"', 0, 0);
     ctx.restore();
+    curY += quoteSize + gapBeforeCredit;
 
-    // 6) 책 제목 + 저자
+    // 책 제목 + 저자
     if (bookTitle) {
       ctx.font = '22px "Malgun Gothic", sans-serif';
-      ctx.fillStyle = 'rgba(255,255,255,0.6)';
-      ctx.textAlign = 'center';
+      ctx.fillStyle = 'rgba(255,255,255,0.55)';
       const credit = `— ${bookTitle}${authorName ? ` · ${authorName}` : ''}`;
-      ctx.fillText(credit, W / 2, closeQuoteY + 50);
+      ctx.fillText(credit, W / 2, curY);
     }
 
     return canvas;
