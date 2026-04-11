@@ -34,7 +34,7 @@ const BagModal = ({ inventory, onClose, onUseItem, t = {} }) => {
         <div className="px-5 py-4">
           {isEmpty ? (
             <div className="text-center py-8 space-y-2">
-              <p className="text-4xl">👜</p>
+              <img src="/icons/odok_crying.png" alt="" className="w-20 h-20 mx-auto opacity-80" />
               <p className="text-sm font-bold text-slate-700 dark:text-slate-200">{t.bag_empty_title || '아직 가방이 비어있습니다.'}</p>
               <p className="text-xs text-slate-400 dark:text-slate-500 leading-relaxed">
                 {t.bag_empty_desc || '문방구에서 아이템을 구매해 보세요!'}

@@ -114,8 +114,8 @@ const ArchiveView = ({ books, user, onBookClick, favoriteBookIds = [], t, author
   };
 
   const emptyIcon = activeTab === 'mine'
-    ? <Book className="w-12 h-12 text-slate-200 mx-auto mb-3" />
-    : <Bookmark className="w-12 h-12 text-slate-200 mx-auto mb-3" />;
+    ? <img src="/icons/odok_writing.png" alt="" className="w-24 h-24 mx-auto mb-2 opacity-80" />
+    : <img src="/icons/odok_reading.png" alt="" className="w-24 h-24 mx-auto mb-2 opacity-80" />;
 
   const emptyText = activeTab === 'mine'
     ? (t?.my_books_empty || '아직 작성한 책이 없습니다')
@@ -209,7 +209,7 @@ const ArchiveView = ({ books, user, onBookClick, favoriteBookIds = [], t, author
         <div className="bg-white dark:bg-slate-800 rounded-2xl border border-dashed border-slate-200 dark:border-slate-600 p-12 text-center">
           {searchQuery.trim() ? (
             <>
-              <Search className="w-10 h-10 text-slate-200 mx-auto mb-2" />
+              <img src="/icons/odok_crying.png" alt="" className="w-20 h-20 mx-auto mb-2 opacity-80" />
               <p className="text-slate-400 text-sm font-bold">{t?.no_search_results || '검색 결과가 없습니다'}</p>
             </>
           ) : (

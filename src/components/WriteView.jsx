@@ -893,7 +893,7 @@ const WriteView = ({ user, userProfile, t, onBookGenerated, slotStatus, setView,
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-6">
       <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 w-full max-w-sm shadow-xl space-y-4 animate-in fade-in zoom-in-95 duration-200 text-center">
         <div className="flex items-center justify-center">
-          <RefreshCw className="w-6 h-6 text-orange-500 animate-spin" />
+          <img src="/icons/odok_thinking.png" alt="" className="w-20 h-20 animate-bounce" />
         </div>
         <p className="text-sm text-slate-700 dark:text-slate-200 font-bold">
           {t?.generating_title || "집필 중입니다..."}
@@ -1635,7 +1635,7 @@ const WriteView = ({ user, userProfile, t, onBookGenerated, slotStatus, setView,
       {
         !selectedCategory && (
           <div className="bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-xl p-6 text-center">
-            <Book className="w-12 h-12 text-orange-400 mx-auto mb-3" />
+            <img src="/icons/odok_waving.png" alt="" className="w-20 h-20 mx-auto mb-2" />
             <p className="text-slate-600 dark:text-slate-300 text-sm font-bold">
               {t?.select_category_plz || "위에서 카테고리를 선택해주세요"}
             </p>

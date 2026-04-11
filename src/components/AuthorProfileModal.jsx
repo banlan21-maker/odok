@@ -223,7 +223,7 @@ const AuthorProfileModal = ({
           {/* 책 없을 때 */}
           {authorBooks.length === 0 && profile && (
             <div className="text-center py-10 px-4 space-y-2">
-              <p className="text-3xl">📝</p>
+              <img src="/icons/odok_writing.png" alt="" className="w-20 h-20 mx-auto opacity-80" />
               <p className="text-sm font-bold text-slate-500 dark:text-slate-400">{t.author_modal_no_books || '아직 집필한 작품이 없어요'}</p>
             </div>
           )}

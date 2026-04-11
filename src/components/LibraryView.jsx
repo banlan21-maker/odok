@@ -179,7 +179,7 @@ const LibraryView = ({ books, onBookClick, filter = 'all', onFilterChange, t, au
             </div>
             {sortedBooks.length === 0 ? (
               <div className="bg-white dark:bg-slate-800 rounded-2xl border border-dashed border-slate-200 dark:border-slate-600 p-8 text-center">
-                <Search className="w-10 h-10 text-slate-200 mx-auto mb-2" />
+                <img src="/icons/odok_crying.png" alt="" className="w-20 h-20 mx-auto mb-2 opacity-80" />
                 <p className="text-slate-400 text-sm font-bold">
                   {t?.no_search_results || "검색 결과가 없습니다"}
                 </p>
@@ -269,7 +269,7 @@ const LibraryView = ({ books, onBookClick, filter = 'all', onFilterChange, t, au
       {/* 책 목록 */}
       {sortedBooks.length === 0 ? (
         <div className="bg-white dark:bg-slate-800 rounded-2xl border border-dashed border-slate-200 dark:border-slate-600 p-12 text-center">
-          <Book className="w-12 h-12 text-slate-200 mx-auto mb-3" />
+          <img src="/icons/odok_reading.png" alt="" className="w-24 h-24 mx-auto mb-2 opacity-80" />
           <p className="text-slate-400 text-sm font-bold mb-1">
             {t?.library_empty || "아직 등록된 책이 없습니다"}
           </p>

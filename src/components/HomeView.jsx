@@ -210,6 +210,7 @@ const HomeView = ({
       <div className="space-y-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
+            <img src="/icons/odok_waving.png" alt="" className="w-8 h-8" />
             <h1 className="text-lg font-jua font-black text-slate-800 dark:text-slate-100 leading-tight whitespace-pre-line">
               {t.home_main_title}
             </h1>
@@ -322,7 +323,7 @@ const HomeView = ({
           </div>
         ) : todayBooks.length === 0 ? (
           <div className="bg-white dark:bg-slate-800 rounded-2xl border border-dashed border-slate-200 dark:border-slate-600 p-8 text-center">
-            <BookOpen className="w-10 h-10 text-slate-300 mx-auto mb-3" />
+            <img src="/icons/odok_reading.png" alt="" className="w-20 h-20 mx-auto mb-2 opacity-80" />
             <p className="text-slate-400 text-sm font-bold mb-1">
               {t.home_empty_new}
             </p>

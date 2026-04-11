@@ -21,7 +21,7 @@ const ChallengeResultModal = ({ result, monthKey, reads, goal, onClose, t = {} }
       <div className="w-full max-w-sm bg-white dark:bg-slate-800 rounded-3xl shadow-2xl overflow-hidden">
         {/* 상단 배경 */}
         <div className={`px-6 pt-8 pb-6 text-center ${isSuccess ? 'bg-gradient-to-b from-emerald-50 to-white dark:from-emerald-950/30 dark:to-slate-800' : 'bg-gradient-to-b from-orange-50 to-white dark:from-orange-950/30 dark:to-slate-800'}`}>
-          <div className="text-6xl mb-3">{isSuccess ? '🎉' : '📚'}</div>
+          <img src={isSuccess ? "/icons/odok_thumbsup.png" : "/icons/odok_reading.png"} alt="" className="w-24 h-24 mx-auto mb-1" />
           <p className="text-[11px] font-bold text-slate-400 dark:text-slate-500 mb-1">{(t.challenge_month_label || '{month} 챌린지 결산').replace('{month}', monthLabel)}</p>
           <h2 className={`text-xl font-black ${isSuccess ? 'text-emerald-600 dark:text-emerald-400' : 'text-orange-500'}`}>
             {isSuccess ? (t.challenge_success || '챌린지 달성!') : (t.challenge_fail || '아쉽지만 다음 달에!')}

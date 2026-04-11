@@ -730,7 +730,7 @@ const BookDetail = ({ book, onClose, onBookUpdate, fontSize = 'text-base', user,
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-6">
       <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 w-full max-w-sm shadow-xl space-y-4 animate-in fade-in zoom-in-95 duration-200 text-center">
         <div className="flex items-center justify-center">
-          <RefreshCw className="w-6 h-6 text-orange-500 animate-spin" />
+          <img src="/icons/odok_thinking.png" alt="" className="w-20 h-20 animate-bounce" />
         </div>
         <p className="text-sm text-slate-700 dark:text-slate-200 font-bold">
           집필 중입니다…

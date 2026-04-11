@@ -137,7 +137,7 @@ const NotificationModal = ({ notifications = [], userId, mailboxItems = [], onCl
           <div className="flex-1 overflow-y-auto scrollbar-hide">
             {notifications.length === 0 ? (
               <div className="py-16 text-center">
-                <Bell className="w-10 h-10 text-slate-200 dark:text-slate-600 mx-auto mb-3" />
+                <img src="/icons/odok_waving.png" alt="" className="w-20 h-20 mx-auto mb-2 opacity-80" />
                 <p className="text-sm text-slate-400 dark:text-slate-500 font-bold">{t.notification_empty || '아직 알림이 없어요'}</p>
               </div>
             ) : (

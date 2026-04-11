@@ -120,12 +120,7 @@ const PremiumCoverModal = ({
         <div className="bg-white dark:bg-slate-800 rounded-2xl p-8 w-full max-w-sm shadow-xl space-y-6 text-center">
           <div className="flex flex-col items-center gap-3">
             <div className="relative w-20 h-20">
-              <div className="w-20 h-20 rounded-full bg-gradient-to-br from-orange-100 to-purple-100 flex items-center justify-center">
-                <span className="text-4xl animate-bounce">🎨</span>
-              </div>
-              <div className="absolute -top-1 -right-1">
-                <RefreshCw className="w-5 h-5 text-orange-400 animate-spin" />
-              </div>
+              <img src="/icons/odok_thinking.png" alt="" className="w-20 h-20 animate-bounce" />
             </div>
             <div>
               <p className="text-base font-black text-slate-800 dark:text-slate-100">AI 표지 생성 중</p>

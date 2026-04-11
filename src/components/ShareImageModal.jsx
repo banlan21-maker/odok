@@ -139,6 +139,23 @@ const ShareImageModal = ({ selectedText, bookTitle, authorName, onClose, t = {} 
       ctx.fillText(credit, W / 2, curY);
     }
 
+    // 하단 브랜딩: 오독오독 + 태그라인
+    ctx.textAlign = 'center';
+    ctx.shadowColor = 'rgba(0,0,0,0.4)';
+    ctx.shadowBlur = 12;
+
+    // 앱 이름
+    ctx.font = '600 28px "Noto Serif KR","Nanum Myeongjo",Georgia,serif';
+    ctx.fillStyle = 'rgba(255,255,255,0.7)';
+    ctx.fillText('오독오독', W / 2, H - 72);
+
+    // 태그라인
+    ctx.font = '300 16px "Noto Serif KR","Nanum Myeongjo","Malgun Gothic",sans-serif';
+    ctx.fillStyle = 'rgba(255,255,255,0.5)';
+    ctx.fillText('당신의 상상, AI가 써드립니다', W / 2, H - 44);
+
+    ctx.shadowBlur = 0;
+
     return canvas;
   };
 
