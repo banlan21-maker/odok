@@ -193,6 +193,7 @@ const WriteView = ({ user, userProfile, t, onBookGenerated, slotStatus, setView,
   const [keywords, setKeywords] = useState(''); // 소설류 키워드
   const [bookTitle, setBookTitle] = useState(''); // 사용자 입력 제목
   const [selectedFont, setSelectedFont] = useState('default'); // 본문 폰트
+  const [styleMode, setStyleMode] = useState(null); // 'webnovel' | 'literary' | 'custom' | null
   const [endingStyle, setEndingStyle] = useState(''); // 소설 결말 스타일
   const [selectedTone, setSelectedTone] = useState(''); // 비문학 문체
   const [selectedMood, setSelectedMood] = useState(''); // 소설 분위기
@@ -434,6 +435,7 @@ const WriteView = ({ user, userProfile, t, onBookGenerated, slotStatus, setView,
     setKeywords('');
     setBookTitle('');
     setSelectedFont('default');
+    setStyleMode(null);
     setEndingStyle('');
     setSelectedTone('');
     setSelectedMood('');
@@ -1325,9 +1327,9 @@ const WriteView = ({ user, userProfile, t, onBookGenerated, slotStatus, setView,
                   </label>
                   <div className="grid grid-cols-3 gap-2">
                     <button
-                      onClick={() => { setSelectedMood('tension'); setSelectedPOV('first_person'); setSelectedSpeechTone('friendly'); setSelectedDialogueRatio('dialogue_heavy'); }}
+                      onClick={() => { setStyleMode('webnovel'); setSelectedMood('tension'); setSelectedPOV('first_person'); setSelectedSpeechTone('friendly'); setSelectedDialogueRatio('dialogue_heavy'); }}
                       className={`py-2.5 px-2 rounded-xl text-[11px] font-black border-2 transition-all text-center ${
-                        selectedPOV === 'first_person' && selectedSpeechTone === 'friendly' && selectedDialogueRatio === 'dialogue_heavy'
+                        styleMode === 'webnovel'
                           ? 'border-orange-500 bg-orange-50 dark:bg-orange-900/20 text-orange-600' : 'border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300'
                       }`}
                     >
@@ -1335,9 +1337,9 @@ const WriteView = ({ user, userProfile, t, onBookGenerated, slotStatus, setView,
                       <p className="text-[9px] font-normal text-slate-400 mt-0.5">1인칭·친근·대화중심</p>
                     </button>
                     <button
-                      onClick={() => { setSelectedMood('lyrical'); setSelectedPOV('third_limited'); setSelectedSpeechTone('formal'); setSelectedDialogueRatio('description_heavy'); }}
+                      onClick={() => { setStyleMode('literary'); setSelectedMood('lyrical'); setSelectedPOV('third_limited'); setSelectedSpeechTone('formal'); setSelectedDialogueRatio('description_heavy'); }}
                       className={`py-2.5 px-2 rounded-xl text-[11px] font-black border-2 transition-all text-center ${
-                        selectedPOV === 'third_limited' && selectedSpeechTone === 'formal' && selectedDialogueRatio === 'description_heavy'
+                        styleMode === 'literary'
                           ? 'border-orange-500 bg-orange-50 dark:bg-orange-900/20 text-orange-600' : 'border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300'
                       }`}
                     >
@@ -1345,9 +1347,9 @@ const WriteView = ({ user, userProfile, t, onBookGenerated, slotStatus, setView,
                       <p className="text-[9px] font-normal text-slate-400 mt-0.5">3인칭·단정·묘사중심</p>
                     </button>
                     <button
-                      onClick={() => { setSelectedMood(''); setSelectedPOV(''); setSelectedSpeechTone(''); setSelectedDialogueRatio(''); }}
+                      onClick={() => { setStyleMode('custom'); setSelectedMood(''); setSelectedPOV(''); setSelectedSpeechTone(''); setSelectedDialogueRatio(''); }}
                       className={`py-2.5 px-2 rounded-xl text-[11px] font-black border-2 transition-all text-center ${
-                        !selectedPOV && !selectedSpeechTone && !selectedDialogueRatio
+                        styleMode === 'custom'
                           ? 'border-orange-500 bg-orange-50 dark:bg-orange-900/20 text-orange-600' : 'border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300'
                       }`}
                     >
@@ -1359,7 +1361,7 @@ const WriteView = ({ user, userProfile, t, onBookGenerated, slotStatus, setView,
               )}
 
               {/* 4. 직접 설정 모드 — 칩 버튼 */}
-              {selectedGenre && selectedCategory?.isNovel && !selectedPOV && !selectedSpeechTone && !selectedDialogueRatio && (
+              {selectedGenre && selectedCategory?.isNovel && styleMode === 'custom' && (
                 <div className="space-y-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl p-4 border border-slate-200 dark:border-slate-700">
                   {/* 분위기 */}
                   <div className="space-y-1.5">
