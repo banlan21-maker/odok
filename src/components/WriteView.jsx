@@ -7,6 +7,7 @@ import { PenTool, RefreshCw, Book, Edit2, Lock, Droplets, Video, Check, X } from
 import { generateBook } from '../utils/aiService';
 import { getExtraWriteInkCost, isKeywordRefreshFree, getLevelFromXp } from '../utils/levelUtils';
 import { showRewardVideoAd } from '../utils/admobService';
+import { BOOK_FONTS } from '../utils/fontOptions';
 
 // 비문학 키워드 은행
 const ESSAY_KEYWORDS = [
@@ -191,6 +192,7 @@ const WriteView = ({ user, userProfile, t, onBookGenerated, slotStatus, setView,
   const [selectedTopic, setSelectedTopic] = useState(null); // 비문학 주제
   const [keywords, setKeywords] = useState(''); // 소설류 키워드
   const [bookTitle, setBookTitle] = useState(''); // 사용자 입력 제목
+  const [selectedFont, setSelectedFont] = useState('default'); // 본문 폰트
   const [endingStyle, setEndingStyle] = useState(''); // 소설 결말 스타일
   const [selectedTone, setSelectedTone] = useState(''); // 비문학 문체
   const [selectedMood, setSelectedMood] = useState(''); // 소설 분위기
@@ -431,6 +433,7 @@ const WriteView = ({ user, userProfile, t, onBookGenerated, slotStatus, setView,
     setSelectedTopic(null);
     setKeywords('');
     setBookTitle('');
+    setSelectedFont('default');
     setEndingStyle('');
     setSelectedTone('');
     setSelectedMood('');
@@ -680,7 +683,8 @@ const WriteView = ({ user, userProfile, t, onBookGenerated, slotStatus, setView,
           category: selectedCategory.id,
           subCategory: null,
           isSeries: false,
-          keywords: selectedTopic
+          keywords: selectedTopic,
+          fontFamily: selectedFont
         }, false, { skipDailyCheck: true, skipNavigate: isGeneratingHidden, skipInkDeduct: isAdReward });
         if (isGeneratingHidden) {
           await sendGenerationCompleteNotification(result.title || bookTitle);
@@ -817,7 +821,8 @@ const WriteView = ({ user, userProfile, t, onBookGenerated, slotStatus, setView,
           selectedMood: selectedMood,
           selectedPOV: selectedPOV,
           selectedSpeechTone: selectedSpeechTone,
-          selectedDialogueRatio: selectedDialogueRatio
+          selectedDialogueRatio: selectedDialogueRatio,
+          fontFamily: selectedFont
         }, false, { skipDailyCheck: true, skipNavigate: isGeneratingHidden, skipInkDeduct: isAdReward });
         if (isGeneratingHidden) {
           await sendGenerationCompleteNotification(result.title || bookTitle);
@@ -1150,6 +1155,29 @@ const WriteView = ({ user, userProfile, t, onBookGenerated, slotStatus, setView,
               {selectedTopic && (
                 <div className="space-y-2">
                   <label className="text-sm font-bold text-slate-700 dark:text-slate-200">
+                    {t?.select_font || "본문 폰트"}
+                  </label>
+                  <div className="flex gap-1.5 overflow-x-auto pb-1">
+                    {BOOK_FONTS.map(f => (
+                      <button
+                        key={f.id}
+                        onClick={() => setSelectedFont(f.id)}
+                        className={`shrink-0 px-3 py-2 rounded-xl text-xs font-bold border transition-all ${
+                          selectedFont === f.id
+                            ? 'bg-slate-800 dark:bg-slate-200 text-white dark:text-slate-900 border-slate-800'
+                            : 'bg-slate-50 dark:bg-slate-700 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-600'
+                        }`}
+                        style={{ fontFamily: f.family }}
+                      >
+                        {f.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {selectedTopic && (
+                <div className="space-y-2">
+                  <label className="text-sm font-bold text-slate-700 dark:text-slate-200">
                     {t?.select_style || "스타일 선택"} <span className="text-orange-500">*</span>
                   </label>
                   <select
@@ -1371,6 +1399,31 @@ const WriteView = ({ user, userProfile, t, onBookGenerated, slotStatus, setView,
                     <div className="text-xs text-slate-400 dark:text-slate-500 font-bold text-right">
                       {bookTitle.length}/15
                     </div>
+                  </div>
+                </div>
+              )}
+
+              {/* 본문 폰트 선택 */}
+              {selectedGenre && (
+                <div className="space-y-2">
+                  <label className="text-sm font-bold text-slate-700 dark:text-slate-200">
+                    {t?.select_font || "본문 폰트"}
+                  </label>
+                  <div className="flex gap-1.5 overflow-x-auto pb-1">
+                    {BOOK_FONTS.map(f => (
+                      <button
+                        key={f.id}
+                        onClick={() => setSelectedFont(f.id)}
+                        className={`shrink-0 px-3 py-2 rounded-xl text-xs font-bold border transition-all ${
+                          selectedFont === f.id
+                            ? 'bg-slate-800 dark:bg-slate-200 text-white dark:text-slate-900 border-slate-800'
+                            : 'bg-slate-50 dark:bg-slate-700 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-600'
+                        }`}
+                        style={{ fontFamily: f.family }}
+                      >
+                        {f.label}
+                      </button>
+                    ))}
                   </div>
                 </div>
               )}

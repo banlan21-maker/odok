@@ -16,6 +16,7 @@ import { getTodayDateKey } from '../utils/dateUtils';
 import { getExtraWriteInkCost, getFreeWriteRewardInk, canDonate, getLevelFromXp, getXpPerInk } from '../utils/levelUtils';
 import { formatGenreTag } from '../utils/formatGenre';
 import { useReadingProgress } from '../hooks/useReadingProgress';
+import { getFontFamily } from '../utils/fontOptions';
 import ShareImageModal from './ShareImageModal';
 
 const DAILY_WRITE_LIMIT = 2;
@@ -943,7 +944,7 @@ const BookDetail = ({ book, onClose, onBookUpdate, fontSize = 'text-base', user,
           ) : (
             <div className="prose prose-slate max-w-none mb-6">
               {/* 수정 5: fontSize를 동적으로 적용 */}
-              <div className={`${fontSizeClass} leading-relaxed text-slate-700 dark:text-slate-200 whitespace-pre-line`}>
+              <div className={`${fontSizeClass} leading-relaxed text-slate-700 dark:text-slate-200 whitespace-pre-line`} style={book.fontFamily && book.fontFamily !== 'default' ? { fontFamily: getFontFamily(book.fontFamily) } : undefined}>
                 {displayContent || book.summary || (t?.no_content || '내용이 없습니다.')}
               </div>
             </div>

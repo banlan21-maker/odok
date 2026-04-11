@@ -329,7 +329,7 @@ const App = () => {
 
   return (
     <div className={`${darkMode ? 'dark' : ''} bg-gray-100 dark:bg-slate-950 min-h-screen flex justify-center items-center`}>
-      <style>{`@import url('https://fonts.googleapis.com/css2?family=Jua&display=swap'); .font-jua { font-family: 'Jua', sans-serif; } .scrollbar-hide::-webkit-scrollbar { display: none; }`}</style>
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=Jua&family=Noto+Serif+KR:wght@400;700&family=Nanum+Myeongjo:wght@400;700;800&family=Noto+Sans+KR:wght@400;700&family=Gaegu:wght@400;700&display=swap'); .font-jua { font-family: 'Jua', sans-serif; } .scrollbar-hide::-webkit-scrollbar { display: none; }`}</style>
       <div className="w-full max-w-md bg-slate-50 dark:bg-slate-900 h-[100dvh] flex flex-col shadow-2xl relative overflow-hidden text-slate-900 dark:text-slate-50 font-sans selection:bg-orange-200" style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}>
 
         {/* In-App Browser Warning */}

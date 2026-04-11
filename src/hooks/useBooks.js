@@ -440,7 +440,8 @@ export const useBooks = ({ user, userProfile, setError, deductInk, setShowInkCon
                 likes: 0,
                 favorites: 0,
                 completions: 0,
-                isSeries: isSeries
+                isSeries: isSeries,
+                fontFamily: bookData.fontFamily || 'default'
             };
 
             if (bookData.steps) bookDocumentData.steps = bookData.steps;
