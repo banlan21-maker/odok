@@ -2050,3 +2050,95 @@ exports.onFollowCreated = onDocumentCreated(
     });
   }
 );
+
+// ─── 트리거 3: 새 책 발행 → 팔로워들에게 알림 ─────────────────────────────
+exports.onBookCreated = onDocumentCreated(
+  {
+    document: "artifacts/{appId}/books/{bookId}",
+    region: REGION,
+  },
+  async (event) => {
+    const book = event.data?.data();
+    if (!book) return;
+
+    const { authorId, title, isAnonymous, authorNickname } = book;
+    if (!authorId) return;
+
+    // 작가의 팔로워 목록 조회
+    const followersSnap = await adminDb
+      .collection("artifacts").doc(event.params.appId)
+      .collection("users").doc(authorId)
+      .collection("followers")
+      .get();
+
+    if (followersSnap.empty) return;
+
+    const authorName = isAnonymous ? "익명" : (authorNickname || "누군가");
+    const shortTitle = title?.length > 20 ? title.slice(0, 20) + "…" : (title || "새 책");
+
+    // 팔로워 각각에게 알림 (최대 50명)
+    const followers = followersSnap.docs.slice(0, 50);
+    const promises = followers.map((doc) =>
+      sendPushToUser(doc.id, {
+        title: `📚 ${authorName}님의 새 책`,
+        body: `"${shortTitle}" — 지금 읽어보세요!`,
+        data: { type: "new_book", bookId: event.params.bookId, senderName: authorName, bookTitle: shortTitle },
+      })
+    );
+    await Promise.allSettled(promises);
+
+    logger.info(`[NewBook] ${authorName}의 "${shortTitle}" → ${followers.length}명에게 알림`);
+  }
+);
+
+// ─── 시리즈 새 에피소드 → 즐겨찾기 유저들에게 알림 ──────────────────────────
+exports.notifySeriesEpisode = onCall(
+  { region: REGION, maxInstances: 10 },
+  async (request) => {
+    if (!request.auth) throw new HttpsError("unauthenticated", "로그인이 필요합니다.");
+
+    const { bookId, bookTitle, episodeNumber, isFinale } = request.data;
+    if (!bookId || !bookTitle) throw new HttpsError("invalid-argument", "필수 파라미터 누락");
+
+    const callerUid = request.auth.uid;
+
+    // 이 책을 즐겨찾기한 유저 목록 조회
+    const favSnap = await adminDb
+      .collection("artifacts").doc(APP_ID)
+      .collection("public").doc("data")
+      .collection("book_favorites")
+      .where("bookId", "==", bookId)
+      .get();
+
+    if (favSnap.empty) return { notified: 0 };
+
+    // 작가 닉네임
+    const profileDoc = await adminDb
+      .collection("artifacts").doc(APP_ID)
+      .collection("users").doc(callerUid)
+      .collection("profile").doc("info")
+      .get();
+    const authorName = profileDoc.exists ? (profileDoc.data()?.nickname || "작가") : "작가";
+
+    const shortTitle = bookTitle.length > 20 ? bookTitle.slice(0, 20) + "…" : bookTitle;
+    const epLabel = isFinale ? "[완결]" : `${episodeNumber}화`;
+
+    // 즐겨찾기한 유저에게 알림 (본인 제외, 최대 100명)
+    const targets = favSnap.docs
+      .map(d => d.data().userId)
+      .filter(uid => uid && uid !== callerUid);
+
+    const unique = [...new Set(targets)].slice(0, 100);
+    const promises = unique.map(uid =>
+      sendPushToUser(uid, {
+        title: `📖 "${shortTitle}" ${epLabel} 업데이트`,
+        body: `${authorName}님이 새 에피소드를 올렸어요!`,
+        data: { type: "new_episode", bookId, senderName: authorName, bookTitle: shortTitle },
+      })
+    );
+    await Promise.allSettled(promises);
+
+    logger.info(`[SeriesEpisode] "${shortTitle}" ${epLabel} → ${unique.length}명 알림`);
+    return { notified: unique.length };
+  }
+);

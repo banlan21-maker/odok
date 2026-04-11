@@ -65,7 +65,7 @@ import { doc, getDoc, setDoc } from 'firebase/firestore';
 const rawAppId = typeof __app_id !== 'undefined' ? __app_id : 'odok-app-default';
 const appId = rawAppId.replace(/\//g, '_');
 
-const APP_VERSION = "2.1.1";
+const APP_VERSION = "2.1.2";
 
 const App = () => {
 

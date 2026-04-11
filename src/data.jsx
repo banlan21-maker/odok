@@ -794,6 +794,8 @@ export const T = {
     notification_like: "님이 좋아요를 눌렀어요",
     notification_follow: "님이 팔로우했어요",
     notification_gift: "님이 선물을 보냈어요",
+    notification_new_book: "님이 새 책을 올렸어요",
+    notification_new_episode: "님이 새 에피소드를 올렸어요",
 
     // ProfileView - 독서 통계
     reading_stats_title: "독서 통계",
@@ -1608,6 +1610,8 @@ export const T = {
     notification_like: " liked your book",
     notification_follow: " followed you",
     notification_gift: " sent you a gift",
+    notification_new_book: " published a new book",
+    notification_new_episode: " posted a new episode",
 
     // ProfileView - Reading Stats
     reading_stats_title: "Reading Stats",

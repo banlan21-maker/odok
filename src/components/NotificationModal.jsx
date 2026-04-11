@@ -1,7 +1,7 @@
 // src/components/NotificationModal.jsx
 // 인앱 알림 내역 모달
 import React from 'react';
-import { X, MessageCircle, Heart, UserPlus, Gift, Bell } from 'lucide-react';
+import { X, MessageCircle, Heart, UserPlus, Gift, Bell, BookOpen } from 'lucide-react';
 import { doc, updateDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 
@@ -13,6 +13,7 @@ const ICON_MAP = {
   like: { icon: Heart, color: 'text-red-500', bg: 'bg-red-50 dark:bg-red-900/30' },
   follow: { icon: UserPlus, color: 'text-green-500', bg: 'bg-green-50 dark:bg-green-900/30' },
   gift: { icon: Gift, color: 'text-orange-500', bg: 'bg-orange-50 dark:bg-orange-900/30' },
+  new_book: { icon: BookOpen, color: 'text-purple-500', bg: 'bg-purple-50 dark:bg-purple-900/30' },
   default: { icon: Bell, color: 'text-slate-500', bg: 'bg-slate-50 dark:bg-slate-700' },
 };
 
@@ -91,6 +92,8 @@ const NotificationModal = ({ notifications, userId, onClose, t = {} }) => {
                         {n.type === 'comment' && <>{t.notification_comment || '님이 댓글을 남겼어요'}</>}
                         {n.type === 'like' && <>{t.notification_like || '님이 좋아요를 눌렀어요'}</>}
                         {n.type === 'follow' && <>{t.notification_follow || '님이 팔로우했어요'}</>}
+                        {n.type === 'new_book' && <>{t.notification_new_book || '님이 새 책을 올렸어요'}</>}
+                        {n.type === 'new_episode' && <>{t.notification_new_episode || '님이 새 에피소드를 올렸어요'}</>}
                         {n.type === 'gift' && <>{t.notification_gift || '님이 선물을 보냈어요'}</>}
                         {!['comment', 'like', 'follow', 'gift'].includes(n.type) && (n.message || '')}
                       </p>

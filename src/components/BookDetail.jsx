@@ -148,8 +148,9 @@ const BookDetail = ({ book, onClose, onBookUpdate, fontSize = 'text-base', user,
     const textToShare = selMenuInfo?.text || savedTextRef.current;
     if (!textToShare) return;
     clearTimeout(clearMenuTimerRef.current);
-    setShareText(textToShare);
     closeSelMenu();
+    // 50ms 지연: 빠른 탭 시 click 이벤트가 모달 backdrop에 전달되는 것 방지
+    setTimeout(() => setShareText(textToShare), 50);
   };
 
   // 완독(95%+) 감지 시 진행률 삭제
@@ -662,6 +663,14 @@ const BookDetail = ({ book, onClose, onBookUpdate, fontSize = 'text-base', user,
         lastBookCreatedDate: todayKey,
         ink: Math.min(INK_MAX, currentInk + rewardInk)
       });
+
+      // 즐겨찾기 유저에게 새 에피소드 알림
+      httpsCallable(functions, 'notifySeriesEpisode')({
+        bookId: book.id,
+        bookTitle: book.title,
+        episodeNumber: episodes.length + 1,
+        isFinale: result.isFinale,
+      }).catch(() => {}); // 알림 실패는 무시
 
       setShowSeriesCompleteModal({ isFinale: result.isFinale });
     } catch (err) {

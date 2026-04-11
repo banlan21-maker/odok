@@ -119,13 +119,32 @@ export const useInkSystem = ({ user, userProfile, setView, setError, setSelected
     }
   };
 
-  // 잉크 확인 후 책 열기
+  // 잉크 확인 후 책 열기 (24시간 이내 재방문은 무료)
+  const UNLOCK_DURATION_MS = 24 * 60 * 60 * 1000; // 24시간
+
   const openBookWithInkCheck = async (book) => {
+    // 본인 책은 무조건 무료
     if (book.authorId === user?.uid) {
       setSelectedBook(book);
       setView('book_detail');
       return;
     }
+
+    // 이미 해금된 책인지 확인 (24시간 이내)
+    try {
+      const unlockedRef = doc(db, 'artifacts', appId, 'users', user.uid, 'unlocked_stories', book.id);
+      const unlockedSnap = await getDoc(unlockedRef);
+      if (unlockedSnap.exists()) {
+        const { unlockedAt } = unlockedSnap.data();
+        const elapsed = Date.now() - new Date(unlockedAt).getTime();
+        if (elapsed < UNLOCK_DURATION_MS) {
+          // 24시간 이내 → 무료로 열기
+          setSelectedBook(book);
+          setView('book_detail');
+          return;
+        }
+      }
+    } catch (e) { /* 조회 실패 시 기존 흐름 진행 */ }
 
     const requiredInk = getReadInkCost(getLevelFromXp(userProfile?.xp ?? 0));
     if (requiredInk === 0) {
