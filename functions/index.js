@@ -42,8 +42,11 @@ const NOVEL_BASE_GUIDE = [
   "[CRITICAL RULE] 소설은 중간에 리셋하거나 앞 내용을 요약 반복하지 말고, 하나의 타임라인으로 쭉 이어가라.",
   "[CRITICAL RULE] 반드시 한국어만 사용하라. 러시아어, 한자, 일본어, 아랍어 등 그 밖의 언어를 절대 사용하지 마라. 오직 한글, 공백, 기본 문장부호, 숫자만 사용하라.",
   "당신은 독자를 사로잡는 베스트셀러 작가다. 매 문장이 다음 문장을 읽게 만드는 흡인력을 가져야 한다.",
-  "요약이 아닌 장면(Scene) 위주로 서술하라. 감각적 묘사(시각·청각·촉각)와 인물의 감정을 생생하게 보여주어라.",
-  "인위적이거나 너무 뻔한 전개는 피하라. 예상을 빗나가는 반전과 자연스러운 개연성을 동시에 갖춰라."
+  "요약이 아닌 장면(Scene) 위주로 서술하라. 감각적 묘사(시각·청각·촉각·후각)와 인물의 감정을 생생하게 보여주어라.",
+  "[Show, Don't Tell] '그는 슬펐다', '그녀는 화가 났다' 같은 감정 직접 서술을 절대 하지 마라. 대신 행동·표정·신체 반응으로 보여줘라. 예: '주먹을 쥔 손이 하얗게 질렸다', '목소리가 가늘게 떨렸다', '시선을 피하며 입술을 깨물었다'. 독자가 감정을 스스로 느끼게 하라.",
+  "[대화문 품질] 대화는 캐릭터의 성격·나이·직업이 묻어나게 써라. 모든 캐릭터가 같은 말투로 말하면 안 된다. 대화 사이에 행동 묘사(비트)를 넣어 장면감을 살려라. 예: '\"괜찮아.\" 그는 고개를 돌리며 말했다. 손끝이 미세하게 떨리고 있었다.'",
+  "인위적이거나 너무 뻔한 전개는 피하라. 예상을 빗나가는 반전과 자연스러운 개연성을 동시에 갖춰라.",
+  "[금지] '마치 ~처럼', '~인 듯 했다', '~할 수밖에 없었다' 같은 상투적 표현의 남용을 피하라. 신선한 비유와 구체적 묘사를 사용하라."
 ].join(" ");
 
 // 시리즈 연속 집필 시 캐릭터·설정 일관성 유지 지침 (시리즈 전용)
@@ -124,7 +127,9 @@ const NONFICTION_BASE_GUIDE = [
   "당신은 해당 분야의 최고 전문가이자 탁월한 글쓴이다.",
   "입력된 키워드와 제목의 분위기를 정확히 반영하되, 독자가 공감할 수 있는 구체적 사례와 통찰을 담아라.",
   "교과서 같은 딱딱한 설명이 아닌, 독자에게 말을 거는 듯한 살아있는 문체로 써라.",
-  "공백 포함 약 3,000자 내외로 핵심 메시지를 명확히 전달하라."
+  "[구체성] 추상적 조언 대신 구체적 장면·사례·비유를 사용하라. '노력하면 된다' 대신 실제 상황에서의 행동과 변화를 묘사하라. 독자가 '아, 나도 그랬는데'라고 공감할 수 있는 디테일을 넣어라.",
+  "[흐름] '첫째', '둘째', '결론적으로' 같은 목차식 나열을 피하라. 하나의 이야기가 흐르듯 자연스럽게 전개하라. 문단과 문단 사이에 논리적 다리를 놓아라.",
+  "공백 포함 약 4,000자 내외로 핵심 메시지를 명확히 전달하라."
 ].join(" ");
 
 const NONFICTION_CATEGORY_STYLES = {
@@ -245,9 +250,9 @@ function buildSpeechToneInstruction(selectedSpeechTone) {
   const tone = (selectedSpeechTone || "").toString().trim();
   if (!tone) return null;
   const instructions = {
-    friendly: "문장 끝맺음(어미)을 반드시 친근한 말투로 통일하라. '-했어', '-였어', '-였지', '-하네', '-하지' 등 구어체 어미를 일관되게 사용하라. 전혀 다른 말투(했다, 합니다 등)가 섞이지 않도록 주의하라.",
-    formal: "문장 끝맺음(어미)을 반드시 단정한 서술형으로 통일하라. '-했다', '-하였다', '-였다' 등 과거형 서술어를 일관되게 사용하라. 구어체(~했어)나 정중체(~했습니다)가 섞이지 않도록 주의하라.",
-    polite: "문장 끝맺음(어미)을 반드시 정중한 말투로 통일하라. '-했습니다', '-입니다', '-습니다', '-세요' 등 존댓말 어미를 일관되게 사용하라. 전혀 다른 말투(했어, 했다 등)가 섞이지 않도록 주의하라."
+    friendly: "전체 톤을 친근하고 따뜻한 대화체로 통일하라. 어미는 '-했어', '-였지', '-하네', '-거든' 등 구어체를 일관 사용하라. 서술도 딱딱한 설명이 아닌, 친구에게 이야기하듯 부드럽고 감성적인 표현을 쓰라. 문장 길이는 짧고 리듬감 있게. 절대 '-했다', '-합니다' 같은 다른 말투를 섞지 마라.",
+    formal: "전체 톤을 절제되고 단정한 문학체로 통일하라. 어미는 '-했다', '-였다', '-이었다' 등 과거형 서술어를 일관 사용하라. 군더더기 없는 간결한 문장, 감정을 직접 드러내기보다 행간에 숨기는 절제된 문체를 유지하라. 절대 '-했어', '-합니다' 같은 다른 말투를 섞지 마라.",
+    polite: "전체 톤을 정중하고 격식 있는 존대체로 통일하라. 어미는 '-했습니다', '-입니다', '-세요' 등 존댓말을 일관 사용하라. 독자를 존중하며 안내하는 듯한 품위 있는 어조를 유지하라. 절대 '-했어', '-했다' 같은 다른 말투를 섞지 마라."
   };
   return instructions[tone] ? `[말투/문체 Guideline - CRITICAL] ${instructions[tone]}` : null;
 }
@@ -275,13 +280,13 @@ function buildSystemPrompt({ isNovel, category, subCategory, genre, isSeries = f
     // episodeType: null(단편/1화), 'continue'(이어쓰기), 'finalize'(완결)
     let structureGuide;
     if (episodeType === 'finalize') {
-      structureGuide = "이번 화는 완결 화다. 지금까지 쌓아온 모든 갈등·복선을 빠짐없이 회수하며, 각 등장인물의 변화와 결말을 충분히 보여주어라. 공백 포함 약 3,000자 이상의 묵직하고 완성도 높은 결말을 작성하라. 단계 구분 없이 하나의 흐름으로 서술하라.";
+      structureGuide = "이번 화는 완결 화다. 지금까지 쌓아온 모든 갈등·복선을 빠짐없이 회수하며, 각 등장인물의 변화와 결말을 충분히 보여주어라. 공백 포함 약 5,000자 이상의 묵직하고 완성도 높은 결말을 작성하라. 단계 구분 없이 하나의 흐름으로 서술하라. 서두르지 말고, 인물들의 감정과 후일담을 충분히 담아라.";
     } else if (episodeType === 'continue') {
-      structureGuide = "이번 화는 연재 중인 에피소드다. 직전 화의 마지막 장면에서 자연스럽게 이어 공백 포함 약 3,000자 이상을 작성하라. 단계 구분 없이 하나의 흐름으로 서술하고, 마지막 문장은 독자가 다음 화를 기다리게 만드는 절단신공(Cliffhanger)으로 끝내라.";
+      structureGuide = "이번 화는 연재 중인 에피소드다. 직전 화의 마지막 장면에서 자연스럽게 이어 공백 포함 약 5,000자 이상을 작성하라. 단계 구분 없이 하나의 흐름으로 서술하고, 마지막은 반드시 절단신공(Cliffhanger)으로 끝내라. 절단신공 유형: (1)위기 직면—주인공이 최악의 상황에 놓인 순간에서 끊기, (2)충격 반전—예상 못한 인물 등장이나 진실 폭로 직후 끊기, (3)선택의 기로—두 갈래 중 하나를 골라야 하는 순간에서 끊기, (4)시한폭탄—제한 시간이 다가오는 긴박감 속에서 끊기. 이 중 장면에 맞는 유형을 선택하라.";
     } else if (isSeries) {
-      structureGuide = "이번 화는 시리즈의 첫 번째 화다. [시작-사건과 훅] 2단계 구조로 공백 포함 약 3,000자 내외로 작성하라. 독자가 다음 화를 기다리게 만드는 강렬한 훅(Hook)으로 끝맺어라.";
+      structureGuide = "이번 화는 시리즈의 첫 번째 화다. [시작-사건과 훅] 2단계 구조로 공백 포함 약 5,000자 내외로 작성하라. 마지막은 독자가 다음 화를 참을 수 없게 만드는 강렬한 훅(Hook)으로 끝맺어라. 훅 유형: 주인공이 모험/위기에 발을 딛는 순간, 예상 못한 진실이 드러나는 순간, 또는 운명적 선택을 해야 하는 순간에서 끊어라.";
     } else {
-      structureGuide = "단편 소설로, [발단-전개-위기-절정-결말] 5단계 구조로 공백 포함 약 4,000자 내외로, 단계별 비율에 맞춰 작성하라. 절정에서는 갈등을 최고조로 끌어올리며, 전체 분량의 약 30%를 할애한다.";
+      structureGuide = "단편 소설로, [발단-전개-위기-절정-결말] 5단계 구조로 공백 포함 약 6,000자 내외로, 단계별 비율에 맞춰 작성하라. 절정에서는 갈등을 최고조로 끌어올리며, 전체 분량의 약 30%를 할애한다. 분량이 많은 만큼 장면 묘사와 인물 심리를 충분히 깊게 파고들어라.";
     }
     return [
       `당신은 ${genre || "소설"} 분야의 최고 작가입니다.`,
@@ -343,7 +348,7 @@ function buildStepPrompt({
     `Task: 이번에는 "${currentStep.name}" 단계를 작성하세요.`,
     `가이드라인: ${currentStep.instruction}`,
     isNovel
-      ? "직접 설명하지 말고 장면으로 보여주세요. 대화문과 감각적 묘사(시각·청각·촉각)를 적극 활용하세요."
+      ? "직접 설명하지 말고 장면으로 보여주세요. 대화문과 감각적 묘사(시각·청각·촉각·후각)를 적극 활용하세요."
       : "설득력 있고 통찰력 있는 어조로 논리적 흐름을 유지하고, 독자에게 말을 거는 듯한 친근한 문체로 작성하세요.",
     "순수 텍스트로만 작성하세요 (JSON 형식, 코드 사용 금지).",
     "[절대 금지] 별표(*), 숫자 기호(#), 하이픈(-), 불릿(•), 마크다운 강조(**) 등 책 내용과 무관한 특수문자를 본문에 넣지 마세요. 문단 구분·장식용 기호 없이 본문만 출력하세요.",
@@ -353,9 +358,9 @@ function buildStepPrompt({
   ];
 
   if (isNovel) {
-    baseInstruction.push("장면 전환과 감정선의 흐름이 자연스럽게 이어지도록 구성하세요.");
+    baseInstruction.push("[단계 연결] 이 단계는 이전 단계의 마지막 문장에서 자연스럽게 이어져야 합니다. 새로운 챕터를 시작하듯 끊기지 마세요. 시간 흐름, 장소 이동, 감정 변화가 자연스럽게 연결되어야 합니다. 독자가 읽을 때 단계가 나뉜 것을 전혀 눈치채지 못하게 하세요.");
   } else {
-    baseInstruction.push("논리적 흐름과 설득력 있는 근거로 전개하세요.");
+    baseInstruction.push("[단계 연결] 이전 단계의 흐름을 자연스럽게 이어받아 전개하세요. 갑자기 새로운 주제로 넘어가지 말고, 앞선 논의를 발전시키는 형태로 서술하세요.");
   }
 
   return `주제(Seed): ${seed}\n단계: ${currentStep.name}\n\n${staticContext}${dynamicContext}${baseInstruction.join("\n")}`;
@@ -440,6 +445,23 @@ function extractLastSentences(content, maxSentences = 5) {
   return sentences.slice(Math.max(0, sentences.length - take)).join(" ");
 }
 
+// 누적 요약이 너무 길어지면 전체를 재압축 (장기 연재 대응)
+const MAX_SUMMARY_LENGTH = 2000; // 약 10화분
+async function compressCumulativeSummary(summary, systemPrompt, isNovel) {
+  if (!summary || summary.length <= MAX_SUMMARY_LENGTH) return summary;
+  logger.info(`[compressSummary] 누적 요약 압축: ${summary.length}자 → 목표 ${MAX_SUMMARY_LENGTH}자 이내`);
+  const prompt = [
+    "다음은 시리즈 소설의 누적 줄거리 요약이다. 이것을 핵심 사건, 인물 관계 변화, 미해결 복선 중심으로 10줄 이내로 압축하라.",
+    "초반 에피소드의 세부 사항은 생략해도 되지만, 핵심 갈등과 인물 변화는 반드시 유지하라.",
+    "한글, 공백, 기본 문장부호만 사용하라.",
+    "",
+    summary
+  ].join("\n");
+  const result = await callGemini(systemPrompt, prompt, 0.2, isNovel);
+  const compressed = (result.content || "").trim();
+  return compressed || summary;
+}
+
 async function summarizeStepContent(content, systemPrompt, isNovel) {
   const prompt = [
     "다음 글을 한국어로 정확히 5줄로 요약해라. 한글, 공백, 기본 문장부호만 사용하라.",
@@ -483,7 +505,13 @@ async function extractSceneBridge(content, systemPrompt, isNovel) {
     if (validateOutput(text, "ko").valid) return text;
   }
   const result = await callGemini(systemPrompt, prompt, 0.1, isNovel);
-  return (result.content || "").trim();
+  const text = (result.content || "").trim();
+  // fallback: 파싱 실패 시 직전 내용의 마지막 문장들을 브릿지로 사용
+  if (!text || text.length < 10) {
+    logger.warn("[extractSceneBridge] 브릿지 추출 실패 — 마지막 문장 fallback");
+    return extractLastSentences(content, 5);
+  }
+  return text;
 }
 
 async function generateStaticContext(systemPrompt, topic, title, genre, isNovel, isSeries = false) {
@@ -537,12 +565,21 @@ function parseStaticContext(text) {
   const synopsisMatch = text.match(/Synopsis:\s*([\s\S]*?)(?=\n\s*Character Sheet:|\n\s*Characters:|$)/i);
   const characterMatch = text.match(/Character Sheet:\s*([\s\S]*?)(?=\n\s*Setting Sheet:|\n\s*배경시트:|$)/i) || text.match(/Characters:\s*([\s\S]*?)(?=\n\s*Setting Sheet:|\n\s*배경시트:|$)/i);
   const settingMatch = text.match(/Setting Sheet:\s*([\s\S]*)/i) || text.match(/배경시트:\s*([\s\S]*)/i);
-  return {
+
+  const parsed = {
     title: (titleMatch?.[1] || "").replace(/^[-·\s]+/, "").trim(),
-    synopsis: (synopsisMatch?.[1] || text).trim(),
+    synopsis: (synopsisMatch?.[1] || "").trim(),
     characterSheet: (characterMatch?.[1] || "").trim(),
     settingSheet: (settingMatch?.[1] || "").trim()
   };
+
+  // fallback: 파싱 실패 시 전체 텍스트를 synopsis로 사용
+  if (!parsed.synopsis && !parsed.characterSheet) {
+    logger.warn("[parseStaticContext] 파싱 실패 — 전체 텍스트를 synopsis로 fallback");
+    parsed.synopsis = text.trim();
+  }
+
+  return parsed;
 }
 
 function getErrorStatus(error) {
@@ -596,11 +633,11 @@ async function callGemini(systemPrompt, userPrompt, temperature = 0.75, isNovel 
 
     const generationConfig = {
       temperature: temperature,
-      maxOutputTokens: isNovel ? 8192 : 8192  // 소설 4000자/비소설 3000자 분량 대응
+      maxOutputTokens: isNovel ? 12288 : 10240  // 소설 6000자/비소설 4000자 분량 대응
     };
 
     if (isNovel) {
-      generationConfig.topP = 0.9;
+      generationConfig.topP = 0.85;
     }
 
     const result = await model.generateContent({
@@ -670,6 +707,13 @@ async function generateStep({
     const result = await callGemini(systemPrompt, userPrompt, currentTemp, isNovel);
     lastContent = (result.content || "").trim();
 
+    // 빈 응답 재시도 (1회)
+    if (!lastContent && attempt < MAX_LANGUAGE_RETRIES - 1) {
+      logger.warn(`[generateStep] 빈 응답, 재시도 ${attempt + 1}/${MAX_LANGUAGE_RETRIES}`);
+      currentTemp = Math.max(MIN_TEMPERATURE, currentTemp - TEMPERATURE_DECREMENT);
+      continue;
+    }
+
     const validation = validateOutput(lastContent, language);
     if (validation.valid) {
       return stripMetaTags(lastContent);
@@ -704,7 +748,7 @@ exports.generateBookAI = onCall(
 
       // 소설류 여부 확인
       const isNovel = category === "webnovel" || category === "novel" || category === "series";
-      const temperature = isNovel ? 0.8 : 0.5;
+      const temperature = isNovel ? 0.72 : 0.5;
 
       // 시스템 프롬프트
       const systemPrompt = buildSystemPrompt({
@@ -725,21 +769,21 @@ exports.generateBookAI = onCall(
       const steps = isNovel
         ? (isSeries
           ? [
-            { name: "시작", instruction: "주인공과 배경을 매력적으로 묘사하세요. 독자가 이야기 세계에 빠져들 수 있도록 생생하게 그려내세요. [분량: 전체의 약 40%, 공백 포함 약 1,200자]" },
-            { name: "사건과 훅", instruction: "평온하던 일상을 깨뜨리는 '사건(Inciting Incident)'을 발생시키세요. 주인공에게 모험이나 문제가 다가오는 장면을 보여주세요. [중요] 사건을 해결하지 말고, 주인공이 모험을 떠나거나 문제에 직면하는 순간에서 멈추세요. 마지막 문장은 다음 화가 궁금해서 미치게 만드는 '절단신공(Cliffhanger)'으로 끝내세요. [분량: 전체의 약 60%, 공백 포함 약 1,800자]" }
+            { name: "시작", instruction: "주인공과 배경을 매력적으로 묘사하세요. 독자가 이야기 세계에 빠져들 수 있도록 오감을 동원해 생생하게 그려내세요. 주인공의 일상, 성격, 주변 인물을 자연스럽게 보여주세요. [분량: 전체의 약 40%, 공백 포함 약 2,000자]" },
+            { name: "사건과 훅", instruction: "평온하던 일상을 깨뜨리는 '사건(Inciting Incident)'을 발생시키세요. 주인공에게 모험이나 문제가 다가오는 장면을 보여주세요. [중요] 사건을 해결하지 말고, 주인공이 모험을 떠나거나 문제에 직면하는 순간에서 멈추세요. 마지막 문장은 다음 화가 궁금해서 미치게 만드는 절단신공으로 끝내세요. [분량: 전체의 약 60%, 공백 포함 약 3,000자]" }
           ]
           : [
-            { name: "발단", instruction: "스토리의 시작과 등장인물을 소개하세요. [분량: 전체의 약 10%, 공백 포함 약 400자]" },
-            { name: "전개", instruction: "사건을 발전시키고 갈등을 구축하세요. [분량: 전체의 약 20%, 공백 포함 약 800자]" },
-            { name: "위기", instruction: "갈등을 심화시키고 긴장감을 높이세요. 중요한 전환 구간이므로 충분히 묘사하세요. [분량: 전체의 약 25%, 공백 포함 약 1,000자]" },
-            { name: "절정", instruction: "갈등을 최고조로 끌어올리고 전환점을 만드세요. 가장 핵심적인 장면이므로 분량을 넉넉히 할애하세요. [분량: 전체의 약 30%, 공백 포함 약 1,200자]" },
-            { name: "결말", instruction: "스토리를 해결하고 마무리하세요. [분량: 전체의 약 15%, 공백 포함 약 600자]" }
+            { name: "발단", instruction: "스토리의 시작. 배경과 분위기를 감각적으로 묘사하고, 주인공을 자연스럽게 등장시키세요. 독자가 이 세계에 발을 딛는 느낌을 주세요. [분량: 전체의 약 10%, 공백 포함 약 600자]" },
+            { name: "전개", instruction: "사건을 본격적으로 전개하고 갈등의 씨앗을 심으세요. 인물 간 관계와 긴장감을 구축하세요. 독자가 '이 다음엔 어떻게 되지?'라고 궁금해하게 만드세요. [분량: 전체의 약 20%, 공백 포함 약 1,200자]" },
+            { name: "위기", instruction: "갈등을 심화시키고 긴장감을 최대로 높이세요. 주인공의 내면 갈등과 외부 압박을 동시에 보여주세요. 독자가 손에 땀을 쥐게 하세요. [분량: 전체의 약 25%, 공백 포함 약 1,500자]" },
+            { name: "절정", instruction: "갈등을 최고조로 끌어올리고 결정적 전환점을 만드세요. 가장 핵심적이고 감동적인 장면입니다. 행동, 대화, 감정을 모두 쏟아부으세요. [분량: 전체의 약 30%, 공백 포함 약 1,800자]" },
+            { name: "결말", instruction: "갈등을 해소하고 여운을 남기세요. 서두르지 말고, 인물의 변화와 감정의 착지를 충분히 보여주세요. 독자가 책을 덮은 뒤에도 생각나는 마지막을 만드세요. [분량: 전체의 약 15%, 공백 포함 약 900자]" }
           ])
         : [
-          { name: "서론", instruction: "주제 제기, 독자의 흥미 유발, 문제 의식 공유. [분량: 전체의 약 25%, 공백 포함 약 750자]" },
-          { name: "본론 1", instruction: "주제에 대한 깊이 있는 통찰, 작가의 경험이나 예시. [분량: 전체의 약 25%, 공백 포함 약 750자]" },
-          { name: "본론 2", instruction: "구체적인 해결책, 철학적 사색, 혹은 반전된 시각 제시. 핵심 논점이므로 충분히 전개하세요. [분량: 전체의 약 30%, 공백 포함 약 900자]" },
-          { name: "결론", instruction: "핵심 메시지 요약, 독자에게 주는 제언, 여운이 남는 마무리. [분량: 전체의 약 20%, 공백 포함 약 600자]" }
+          { name: "서론", instruction: "독자의 호기심을 자극하는 질문이나 장면으로 시작하세요. 주제를 자연스럽게 끌어내되, '이 글은 ~에 대한 것입니다' 같은 직접 선언은 피하세요. [분량: 전체의 약 25%, 공백 포함 약 1,000자]" },
+          { name: "본론 1", instruction: "주제에 대한 깊이 있는 통찰을 구체적 사례·경험·비유와 함께 전개하세요. 추상적 설명 대신 독자가 눈앞에 그릴 수 있는 장면을 제시하세요. [분량: 전체의 약 25%, 공백 포함 약 1,000자]" },
+          { name: "본론 2", instruction: "새로운 관점, 반전된 시각, 또는 구체적 해결책을 제시하세요. 본론 1과 다른 각도에서 주제를 조명하되, 논리적으로 연결되게 하세요. [분량: 전체의 약 30%, 공백 포함 약 1,200자]" },
+          { name: "결론", instruction: "핵심 메시지를 독자의 가슴에 남기세요. '결론적으로' 같은 형식적 표현 없이, 여운이 남는 문장으로 자연스럽게 마무리하세요. [분량: 전체의 약 20%, 공백 포함 약 800자]" }
         ];
 
       let fullContent = "";
@@ -883,7 +927,7 @@ exports.generateSeriesEpisode = onCall(
       }
 
       const isNovel = true;
-      const temperature = 0.8;
+      const temperature = 0.72;
       const isFinalize = continuationType === 'finalize';
 
       // 시스템 프롬프트
@@ -906,7 +950,8 @@ exports.generateSeriesEpisode = onCall(
       const requestedTitle = (title || "").toString().trim();
 
       const lastParagraph = extractLastSentences(lastEpisodeContent || "", 10);
-      const previousStorySummary = cumulativeSummary || "";
+      // 장기 연재 시 누적 요약이 너무 길면 압축
+      const previousStorySummary = await compressCumulativeSummary(cumulativeSummary || "", systemPrompt, true);
       // 완결은 다음 장면이 없으므로 scene bridge 추출 불필요
       const sceneBridge = (!isFinalize && lastEpisodeContent)
         ? await extractSceneBridge(lastEpisodeContent, systemPrompt, true)
@@ -921,7 +966,7 @@ exports.generateSeriesEpisode = onCall(
             "주인공이 최대 위기를 극복하거나 목표를 달성(또는 비극적으로 실패)하는 순간을 생생하게 그려라.",
             "복선으로 깔아두었던 모든 떡밥을 자연스럽게 회수하라. 설명하지 말고 사건으로 보여라.",
             "등장인물들의 변화와 후일담을 짧지만 임팩트 있게 보여주고, 독자에게 깊은 여운을 남기며 완결하라.",
-            "[분량: 공백 포함 약 3,000자 이상]"
+            "[분량: 공백 포함 약 5,000자 이상]"
           ].join(" ")
         }
         : {
@@ -932,7 +977,7 @@ exports.generateSeriesEpisode = onCall(
             "문제를 너무 쉽게 해결하지 마라. 해결하면 더 큰 문제가 생기도록 상황을 꼬아라.",
             "이번 화의 사건은 전체 서사에서 의미 있는 진전이어야 한다. 의미 없는 에피소드를 나열하지 마라.",
             "마지막 문장은 독자가 다음 화를 참을 수 없게 만드는 '절단신공(Cliffhanger)'으로 끝내라.",
-            "[분량: 공백 포함 약 3,000자 이상]"
+            "[분량: 공백 포함 약 5,000자 이상]"
           ].join(" ")
         };
 
