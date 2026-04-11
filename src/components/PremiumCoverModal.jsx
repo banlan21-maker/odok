@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { Sparkles, Video, BookOpen, X, RefreshCw } from 'lucide-react';
 import { generatePremiumCover } from '../utils/aiCoverService';
+import OXQuizGame from './OXQuizGame';
 import { showRewardVideoAd } from '../utils/admobService';
 import { hasPremiumCover } from '../utils/bookCovers';
 
@@ -114,24 +115,41 @@ const PremiumCoverModal = ({
   };
 
   // ── 로딩 화면 ──────────────────────────────────────────────────
+  const [showQuizInLoading, setShowQuizInLoading] = useState(false);
   if (phase === 'loading') {
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-6">
-        <div className="bg-white dark:bg-slate-800 rounded-2xl p-8 w-full max-w-sm shadow-xl space-y-6 text-center">
-          <div className="flex flex-col items-center gap-3">
-            <div className="relative w-20 h-20">
-              <img src="/icons/odok_thinking.png" alt="" className="w-20 h-20 animate-bounce" />
-            </div>
-            <div>
-              <p className="text-base font-black text-slate-800 dark:text-slate-100">AI 표지 생성 중</p>
-              <p className="text-sm text-slate-500 dark:text-slate-400 mt-1 min-h-[2.5rem] transition-all">
-                {loadingMessages[loadingMsgIndex]}
-              </p>
-            </div>
-          </div>
-          <div className="w-full bg-slate-100 dark:bg-slate-700 rounded-full h-1.5 overflow-hidden">
-            <div className="h-full bg-gradient-to-r from-orange-400 to-purple-500 rounded-full animate-pulse" style={{ width: '75%' }} />
-          </div>
+        <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 w-full max-w-sm shadow-xl space-y-4 text-center max-h-[85vh] overflow-y-auto scrollbar-hide">
+          {showQuizInLoading ? (
+            <>
+              <div className="flex items-center justify-between">
+                <p className="text-xs font-bold text-slate-400">{loadingMessages[loadingMsgIndex]}</p>
+                <button onClick={() => setShowQuizInLoading(false)} className="text-xs text-orange-500 font-bold">돌아가기</button>
+              </div>
+              <OXQuizGame />
+            </>
+          ) : (
+            <>
+              <div className="flex flex-col items-center gap-3">
+                <img src="/icons/odok_thinking.png" alt="" className="w-20 h-20 animate-bounce" />
+                <div>
+                  <p className="text-base font-black text-slate-800 dark:text-slate-100">AI 표지 생성 중</p>
+                  <p className="text-sm text-slate-500 dark:text-slate-400 mt-1 min-h-[2.5rem] transition-all">
+                    {loadingMessages[loadingMsgIndex]}
+                  </p>
+                </div>
+              </div>
+              <div className="w-full bg-slate-100 dark:bg-slate-700 rounded-full h-1.5 overflow-hidden">
+                <div className="h-full bg-gradient-to-r from-orange-400 to-purple-500 rounded-full animate-pulse" style={{ width: '75%' }} />
+              </div>
+              <button
+                onClick={() => setShowQuizInLoading(true)}
+                className="w-full py-3 rounded-xl text-sm font-black bg-orange-500 text-white hover:bg-orange-600 active:scale-95 transition-all"
+              >
+                ⭕❌ OX퀴즈 풀면서 기다리기
+              </button>
+            </>
+          )}
         </div>
       </div>
     );

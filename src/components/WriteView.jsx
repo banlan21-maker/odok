@@ -8,6 +8,7 @@ import { generateBook } from '../utils/aiService';
 import { getExtraWriteInkCost, isKeywordRefreshFree, getLevelFromXp } from '../utils/levelUtils';
 import { showRewardVideoAd } from '../utils/admobService';
 import { BOOK_FONTS } from '../utils/fontOptions';
+import OXQuizGame from './OXQuizGame';
 
 // 비문학 키워드 은행
 const ESSAY_KEYWORDS = [
@@ -889,43 +890,61 @@ const WriteView = ({ user, userProfile, t, onBookGenerated, slotStatus, setView,
     if (setError) setError('집필이 취소되었습니다.');
   };
 
-  const GeneratingNotice = () => (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-6">
-      <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 w-full max-w-sm shadow-xl space-y-4 animate-in fade-in zoom-in-95 duration-200 text-center">
-        <div className="flex items-center justify-center">
-          <img src="/icons/odok_thinking.png" alt="" className="w-20 h-20 animate-bounce" />
-        </div>
-        <p className="text-sm text-slate-700 dark:text-slate-200 font-bold">
-          {t?.generating_title || "집필 중입니다..."}
-        </p>
-        <p className="text-xs text-slate-500 dark:text-slate-400">
-          {t?.generating_desc || "책 생성에는 약 2~3분이 소요될 수 있어요."}
-        </p>
-        <p className="text-xs text-slate-400 dark:text-slate-500">
-          {t?.generating_cancel_desc || "취소 후에 다른 작업을 진행할 수 있습니다."}
-        </p>
-        {currentLoadingMessage && (
-          <p className="text-xs text-slate-500 dark:text-slate-400 font-bold">
-            {currentLoadingMessage}
-          </p>
-        )}
-        <div className="flex gap-2">
-          <button
-            onClick={() => setIsGeneratingHidden(true)}
-            className="flex-1 py-3 rounded-xl text-sm font-black bg-slate-900 dark:bg-slate-700 text-white hover:bg-slate-800 dark:hover:bg-slate-600"
-          >
-            {t?.hide_btn || "숨기기"}
-          </button>
-          <button
-            onClick={handleCancelGenerate}
-            className="flex-1 py-3 rounded-xl text-sm font-black bg-white dark:bg-slate-800 border border-orange-300 text-orange-600 hover:bg-orange-100 dark:hover:bg-orange-900/20"
-          >
-            {t?.cancel_write_btn || "집필 취소"}
-          </button>
+  const GeneratingNotice = () => {
+    const [showQuiz, setShowQuiz] = useState(false);
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-6">
+        <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 w-full max-w-sm shadow-xl space-y-4 animate-in fade-in zoom-in-95 duration-200 text-center max-h-[85vh] overflow-y-auto scrollbar-hide">
+          {showQuiz ? (
+            <>
+              <div className="flex items-center justify-between">
+                <p className="text-xs font-bold text-slate-400">{currentLoadingMessage || (t?.generating_title || "집필 중...")}</p>
+                <button onClick={() => setShowQuiz(false)} className="text-xs text-orange-500 font-bold">돌아가기</button>
+              </div>
+              <OXQuizGame t={t} />
+            </>
+          ) : (
+            <>
+              <div className="flex items-center justify-center">
+                <img src="/icons/odok_thinking.png" alt="" className="w-20 h-20 animate-bounce" />
+              </div>
+              <p className="text-sm text-slate-700 dark:text-slate-200 font-bold">
+                {t?.generating_title || "집필 중입니다..."}
+              </p>
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                {t?.generating_desc || "책 생성에는 약 2~3분이 소요될 수 있어요."}
+              </p>
+              {currentLoadingMessage && (
+                <p className="text-xs text-slate-500 dark:text-slate-400 font-bold">
+                  {currentLoadingMessage}
+                </p>
+              )}
+              <button
+                onClick={() => setShowQuiz(true)}
+                className="w-full py-3 rounded-xl text-sm font-black bg-orange-500 text-white hover:bg-orange-600 active:scale-95 transition-all"
+              >
+                ⭕❌ OX퀴즈 풀면서 기다리기
+              </button>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setIsGeneratingHidden(true)}
+                  className="flex-1 py-3 rounded-xl text-sm font-black bg-slate-900 dark:bg-slate-700 text-white hover:bg-slate-800 dark:hover:bg-slate-600"
+                >
+                  {t?.hide_btn || "숨기기"}
+                </button>
+                <button
+                  onClick={handleCancelGenerate}
+                  className="flex-1 py-3 rounded-xl text-sm font-black bg-white dark:bg-slate-800 border border-orange-300 text-orange-600 hover:bg-orange-100 dark:hover:bg-orange-900/20"
+                >
+                  {t?.cancel_write_btn || "집필 취소"}
+                </button>
+              </div>
+            </>
+          )}
         </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   // 생성 가능 여부 확인
   const canGenerateNovel = selectedCategory &&
