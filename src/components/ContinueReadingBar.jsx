@@ -1,20 +1,17 @@
 // src/components/ContinueReadingBar.jsx
-// 홈화면 하단 고정 "이전에 읽던 책" 이어읽기 바
+// 홈화면 하단 고정 "이어읽기" 바 (간소화)
 import React, { useEffect, useState } from 'react';
-import { X, BookOpen, ChevronRight } from 'lucide-react';
-import { getCoverImageFromBook } from '../utils/bookCovers';
+import { X } from 'lucide-react';
 
 const ContinueReadingBar = ({ book, ratio, onContinue, onDismiss, t = {} }) => {
   const [visible, setVisible] = useState(false);
 
-  // 마운트 시 슬라이드업 애니메이션
   useEffect(() => {
     const id = setTimeout(() => setVisible(true), 300);
     return () => clearTimeout(id);
   }, []);
 
   const percent = Math.round((ratio || 0) * 100);
-  const coverImg = getCoverImageFromBook(book);
 
   return (
     <>
@@ -31,51 +28,34 @@ const ContinueReadingBar = ({ book, ratio, onContinue, onDismiss, t = {} }) => {
           <div className="pointer-events-auto bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-slate-100 dark:border-slate-700 overflow-hidden">
             {/* 진행률 바 */}
             <div className="h-1 bg-slate-100 dark:bg-slate-700">
-              <div
-                className="h-full bg-gradient-to-r from-orange-400 to-pink-500 transition-all"
-                style={{ width: `${percent}%` }}
-              />
+              <div className="h-full bg-gradient-to-r from-orange-400 to-pink-500 transition-all" style={{ width: `${percent}%` }} />
             </div>
 
-            <div className="flex items-center gap-3 px-3 py-2.5">
-              {/* 표지 */}
-              <div className="w-10 h-14 rounded-lg overflow-hidden shrink-0 shadow-sm">
-                <img
-                  src={coverImg}
-                  alt={book.title}
-                  className="w-full h-full object-cover"
-                  onError={(e) => { e.target.style.display = 'none'; }}
-                />
-              </div>
-
+            <div className="flex items-center gap-2.5 px-3 py-2" onClick={onContinue}>
               {/* 텍스트 */}
-              <div className="flex-1 min-w-0" onClick={onContinue}>
-                <p className="text-[10px] font-bold text-orange-500 mb-0.5">
-                  {t.continue_reading_label || '이전에 읽던 책'} · {percent}%
+              <div className="flex-1 min-w-0">
+                <p className="text-[9px] font-bold text-orange-500">
+                  {t.continue_reading_label || '이어읽기'} · {percent}%
                 </p>
-                <p className="text-sm font-black text-slate-800 dark:text-slate-100 truncate leading-tight">
+                <p className="text-xs font-black text-slate-800 dark:text-slate-100 truncate leading-tight">
                   {book.title}
-                </p>
-                <p className="text-[11px] text-slate-400 dark:text-slate-500 truncate">
-                  {book.authorName || book.author}
                 </p>
               </div>
 
               {/* 계속 읽기 버튼 */}
               <button
-                onClick={onContinue}
-                className="shrink-0 flex items-center gap-1 bg-orange-500 text-white text-xs font-black px-3 py-1.5 rounded-xl active:scale-95 transition-transform"
+                onClick={(e) => { e.stopPropagation(); onContinue(); }}
+                className="shrink-0 bg-orange-500 text-white text-[10px] font-black px-2.5 py-1.5 rounded-lg active:scale-95 transition-transform"
               >
-                <BookOpen className="w-3.5 h-3.5" />
                 {t.continue_reading_btn || '계속 읽기'}
               </button>
 
               {/* 닫기 */}
               <button
-                onClick={onDismiss}
-                className="shrink-0 p-1 rounded-full text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 active:scale-95 transition-all"
+                onClick={(e) => { e.stopPropagation(); onDismiss(); }}
+                className="shrink-0 p-0.5 rounded-full text-slate-300 hover:text-slate-500 dark:hover:text-slate-300"
               >
-                <X className="w-4 h-4" />
+                <X className="w-3.5 h-3.5" />
               </button>
             </div>
           </div>

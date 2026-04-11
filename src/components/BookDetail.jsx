@@ -192,6 +192,7 @@ const BookDetail = ({ book, onClose, onBookUpdate, fontSize = 'text-base', user,
   const [isDeleting, setIsDeleting] = useState(false);
   const [isEditingContent, setIsEditingContent] = useState(false);
   const [editedContent, setEditedContent] = useState('');
+  const [editedTitle, setEditedTitle] = useState('');
   const [isSavingContent, setIsSavingContent] = useState(false);
 
   // 시리즈 집필 중 화면 꺼짐 방지
@@ -217,12 +218,14 @@ const BookDetail = ({ book, onClose, onBookUpdate, fontSize = 'text-base', user,
   const handleAdminStartEditContent = () => {
     const content = isSeries && currentEpisode ? currentEpisode.content : (book.content || '');
     setEditedContent(content);
+    setEditedTitle(book.title || '');
     setIsEditingContent(true);
   };
 
   const handleAdminCancelEditContent = () => {
     setIsEditingContent(false);
     setEditedContent('');
+    setEditedTitle('');
   };
 
   const handleAdminSaveContent = async () => {
@@ -230,16 +233,17 @@ const BookDetail = ({ book, onClose, onBookUpdate, fontSize = 'text-base', user,
     setIsSavingContent(true);
     try {
       const bookRef = doc(db, 'artifacts', appId, 'books', bookId);
+      const titleUpdate = editedTitle.trim() !== book.title ? { title: editedTitle.trim() } : {};
       if (isSeries && episodes.length > 0) {
         const newEpisodes = [...episodes];
         newEpisodes[currentEpisodeIndex] = { ...newEpisodes[currentEpisodeIndex], content: editedContent.trim() };
-        await updateDoc(bookRef, { episodes: newEpisodes, updatedAt: serverTimestamp() });
+        await updateDoc(bookRef, { episodes: newEpisodes, ...titleUpdate, updatedAt: serverTimestamp() });
       } else {
-        await updateDoc(bookRef, { content: editedContent.trim(), updatedAt: serverTimestamp() });
+        await updateDoc(bookRef, { content: editedContent.trim(), ...titleUpdate, updatedAt: serverTimestamp() });
       }
       const updatedBook = isSeries
-        ? { ...book, episodes: [...episodes], updatedAt: { toDate: () => new Date() } }
-        : { ...book, content: editedContent.trim(), updatedAt: { toDate: () => new Date() } };
+        ? { ...book, ...titleUpdate, episodes: [...episodes], updatedAt: { toDate: () => new Date() } }
+        : { ...book, ...titleUpdate, content: editedContent.trim(), updatedAt: { toDate: () => new Date() } };
       if (isSeries && episodes.length > 0) {
         const newEps = [...episodes];
         newEps[currentEpisodeIndex] = { ...newEps[currentEpisodeIndex], content: editedContent.trim() };
@@ -906,6 +910,13 @@ const BookDetail = ({ book, onClose, onBookUpdate, fontSize = 'text-base', user,
         <div ref={contentAreaRef} className="bg-white dark:bg-slate-800 rounded-2xl p-6 border border-slate-100 dark:border-slate-700 shadow-sm" onContextMenu={(e) => e.preventDefault()} style={{ WebkitTouchCallout: 'none' }}>
           {isEditingContent ? (
             <div className="space-y-3">
+              <input
+                value={editedTitle}
+                onChange={(e) => setEditedTitle(e.target.value)}
+                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100 text-base font-black text-slate-800 focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+                placeholder={t?.edit_title_ph || '제목'}
+                maxLength={50}
+              />
               <textarea
                 value={editedContent}
                 onChange={(e) => setEditedContent(e.target.value)}
