@@ -1279,148 +1279,148 @@ const WriteView = ({ user, userProfile, t, onBookGenerated, slotStatus, setView,
                 </div>
               ) : null}
 
-              {/* 분위기 선택 */}
+              {/* ─── 순서 조정: 키워드 → 제목 → 스타일 프리셋/직접설정 → 폰트 → 결말 ─── */}
+
+              {/* 1. 키워드 (뭘 쓸 건지 먼저) */}
               {selectedGenre && (
                 <div className="space-y-2">
                   <label className="text-sm font-bold text-slate-700 dark:text-slate-200">
-                    {t?.mood_label || "분위기"} <span className="text-orange-500">*</span>
+                    {t?.topic_keyword || "주제 또는 키워드"} <span className="text-orange-500">*</span>
                   </label>
-                  <select
-                    value={selectedMood}
-                    onChange={(e) => setSelectedMood(e.target.value)}
+                  <input
+                    type="text"
+                    value={keywords}
+                    onChange={(e) => setKeywords(e.target.value)}
+                    placeholder={t?.keyword_placeholder || "예: 가을 낙엽, 첫 사랑, 성장, 일상의 소중함..."}
                     className="w-full bg-slate-50 dark:bg-slate-700 border-2 border-slate-200 dark:border-slate-600 rounded-xl py-3 px-4 text-sm focus:border-orange-500 focus:bg-white dark:focus:bg-slate-700 outline-none transition-colors text-slate-800 dark:text-slate-100"
-                  >
-                    <option value="">{t?.mood_plz || "분위기를 선택하세요"}</option>
-                    {getMoodOptions().map((mood) => (
-                      <option key={mood} value={mood}>
-                        {t?.[MOOD_TO_NAMEKEY[mood]] || mood}
-                      </option>
-                    ))}
-                  </select>
-                  {selectedMood && MOOD_TO_NAMEKEY[selectedMood] && (
-                    <p className="text-xs text-slate-400 dark:text-slate-500">
-                      {t?.[MOOD_TO_NAMEKEY[selectedMood] + '_desc'] || MOOD_DESCRIPTIONS[selectedMood] || ''}
-                    </p>
-                  )}
+                    maxLength={50}
+                  />
+                  <div className="text-xs text-slate-400 dark:text-slate-500 font-bold text-right">{keywords.length}/50</div>
                 </div>
               )}
 
-              {/* 시점 선택 (소설류 전용) */}
-              {selectedGenre && selectedCategory?.isNovel && (
-                <div className="space-y-2">
-                  <label className="text-sm font-bold text-slate-700 dark:text-slate-200">
-                    {t?.pov_label || "누가 이야기하나요?"} <span className="text-orange-500">*</span>
-                  </label>
-                  <select
-                    value={selectedPOV}
-                    onChange={(e) => setSelectedPOV(e.target.value)}
-                    className="w-full bg-slate-50 dark:bg-slate-700 border-2 border-slate-200 dark:border-slate-600 rounded-xl py-3 px-4 text-sm focus:border-orange-500 focus:bg-white dark:focus:bg-slate-700 outline-none transition-colors text-slate-800 dark:text-slate-100"
-                  >
-                    <option value="">{t?.pov_plz || "시점을 선택하세요"}</option>
-                    <option value="first_person">{t?.pov_first_person || "내가 직접 말하기"}</option>
-                    <option value="third_limited">{t?.pov_third_limited || "옆에서 지켜보기"}</option>
-                    <option value="omniscient">{t?.pov_omniscient || "전지적 시점"}</option>
-                  </select>
-                  {selectedPOV && (
-                    <p className="text-xs text-slate-400 dark:text-slate-500">
-                      {selectedPOV === 'first_person' && (t?.pov_first_person_desc || "주인공이 자기 이야기를 하듯 생생하게 씁니다.")}
-                      {selectedPOV === 'third_limited' && (t?.pov_third_limited_desc || "관찰자가 주인공의 행동을 보듯 설명합니다.")}
-                      {selectedPOV === 'omniscient' && (t?.pov_omniscient_desc || "신처럼 모든 인물의 속마음까지 다 보여줍니다.")}
-                    </p>
-                  )}
-                </div>
-              )}
-
-              {/* 말투 선택 (소설류 전용) */}
-              {selectedGenre && selectedCategory?.isNovel && (
-                <div className="space-y-2">
-                  <label className="text-sm font-bold text-slate-700 dark:text-slate-200">
-                    {t?.speech_tone_label || "어떤 말투로 쓸까요?"} <span className="text-orange-500">*</span>
-                  </label>
-                  <select
-                    value={selectedSpeechTone}
-                    onChange={(e) => setSelectedSpeechTone(e.target.value)}
-                    className="w-full bg-slate-50 dark:bg-slate-700 border-2 border-slate-200 dark:border-slate-600 rounded-xl py-3 px-4 text-sm focus:border-orange-500 focus:bg-white dark:focus:bg-slate-700 outline-none transition-colors text-slate-800 dark:text-slate-100"
-                  >
-                    <option value="">{t?.speech_tone_plz || "말투를 선택하세요"}</option>
-                    <option value="friendly">{t?.speech_tone_friendly || "친근한 말투"}</option>
-                    <option value="formal">{t?.speech_tone_formal || "단정한 말투"}</option>
-                    <option value="polite">{t?.speech_tone_polite || "정중한 말투"}</option>
-                  </select>
-                  {selectedSpeechTone && (
-                    <p className="text-xs text-slate-400 dark:text-slate-500">
-                      {selectedSpeechTone === 'friendly' && (t?.speech_tone_friendly_desc || '~했어, ~였지처럼 편안하게 이야기합니다.')}
-                      {selectedSpeechTone === 'formal' && (t?.speech_tone_formal_desc || '~했다, ~하였다처럼 정통 소설의 느낌을 줍니다.')}
-                      {selectedSpeechTone === 'polite' && (t?.speech_tone_polite_desc || '~했습니다, ~입니다처럼 차분하고 예의 바르게 씁니다.')}
-                    </p>
-                  )}
-                </div>
-              )}
-
-              {/* 대화 비중 선택 (소설류 전용) */}
-              {selectedGenre && selectedCategory?.isNovel && (
-                <div className="space-y-2">
-                  <label className="text-sm font-bold text-slate-700 dark:text-slate-200">
-                    {t?.dialogue_ratio_label || "대화가 얼마나 많은 게 좋을까요?"} <span className="text-orange-500">*</span>
-                  </label>
-                  <select
-                    value={selectedDialogueRatio}
-                    onChange={(e) => setSelectedDialogueRatio(e.target.value)}
-                    className="w-full bg-slate-50 dark:bg-slate-700 border-2 border-slate-200 dark:border-slate-600 rounded-xl py-3 px-4 text-sm focus:border-orange-500 focus:bg-white dark:focus:bg-slate-700 outline-none transition-colors text-slate-800 dark:text-slate-100"
-                  >
-                    <option value="">{t?.dialogue_ratio_plz || "대화 비중을 선택하세요"}</option>
-                    <option value="dialogue_heavy">{t?.dialogue_ratio_heavy || "대화 중심 (웹소설 스타일)"}</option>
-                    <option value="description_heavy">{t?.dialogue_ratio_desc || "설명 중심 (일반 소설 스타일)"}</option>
-                  </select>
-                  {selectedDialogueRatio && (
-                    <p className="text-xs text-slate-400 dark:text-slate-500">
-                      {selectedDialogueRatio === 'dialogue_heavy' && (t?.dialogue_ratio_heavy_desc || "인물들의 대화가 많아 술술 읽히는 방식입니다.")}
-                      {selectedDialogueRatio === 'description_heavy' && (t?.dialogue_ratio_desc_desc || "상황 묘사와 설명이 풍부하고 깊이 있는 방식입니다.")}
-                    </p>
-                  )}
-                </div>
-              )}
-
-              {/* 책 제목 */}
+              {/* 2. 제목 */}
               {selectedGenre && (
                 <div className="space-y-2">
                   <label className="text-sm font-bold text-slate-700 dark:text-slate-200">
                     {t?.book_title || "책 제목"} <span className="text-orange-500">*</span>
                   </label>
-                  <div className="space-y-2">
-                    <input
-                      type="text"
-                      value={bookTitle}
-                      onChange={(e) => setBookTitle(e.target.value)}
-                      placeholder={t?.book_title_ph || "15자 이내로 제목을 입력하세요"}
-                      className="w-full bg-slate-50 dark:bg-slate-700 border-2 border-slate-200 dark:border-slate-600 rounded-xl py-3 px-4 text-sm focus:border-orange-500 focus:bg-white dark:focus:bg-slate-700 outline-none transition-colors text-slate-800 dark:text-slate-100"
-                      maxLength={15}
-                    />
-                    <div className="text-xs text-slate-400 dark:text-slate-500 font-bold text-right">
-                      {bookTitle.length}/15
+                  <input
+                    type="text"
+                    value={bookTitle}
+                    onChange={(e) => setBookTitle(e.target.value)}
+                    placeholder={t?.book_title_ph || "15자 이내로 제목을 입력하세요"}
+                    className="w-full bg-slate-50 dark:bg-slate-700 border-2 border-slate-200 dark:border-slate-600 rounded-xl py-3 px-4 text-sm focus:border-orange-500 focus:bg-white dark:focus:bg-slate-700 outline-none transition-colors text-slate-800 dark:text-slate-100"
+                    maxLength={15}
+                  />
+                  <div className="text-xs text-slate-400 dark:text-slate-500 font-bold text-right">{bookTitle.length}/15</div>
+                </div>
+              )}
+
+              {/* 3. 스타일 프리셋 (빠른 설정) */}
+              {selectedGenre && selectedCategory?.isNovel && (
+                <div className="space-y-2">
+                  <label className="text-sm font-bold text-slate-700 dark:text-slate-200">
+                    {t?.style_preset || "스타일"}
+                  </label>
+                  <div className="grid grid-cols-3 gap-2">
+                    <button
+                      onClick={() => { setSelectedMood('tension'); setSelectedPOV('first_person'); setSelectedSpeechTone('friendly'); setSelectedDialogueRatio('dialogue_heavy'); }}
+                      className={`py-2.5 px-2 rounded-xl text-[11px] font-black border-2 transition-all text-center ${
+                        selectedPOV === 'first_person' && selectedSpeechTone === 'friendly' && selectedDialogueRatio === 'dialogue_heavy'
+                          ? 'border-orange-500 bg-orange-50 dark:bg-orange-900/20 text-orange-600' : 'border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300'
+                      }`}
+                    >
+                      📱 {t?.preset_webnovel || '웹소설풍'}
+                      <p className="text-[9px] font-normal text-slate-400 mt-0.5">1인칭·친근·대화중심</p>
+                    </button>
+                    <button
+                      onClick={() => { setSelectedMood('lyrical'); setSelectedPOV('third_limited'); setSelectedSpeechTone('formal'); setSelectedDialogueRatio('description_heavy'); }}
+                      className={`py-2.5 px-2 rounded-xl text-[11px] font-black border-2 transition-all text-center ${
+                        selectedPOV === 'third_limited' && selectedSpeechTone === 'formal' && selectedDialogueRatio === 'description_heavy'
+                          ? 'border-orange-500 bg-orange-50 dark:bg-orange-900/20 text-orange-600' : 'border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300'
+                      }`}
+                    >
+                      📖 {t?.preset_literary || '문학 소설'}
+                      <p className="text-[9px] font-normal text-slate-400 mt-0.5">3인칭·단정·묘사중심</p>
+                    </button>
+                    <button
+                      onClick={() => { setSelectedMood(''); setSelectedPOV(''); setSelectedSpeechTone(''); setSelectedDialogueRatio(''); }}
+                      className={`py-2.5 px-2 rounded-xl text-[11px] font-black border-2 transition-all text-center ${
+                        !selectedPOV && !selectedSpeechTone && !selectedDialogueRatio
+                          ? 'border-orange-500 bg-orange-50 dark:bg-orange-900/20 text-orange-600' : 'border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300'
+                      }`}
+                    >
+                      ⚙️ {t?.preset_custom || '직접 설정'}
+                      <p className="text-[9px] font-normal text-slate-400 mt-0.5">하나씩 선택</p>
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* 4. 직접 설정 모드 — 칩 버튼 */}
+              {selectedGenre && selectedCategory?.isNovel && !selectedPOV && !selectedSpeechTone && !selectedDialogueRatio && (
+                <div className="space-y-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl p-4 border border-slate-200 dark:border-slate-700">
+                  {/* 분위기 */}
+                  <div className="space-y-1.5">
+                    <p className="text-xs font-bold text-slate-500 dark:text-slate-400">{t?.mood_label || "분위기"} *</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {getMoodOptions().map((mood) => (
+                        <button key={mood} onClick={() => setSelectedMood(mood)}
+                          className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all ${selectedMood === mood ? 'bg-orange-500 text-white' : 'bg-white dark:bg-slate-700 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-600'}`}>
+                          {t?.[MOOD_TO_NAMEKEY[mood]] || mood}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  {/* 시점 */}
+                  <div className="space-y-1.5">
+                    <p className="text-xs font-bold text-slate-500 dark:text-slate-400">{t?.pov_label || "시점"} *</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {[{ v: 'first_person', l: t?.pov_first_person || '내가 직접 말하기' }, { v: 'third_limited', l: t?.pov_third_limited || '옆에서 지켜보기' }, { v: 'omniscient', l: t?.pov_omniscient || '전지적 시점' }].map(p => (
+                        <button key={p.v} onClick={() => setSelectedPOV(p.v)}
+                          className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all ${selectedPOV === p.v ? 'bg-orange-500 text-white' : 'bg-white dark:bg-slate-700 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-600'}`}>
+                          {p.l}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  {/* 말투 */}
+                  <div className="space-y-1.5">
+                    <p className="text-xs font-bold text-slate-500 dark:text-slate-400">{t?.speech_tone_label || "말투"} *</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {[{ v: 'friendly', l: t?.speech_tone_friendly || '친근한' }, { v: 'formal', l: t?.speech_tone_formal || '단정한' }, { v: 'polite', l: t?.speech_tone_polite || '정중한' }].map(s => (
+                        <button key={s.v} onClick={() => setSelectedSpeechTone(s.v)}
+                          className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all ${selectedSpeechTone === s.v ? 'bg-orange-500 text-white' : 'bg-white dark:bg-slate-700 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-600'}`}>
+                          {s.l}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  {/* 대화 비중 */}
+                  <div className="space-y-1.5">
+                    <p className="text-xs font-bold text-slate-500 dark:text-slate-400">{t?.dialogue_ratio_label || "대화 비중"} *</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {[{ v: 'dialogue_heavy', l: t?.dialogue_ratio_heavy || '대화 중심' }, { v: 'description_heavy', l: t?.dialogue_ratio_desc || '묘사 중심' }].map(d => (
+                        <button key={d.v} onClick={() => setSelectedDialogueRatio(d.v)}
+                          className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all ${selectedDialogueRatio === d.v ? 'bg-orange-500 text-white' : 'bg-white dark:bg-slate-700 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-600'}`}>
+                          {d.l}
+                        </button>
+                      ))}
                     </div>
                   </div>
                 </div>
               )}
 
-              {/* 본문 폰트 선택 */}
+              {/* 5. 폰트 */}
               {selectedGenre && (
                 <div className="space-y-2">
-                  <label className="text-sm font-bold text-slate-700 dark:text-slate-200">
-                    {t?.select_font || "본문 폰트"}
-                  </label>
+                  <label className="text-sm font-bold text-slate-700 dark:text-slate-200">{t?.select_font || "본문 폰트"}</label>
                   <div className="flex gap-1.5 overflow-x-auto pb-1">
                     {BOOK_FONTS.map(f => (
-                      <button
-                        key={f.id}
-                        onClick={() => setSelectedFont(f.id)}
-                        className={`shrink-0 px-3 py-2 rounded-xl text-xs font-bold border transition-all ${
-                          selectedFont === f.id
-                            ? 'bg-slate-800 dark:bg-slate-200 text-white dark:text-slate-900 border-slate-800'
-                            : 'bg-slate-50 dark:bg-slate-700 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-600'
-                        }`}
-                        style={{ fontFamily: f.family }}
-                      >
+                      <button key={f.id} onClick={() => setSelectedFont(f.id)}
+                        className={`shrink-0 px-3 py-2 rounded-xl text-xs font-bold border transition-all ${selectedFont === f.id ? 'bg-slate-800 dark:bg-slate-200 text-white dark:text-slate-900 border-slate-800' : 'bg-slate-50 dark:bg-slate-700 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-600'}`}
+                        style={{ fontFamily: f.family }}>
                         {f.label}
                       </button>
                     ))}
@@ -1428,46 +1428,36 @@ const WriteView = ({ user, userProfile, t, onBookGenerated, slotStatus, setView,
                 </div>
               )}
 
-              {/* 키워드 선택 (장르 선택 후) */}
-              {selectedGenre && (
+              {/* 6. 결말 스타일 (시리즈 제외, 칩 버튼) */}
+              {selectedCategory.isNovel && selectedCategory.id !== 'series' && selectedGenre && (
                 <div className="space-y-2">
-                  <label className="text-sm font-bold text-slate-700 dark:text-slate-200">
-                    {t?.topic_keyword || "주제 또는 키워드"} <span className="text-orange-500">*</span>
-                  </label>
-                  <div className="space-y-2">
-                    <input
-                      type="text"
-                      value={keywords}
-                      onChange={(e) => setKeywords(e.target.value)}
-                      placeholder={t?.keyword_placeholder || "예: 가을 낙엽, 첫 사랑, 성장, 일상의 소중함..."}
-                      className="w-full bg-slate-50 dark:bg-slate-700 border-2 border-slate-200 dark:border-slate-600 rounded-xl py-3 px-4 text-sm focus:border-orange-500 focus:bg-white dark:focus:bg-slate-700 outline-none transition-colors text-slate-800 dark:text-slate-100"
-                      maxLength={50}
-                    />
-                    <div className="text-xs text-slate-400 dark:text-slate-500 font-bold text-right">
-                      {keywords.length}/50
-                    </div>
+                  <label className="text-sm font-bold text-slate-700 dark:text-slate-200">{t?.ending_style || "결말 스타일"}</label>
+                  <div className="flex flex-wrap gap-1.5">
+                    <button onClick={() => setEndingStyle('')}
+                      className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all ${!endingStyle ? 'bg-slate-800 dark:bg-slate-200 text-white dark:text-slate-900' : 'bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-600'}`}>
+                      {t?.no_select || "선택 안 함"}
+                    </button>
+                    {endingStyleIds.map((item) => (
+                      <button key={item.id} onClick={() => setEndingStyle(item.value)}
+                        className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all ${endingStyle === item.value ? 'bg-orange-500 text-white' : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-600'}`}>
+                        {t?.['ending_' + item.id] || item.value}
+                      </button>
+                    ))}
                   </div>
                 </div>
               )}
 
-              {/* 결말 스타일 (소설류 전용, 시리즈 제외) */}
-              {selectedCategory.isNovel && selectedCategory.id !== 'series' && (
-                <div className="space-y-2">
-                  <label className="text-sm font-bold text-slate-700 dark:text-slate-200">
-                    {t?.ending_style || "결말 스타일"}
-                  </label>
-                  <select
-                    value={endingStyle}
-                    onChange={(e) => setEndingStyle(e.target.value)}
-                    className="w-full bg-slate-50 dark:bg-slate-700 border-2 border-slate-200 dark:border-slate-600 rounded-xl py-3 px-4 text-sm focus:border-orange-500 focus:bg-white dark:focus:bg-slate-700 outline-none transition-colors text-slate-800 dark:text-slate-100"
-                  >
-                    <option value="">{t?.no_select || "선택 안 함"}</option>
-                    {endingStyleIds.map((item) => (
-                      <option key={item.id} value={item.value}>
-                        {t?.['ending_' + item.id] || item.value}
-                      </option>
-                    ))}
-                  </select>
+              {/* 7. 생성 전 요약 카드 */}
+              {canGenerateNovel && (
+                <div className="bg-orange-50 dark:bg-orange-900/10 rounded-2xl p-4 border border-orange-200 dark:border-orange-800/30">
+                  <p className="text-[10px] font-bold text-orange-500 mb-2">{t?.summary_before_create || '생성 요약'}</p>
+                  <div className="space-y-1 text-xs text-slate-600 dark:text-slate-300">
+                    <p>📂 {t?.[`cat_${selectedCategory.id}`] || selectedCategory.name} {'>'} {t?.['genre_' + selectedGenre?.id?.replace(/-/g, '_')] || selectedGenre?.name}</p>
+                    <p>📝 "{bookTitle}" · {keywords || '-'}</p>
+                    <p>🎭 {t?.[MOOD_TO_NAMEKEY[selectedMood]] || selectedMood || '-'} · {selectedPOV === 'first_person' ? '1인칭' : selectedPOV === 'third_limited' ? '3인칭' : selectedPOV === 'omniscient' ? '전지적' : '-'} · {selectedSpeechTone === 'friendly' ? '친근' : selectedSpeechTone === 'formal' ? '단정' : selectedSpeechTone === 'polite' ? '정중' : '-'}</p>
+                    {endingStyle && <p>🔚 {endingStyle}</p>}
+                    <p>✏️ {BOOK_FONTS.find(f => f.id === selectedFont)?.label || '기본'}</p>
+                  </div>
                 </div>
               )}
 
