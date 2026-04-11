@@ -2,6 +2,14 @@
 import React, { useState } from 'react';
 import { X, LogOut, Trash2, AlertTriangle } from 'lucide-react';
 
+const NOTIF_TYPES = [
+  { key: 'comment', emoji: '💬', labelKey: 'notif_setting_comment', defaultLabel: '댓글 알림' },
+  { key: 'follow', emoji: '👤', labelKey: 'notif_setting_follow', defaultLabel: '팔로우 알림' },
+  { key: 'new_book', emoji: '📚', labelKey: 'notif_setting_new_book', defaultLabel: '팔로우 작가 신작' },
+  { key: 'new_episode', emoji: '📖', labelKey: 'notif_setting_new_episode', defaultLabel: '시리즈 새 에피소드' },
+  { key: 'gift', emoji: '🎁', labelKey: 'notif_setting_gift', defaultLabel: '선물 알림' },
+];
+
 const SettingsModal = ({
   language,
   setLanguage,
@@ -16,8 +24,20 @@ const SettingsModal = ({
   saveProfile,
   onClose,
   onOpenHelp,
+  notifSettings = {},
+  setNotifSettings,
 }) => {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
+  const allOn = NOTIF_TYPES.every(({ key }) => notifSettings[key] !== false);
+  const toggleAll = (on) => {
+    const next = {};
+    NOTIF_TYPES.forEach(({ key }) => { next[key] = on; });
+    setNotifSettings?.(next);
+  };
+  const toggleOne = (key) => {
+    setNotifSettings?.({ ...notifSettings, [key]: notifSettings[key] === false ? true : false });
+  };
 
   const handleSave = () => {
     saveProfile();
@@ -149,6 +169,44 @@ const SettingsModal = ({
                   </div>
                 </div>
 
+              </div>
+            </div>
+
+            {/* Section: 알림 설정 */}
+            <div>
+              <p className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wide mb-2">
+                {t?.notif_settings_title ?? '알림 설정'}
+              </p>
+              <div className="bg-white dark:bg-slate-800 rounded-2xl p-4 border border-slate-100 dark:border-slate-700 space-y-3">
+                {/* 전체 토글 */}
+                <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-700">
+                  <span className="text-sm font-black text-slate-700 dark:text-slate-200">
+                    {t?.notif_setting_all ?? '모든 알림'}
+                  </span>
+                  <button
+                    onClick={() => toggleAll(!allOn)}
+                    className={`w-11 h-6 rounded-full transition-colors relative ${allOn ? 'bg-orange-500' : 'bg-slate-300 dark:bg-slate-600'}`}
+                  >
+                    <div className={`w-5 h-5 bg-white rounded-full shadow absolute top-0.5 transition-transform ${allOn ? 'translate-x-[22px]' : 'translate-x-0.5'}`} />
+                  </button>
+                </div>
+                {/* 개별 토글 */}
+                {NOTIF_TYPES.map(({ key, emoji, labelKey, defaultLabel }) => {
+                  const isOn = notifSettings[key] !== false;
+                  return (
+                    <div key={key} className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-slate-600 dark:text-slate-300">
+                        {emoji} {t?.[labelKey] ?? defaultLabel}
+                      </span>
+                      <button
+                        onClick={() => toggleOne(key)}
+                        className={`w-9 h-5 rounded-full transition-colors relative ${isOn ? 'bg-orange-400' : 'bg-slate-200 dark:bg-slate-600'}`}
+                      >
+                        <div className={`w-4 h-4 bg-white rounded-full shadow absolute top-0.5 transition-transform ${isOn ? 'translate-x-[18px]' : 'translate-x-0.5'}`} />
+                      </button>
+                    </div>
+                  );
+                })}
               </div>
             </div>
 

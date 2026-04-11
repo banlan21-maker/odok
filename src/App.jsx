@@ -53,7 +53,7 @@ import { useInventory } from './hooks/useInventory';
 import { useHighlights } from './hooks/useHighlights';
 import { usePushNotifications } from './hooks/usePushNotifications';
 import { useMailbox } from './hooks/useMailbox';
-const MailboxModal = lazy(() => import('./components/MailboxModal'));
+// MailboxModal은 NotificationModal에 통합됨
 import { useLastReadBook } from './hooks/useLastReadBook';
 import { useNotificationHistory } from './hooks/useNotificationHistory';
 import { useReadingStats } from './hooks/useReadingStats';
@@ -143,6 +143,7 @@ const App = () => {
     language, setLanguage,
     fontSize, setFontSize,
     darkMode, setDarkMode,
+    notifSettings, setNotifSettings,
     isNoticeAdmin, saveProfile,
     showSaveSuccessModal, setShowSaveSuccessModal,
     showAttendanceModal, setShowAttendanceModal,
@@ -272,7 +273,6 @@ const App = () => {
   const { highlights, addHighlight, deleteHighlight } = useHighlights({ user });
   usePushNotifications({ user });
   const { mailboxItems, unclaimedCount } = useMailbox({ user });
-  const [showMailbox, setShowMailbox] = useState(false);
   const { notifications, unreadCount } = useNotificationHistory({ user });
   const [showNotifications, setShowNotifications] = useState(false);
   const { stats: readingStats } = useReadingStats({ user });
@@ -389,27 +389,15 @@ const App = () => {
                 <div className="flex items-center gap-1 bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300 px-2 py-1 rounded-lg">
                   <span className="text-xs font-black">Lv.{levelInfo.level}</span>
                 </div>
-                {/* 알림 버튼 */}
+                {/* 소식함 버튼 (알림 + 우편함 통합) */}
                 <button
                   onClick={() => setShowNotifications(true)}
                   className="relative flex items-center justify-center w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-950 hover:bg-blue-100 dark:hover:bg-blue-900 transition-colors"
                 >
-                  <span className="text-sm">🔔</span>
-                  {unreadCount > 0 && (
-                    <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-red-500 text-white text-[9px] font-black flex items-center justify-center leading-none">
-                      {unreadCount > 9 ? '9+' : unreadCount}
-                    </span>
-                  )}
-                </button>
-                {/* 우편함 버튼 */}
-                <button
-                  onClick={() => setShowMailbox(true)}
-                  className="relative flex items-center justify-center w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-950 hover:bg-blue-100 dark:hover:bg-blue-900 transition-colors"
-                >
                   <span className="text-sm">📬</span>
-                  {unclaimedCount > 0 && (
+                  {(unreadCount + unclaimedCount) > 0 && (
                     <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-red-500 text-white text-[9px] font-black flex items-center justify-center leading-none">
-                      {unclaimedCount > 9 ? '9+' : unclaimedCount}
+                      {(unreadCount + unclaimedCount) > 9 ? '9+' : (unreadCount + unclaimedCount)}
                     </span>
                   )}
                 </button>
@@ -944,6 +932,7 @@ const App = () => {
             language={language} setLanguage={setLanguage}
             fontSize={fontSize} setFontSize={setFontSize}
             darkMode={darkMode} setDarkMode={setDarkMode}
+            notifSettings={notifSettings} setNotifSettings={setNotifSettings}
             t={t}
             user={user}
             handleLogout={handleLogout}
@@ -1003,21 +992,13 @@ const App = () => {
           />
         )}
 
-        {/* 알림 내역 모달 */}
+        {/* 소식함 모달 (알림 + 우편함 통합) */}
         {showNotifications && (
           <NotificationModal
             notifications={notifications}
             userId={user?.uid}
-            onClose={() => setShowNotifications(false)}
-            t={t}
-          />
-        )}
-
-        {/* 우편함 모달 */}
-        {showMailbox && (
-          <MailboxModal
             mailboxItems={mailboxItems}
-            onClose={() => setShowMailbox(false)}
+            onClose={() => setShowNotifications(false)}
             t={t}
           />
         )}

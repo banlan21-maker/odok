@@ -22,6 +22,7 @@ export const useUserProfile = ({ user, setView, setError, viewRef }) => {
   const [language, setLanguage] = useState('ko');
   const [fontSize, setFontSize] = useState('text-base');
   const [darkMode, setDarkMode] = useState(false);
+  const [notifSettings, setNotifSettings] = useState({});
   const [showAttendanceModal, setShowAttendanceModal] = useState(false);
   const [lastAttendanceInk, setLastAttendanceInk] = useState(1);
   const [showSaveSuccessModal, setShowSaveSuccessModal] = useState(false);
@@ -173,6 +174,7 @@ export const useUserProfile = ({ user, setView, setError, viewRef }) => {
         if (data.language) setLanguage(data.language);
         if (data.fontSize) setFontSize(data.fontSize);
         if (data.darkMode !== undefined) setDarkMode(data.darkMode);
+        if (data.notifSettings) setNotifSettings(data.notifSettings);
 
         const today = getTodayDateKey();
         if (data.lastAttendanceDate !== today) checkAttendance(profileRef, today);
@@ -211,6 +213,7 @@ export const useUserProfile = ({ user, setView, setError, viewRef }) => {
         if (data.language) setLanguage(data.language);
         if (data.fontSize) setFontSize(data.fontSize);
         if (data.darkMode !== undefined) setDarkMode(data.darkMode);
+        if (data.notifSettings) setNotifSettings(data.notifSettings);
 
         const today = getTodayDateKey();
         if (data.lastAttendanceDate !== today) checkAttendance(profileRef, today);
@@ -292,6 +295,7 @@ export const useUserProfile = ({ user, setView, setError, viewRef }) => {
         language: language,
         fontSize: fontSize,
         darkMode: darkMode,
+        notifSettings: notifSettings,
         anonymousActivity: tempAnonymousActivity,
         bio: tempBio.trim().slice(0, 100),
         updatedAt: serverTimestamp()
@@ -444,6 +448,8 @@ export const useUserProfile = ({ user, setView, setError, viewRef }) => {
     setFontSize,
     darkMode,
     setDarkMode,
+    notifSettings,
+    setNotifSettings,
     showAttendanceModal,
     setShowAttendanceModal,
     lastAttendanceInk,

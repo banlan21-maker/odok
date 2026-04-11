@@ -1937,7 +1937,23 @@ const APP_ID = "odok-app-default";
  * 특정 유저에게 FCM 푸시 알림 전송
  */
 async function sendPushToUser(targetUid, { title, body, data = {} }) {
-  // 1) 인앱 알림 내역 저장 (FCM 전송 실패해도 내역은 남음)
+  // 0) 사용자 알림 설정 확인 — 해당 타입이 꺼져있으면 인앱 저장만 하고 푸시 안 보냄
+  let pushDisabled = false;
+  try {
+    const profileDoc = await adminDb
+      .collection("artifacts").doc(APP_ID)
+      .collection("users").doc(targetUid)
+      .collection("profile").doc("info")
+      .get();
+    if (profileDoc.exists) {
+      const ns = profileDoc.data()?.notifSettings;
+      if (ns && data.type && ns[data.type] === false) {
+        pushDisabled = true;
+      }
+    }
+  } catch (e) { /* 설정 조회 실패 시 기본값(켜짐) */ }
+
+  // 1) 인앱 알림 내역 저장 (설정 꺼져있어도 내역은 저장)
   try {
     await adminDb
       .collection("artifacts").doc(APP_ID)
@@ -1955,7 +1971,12 @@ async function sendPushToUser(targetUid, { title, body, data = {} }) {
     logger.warn(`[Notification] 저장 실패 uid:${targetUid}`, err.message);
   }
 
-  // 2) FCM 푸시 전송
+  // 2) FCM 푸시 전송 (사용자가 해당 알림을 끈 경우 건너뜀)
+  if (pushDisabled) {
+    logger.info(`[Push] 알림 설정 OFF → uid:${targetUid}, type:${data.type}`);
+    return;
+  }
+
   try {
     const tokenDoc = await adminDb
       .collection("artifacts").doc(APP_ID)

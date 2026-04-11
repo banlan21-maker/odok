@@ -796,6 +796,16 @@ export const T = {
     notification_gift: "님이 선물을 보냈어요",
     notification_new_book: "님이 새 책을 올렸어요",
     notification_new_episode: "님이 새 에피소드를 올렸어요",
+    inbox_title: "소식함",
+    inbox_tab_notifications: "알림",
+    inbox_tab_mailbox: "우편함",
+    notif_settings_title: "알림 설정",
+    notif_setting_all: "모든 알림",
+    notif_setting_comment: "댓글 알림",
+    notif_setting_follow: "팔로우 알림",
+    notif_setting_new_book: "팔로우 작가 신작",
+    notif_setting_new_episode: "시리즈 새 에피소드",
+    notif_setting_gift: "선물 알림",
 
     // ProfileView - 독서 통계
     reading_stats_title: "독서 통계",
@@ -1612,6 +1622,16 @@ export const T = {
     notification_gift: " sent you a gift",
     notification_new_book: " published a new book",
     notification_new_episode: " posted a new episode",
+    inbox_title: "Inbox",
+    inbox_tab_notifications: "Alerts",
+    inbox_tab_mailbox: "Mailbox",
+    notif_settings_title: "Notifications",
+    notif_setting_all: "All notifications",
+    notif_setting_comment: "Comments",
+    notif_setting_follow: "Follows",
+    notif_setting_new_book: "New books from followed",
+    notif_setting_new_episode: "New series episodes",
+    notif_setting_gift: "Gifts",
 
     // ProfileView - Reading Stats
     reading_stats_title: "Reading Stats",
