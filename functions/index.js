@@ -1975,6 +1975,144 @@ exports.generateBookSummary = onCall({ region: REGION, maxInstances: 10, timeout
   return { summary: summary, summary_type: type === 'basic' ? 'BASIC' : 'PREMIUM' };
 });
 
+// ─── AI 평론가: 책 짧은 평론 생성 (잉크 2개 소비) ────────────────────────────
+const REVIEWER_CHARACTERS = [
+  { id: 'critic',    name: '까칠한 평론가',  emoji: '😤', personality: '냉정하고 직설적이며, 작품의 단점을 날카롭게 짚어낸다. 칭찬할 때도 인색하다.' },
+  { id: 'emotional', name: '감성 평론가',    emoji: '🥺', personality: '감정에 충실하고 여운을 중시한다. 작품의 분위기와 감정선을 풍부하게 표현한다.' },
+  { id: 'mz',        name: 'MZ 평론가',      emoji: '🤓', personality: '트렌디하고 유머러스하며, 신조어와 밈을 자유롭게 사용한다. 솔직하고 가볍다.' },
+  { id: 'literary',  name: '문학 평론가',    emoji: '📖', personality: '정통 문학 평론의 시각으로 서사 구조와 문체를 분석한다. 격조 있는 어휘를 쓴다.' },
+  { id: 'reader',    name: '평범한 독자',    emoji: '👤', personality: '꾸밈없이 솔직한 일반 독자의 시각이다. 일상적인 언어로 감상을 표현한다.' },
+];
+
+const REVIEW_TONES = [
+  { id: 'positive',  label: '긍정',   guide: '작품의 매력과 장점을 강조하며 호평한다.', minRating: 4, maxRating: 5 },
+  { id: 'negative',  label: '부정',   guide: '작품의 약점과 아쉬운 점을 지적하며 혹평한다.', minRating: 1, maxRating: 2 },
+  { id: 'neutral',   label: '중립',   guide: '장단점을 균형 있게 짚으며 객관적으로 평가한다.', minRating: 3, maxRating: 3 },
+  { id: 'humor',     label: '유머',   guide: '재치 있고 위트 넘치는 톤으로 가볍게 평한다.', minRating: 2, maxRating: 4 },
+  { id: 'emotional', label: '감성',   guide: '감정과 여운을 중심으로 서정적으로 평한다.', minRating: 3, maxRating: 5 },
+];
+
+exports.generateBookReview = onCall(
+  {
+    region: REGION,
+    maxInstances: 10,
+    timeoutSeconds: 60,
+  },
+  async (request) => {
+    if (!request.auth) {
+      throw new HttpsError("unauthenticated", "로그인이 필요합니다.");
+    }
+
+    const { bookId, appId } = request.data;
+    if (!bookId || !appId) {
+      throw new HttpsError("invalid-argument", "bookId와 appId가 필요합니다.");
+    }
+
+    const userId = request.auth.uid;
+    const INK_COST = 2;
+
+    // 1. 잉크 차감 (트랜잭션)
+    const profileRef = adminDb.collection("artifacts").doc(appId)
+      .collection("users").doc(userId)
+      .collection("profile").doc("info");
+
+    await adminDb.runTransaction(async (tx) => {
+      const snap = await tx.get(profileRef);
+      if (!snap.exists) throw new HttpsError("not-found", "프로필을 찾을 수 없습니다.");
+      const currentInk = snap.data().ink || 0;
+      if (currentInk < INK_COST) {
+        throw new HttpsError("failed-precondition", `잉크가 부족합니다. (${INK_COST}개 필요)`);
+      }
+      tx.update(profileRef, { ink: currentInk - INK_COST });
+    });
+
+    // 2. 책 정보 조회
+    const bookRef = adminDb.collection("artifacts").doc(appId).collection("books").doc(bookId);
+    const bookSnap = await bookRef.get();
+    if (!bookSnap.exists) {
+      // 잉크 환불
+      await profileRef.update({ ink: admin.firestore.FieldValue.increment(INK_COST) });
+      throw new HttpsError("not-found", "책을 찾을 수 없습니다.");
+    }
+    const book = bookSnap.data();
+    const bookContent = (book.content || (book.episodes?.map(e => e.content).join("\n\n")) || "").slice(0, 4000);
+    const bookTitle = book.title || "제목 없음";
+    const bookGenre = book.genre || book.subCategory || "";
+
+    // 3. 캐릭터 + 톤 랜덤 선택
+    const character = REVIEWER_CHARACTERS[Math.floor(Math.random() * REVIEWER_CHARACTERS.length)];
+    const tone = REVIEW_TONES[Math.floor(Math.random() * REVIEW_TONES.length)];
+    const rating = tone.minRating === tone.maxRating
+      ? tone.minRating
+      : Math.floor(Math.random() * (tone.maxRating - tone.minRating + 1)) + tone.minRating;
+
+    // 4. Gemini 프롬프트
+    const systemInstruction = [
+      `당신은 "${character.name}"라는 캐릭터다.`,
+      `성격: ${character.personality}`,
+      "지금 한 권의 책을 읽고 짧은 평론을 남기려 한다.",
+      `[톤 지침] ${tone.guide}`,
+      "[분량] 공백 포함 100~200자로, 댓글처럼 짧고 임팩트 있게 작성하라.",
+      "[형식] 마크다운, 별표, 헤더 없이 평론 본문만 출력하라.",
+      "[언어] 반드시 한국어만 사용하라.",
+      "[금지] '★', '⭐' 별점 표시를 본문에 넣지 마라. (별점은 별도로 표시됨)",
+      "[금지] '저는', '제가' 같은 인사말 없이 바로 평론으로 시작하라.",
+    ].join(" ");
+
+    const prompt = [
+      `[책 제목] ${bookTitle}`,
+      bookGenre ? `[장르] ${bookGenre}` : "",
+      "",
+      "[책 내용 일부]",
+      bookContent,
+      "",
+      `위 책에 대한 ${character.name}의 짧은 평론을 작성하라.`,
+    ].filter(Boolean).join("\n");
+
+    // 5. Gemini 호출
+    let reviewText = null;
+    try {
+      const result = await callGemini(systemInstruction, prompt, 0.85, true);
+      reviewText = stripMetaTags((result.content || "").trim());
+    } catch (err) {
+      logger.error("[generateBookReview] Gemini 오류:", err.message);
+      // 실패 시 잉크 환불
+      await profileRef.update({ ink: admin.firestore.FieldValue.increment(INK_COST) });
+      throw new HttpsError("internal", "AI 평론 생성에 실패했습니다. 잉크가 환불되었습니다.");
+    }
+
+    if (!reviewText || reviewText.length < 20) {
+      await profileRef.update({ ink: admin.firestore.FieldValue.increment(INK_COST) });
+      throw new HttpsError("internal", "AI 평론이 정상적으로 생성되지 않았습니다.");
+    }
+
+    // 6. Firestore 저장
+    const reviewData = {
+      bookId,
+      reviewerCharacterId: character.id,
+      reviewerName: character.name,
+      reviewerEmoji: character.emoji,
+      tone: tone.id,
+      toneLabel: tone.label,
+      rating,
+      content: reviewText,
+      triggeredBy: userId,
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    };
+    const reviewRef = await adminDb.collection("artifacts").doc(appId)
+      .collection("public").doc("data")
+      .collection("book_reviews").add(reviewData);
+
+    logger.info(`[generateBookReview] 생성 완료: ${character.name} (${tone.id}/${rating}★)`);
+
+    return {
+      id: reviewRef.id,
+      ...reviewData,
+      createdAt: new Date().toISOString(),
+    };
+  }
+);
+
 // ─── 푸시 알림 헬퍼 ────────────────────────────────────────────────────────
 const APP_ID = "odok-app-default";
 

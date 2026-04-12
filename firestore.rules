@@ -78,6 +78,12 @@ service cloud.firestore {
           allow update, delete: if isAuth() && resource.data.userId == request.auth.uid;
         }
 
+        // Book Reviews (AI 평론) — 서버 함수에서만 생성
+        match /book_reviews/{reviewId} {
+          allow read: if true;
+          allow create, update, delete: if false; // Cloud Function (Admin SDK) only
+        }
+
         // Ratings
         match /ratings/{ratingId} {
           allow read: if true;

@@ -181,6 +181,10 @@ const BookDetail = ({ book, onClose, onBookUpdate, fontSize = 'text-base', user,
   const [isLiked, setIsLiked] = useState(false);
   const [comments, setComments] = useState([]);
   const [commentInput, setCommentInput] = useState('');
+  const [commentTab, setCommentTab] = useState('comments'); // 'comments' | 'ai_reviews'
+  const [aiReviews, setAiReviews] = useState([]);
+  const [isGeneratingReview, setIsGeneratingReview] = useState(false);
+  const REVIEW_INK_COST = 2;
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [editingCommentId, setEditingCommentId] = useState(null);
   const [editingText, setEditingText] = useState('');
@@ -373,6 +377,39 @@ const BookDetail = ({ book, onClose, onBookUpdate, fontSize = 'text-base', user,
       setComments(sorted);
     });
   }, [appId, bookId]);
+
+  // AI 평론 구독
+  useEffect(() => {
+    if (!appId || !bookId) return;
+    const reviewsRef = collection(db, 'artifacts', appId, 'public', 'data', 'book_reviews');
+    return onSnapshot(reviewsRef, (snap) => {
+      const items = snap.docs
+        .map(d => ({ id: d.id, ...d.data() }))
+        .filter(r => r.bookId === bookId)
+        .sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+      setAiReviews(items);
+    });
+  }, [appId, bookId]);
+
+  // AI 평론 생성
+  const generateAIReview = async () => {
+    if (!user) { alert('로그인이 필요합니다.'); return; }
+    if (isGeneratingReview) return;
+    if ((userProfile?.ink || 0) < REVIEW_INK_COST) {
+      alert(`잉크가 부족합니다. (${REVIEW_INK_COST}개 필요)`);
+      return;
+    }
+    setIsGeneratingReview(true);
+    try {
+      const reviewFn = httpsCallable(functions, 'generateBookReview');
+      await reviewFn({ bookId, appId });
+    } catch (err) {
+      console.error('AI 평론 생성 실패:', err);
+      alert(err?.message || 'AI 평론 생성에 실패했습니다.');
+    } finally {
+      setIsGeneratingReview(false);
+    }
+  };
 
   // 시리즈 다음 화 집필 중 로딩 메시지 순환
   useEffect(() => {
@@ -1111,9 +1148,86 @@ const BookDetail = ({ book, onClose, onBookUpdate, fontSize = 'text-base', user,
           </div>
         )}
 
-        {/* 댓글 */}
+        {/* 댓글 + AI 평론 탭 */}
         <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 border border-slate-100 dark:border-slate-700 shadow-sm space-y-4">
-          <h3 className="text-sm font-bold text-slate-700 dark:text-slate-200">{(t?.comment_count || "댓글 {count}개").replace('{count}', comments.length)}</h3>
+          {/* 탭 */}
+          <div className="flex border-b border-slate-200 dark:border-slate-700 -mt-2">
+            <button
+              onClick={() => setCommentTab('comments')}
+              className={`flex-1 py-2 text-xs font-black transition-colors ${commentTab === 'comments' ? 'text-orange-600 border-b-2 border-orange-500' : 'text-slate-400'}`}
+            >
+              💬 댓글 {comments.length}
+            </button>
+            <button
+              onClick={() => setCommentTab('ai_reviews')}
+              className={`flex-1 py-2 text-xs font-black transition-colors ${commentTab === 'ai_reviews' ? 'text-purple-600 border-b-2 border-purple-500' : 'text-slate-400'}`}
+            >
+              🤖 AI 평론 {aiReviews.length}
+            </button>
+          </div>
+
+          {commentTab === 'ai_reviews' ? (
+            <>
+              <div className="space-y-3 max-h-96 overflow-auto pr-1">
+                {aiReviews.length === 0 ? (
+                  <div className="text-center py-8 space-y-2">
+                    <p className="text-3xl">🤖</p>
+                    <p className="text-xs text-slate-400 dark:text-slate-500">아직 AI 평론이 없어요</p>
+                    <p className="text-[11px] text-slate-300">잉크 {REVIEW_INK_COST}개로 AI 평론을 받아보세요!</p>
+                  </div>
+                ) : (
+                  aiReviews.map((r) => {
+                    const toneColors = {
+                      positive:  { bg: 'bg-emerald-50 dark:bg-emerald-900/20', border: 'border-emerald-200 dark:border-emerald-800', text: 'text-emerald-700 dark:text-emerald-400' },
+                      negative:  { bg: 'bg-rose-50 dark:bg-rose-900/20',       border: 'border-rose-200 dark:border-rose-800',       text: 'text-rose-700 dark:text-rose-400' },
+                      neutral:   { bg: 'bg-slate-50 dark:bg-slate-700/40',     border: 'border-slate-200 dark:border-slate-600',     text: 'text-slate-700 dark:text-slate-300' },
+                      humor:     { bg: 'bg-amber-50 dark:bg-amber-900/20',     border: 'border-amber-200 dark:border-amber-800',     text: 'text-amber-700 dark:text-amber-400' },
+                      emotional: { bg: 'bg-purple-50 dark:bg-purple-900/20',   border: 'border-purple-200 dark:border-purple-800',   text: 'text-purple-700 dark:text-purple-400' },
+                    };
+                    const cfg = toneColors[r.tone] || toneColors.neutral;
+                    return (
+                      <div key={r.id} className={`rounded-xl p-3 border ${cfg.bg} ${cfg.border}`}>
+                        <div className="flex items-center justify-between mb-1.5">
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-base">{r.reviewerEmoji}</span>
+                            <span className="text-xs font-black text-slate-700 dark:text-slate-200">{r.reviewerName}</span>
+                            <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${cfg.bg} ${cfg.text} border ${cfg.border}`}>
+                              {r.toneLabel}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-0.5">
+                            {[1,2,3,4,5].map(s => (
+                              <span key={s} className={`text-xs ${s <= r.rating ? 'text-yellow-400' : 'text-slate-300 dark:text-slate-600'}`}>★</span>
+                            ))}
+                          </div>
+                        </div>
+                        <p className="text-xs text-slate-700 dark:text-slate-200 leading-relaxed whitespace-pre-line">
+                          {r.content}
+                        </p>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+
+              {/* AI 평론 생성 버튼 */}
+              <button
+                onClick={generateAIReview}
+                disabled={isGeneratingReview}
+                className="w-full py-3 rounded-xl text-sm font-black bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 active:scale-95 text-white transition-all disabled:opacity-60 flex items-center justify-center gap-2"
+              >
+                {isGeneratingReview ? (
+                  <><RefreshCw className="w-4 h-4 animate-spin" /> AI 평론 생성 중...</>
+                ) : (
+                  <>🤖 AI 평론 받기 (잉크 {REVIEW_INK_COST}개)</>
+                )}
+              </button>
+              <p className="text-[10px] text-slate-400 dark:text-slate-500 text-center">
+                랜덤한 평론가가 무작위 톤으로 평을 남겨요. 긍정·부정 모두 가능!
+              </p>
+            </>
+          ) : (
+            <>
           <div className="space-y-3 max-h-80 overflow-auto pr-1">
             {comments.length === 0 ? (
               <p className="text-xs text-slate-400 dark:text-slate-500">{t?.first_comment || "첫 댓글을 남겨보세요."}</p>
@@ -1205,6 +1319,8 @@ const BookDetail = ({ book, onClose, onBookUpdate, fontSize = 'text-base', user,
             </div>
           )}
           <p className="text-xs text-slate-400 dark:text-slate-500">{t?.comment_limit || "댓글은 200자 이내로 작성하세요."}</p>
+            </>
+          )}
         </div>
 
         {/* 시리즈 이어쓰기 모달 */}
