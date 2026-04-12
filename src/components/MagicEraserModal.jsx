@@ -37,10 +37,10 @@ const MagicEraserModal = ({ user, books, useItem, onClose, t = {} }) => {
     const steps = selectedBook.steps || [];
     const lastStep = steps[steps.length - 1];
     const nonLastSteps = steps.slice(0, -1);
-    const previousContent = nonLastSteps
-      .map(s => s.summary || s.content?.slice(0, 300) || '')
-      .filter(Boolean)
-      .join('\n');
+    // steps가 1개뿐이면 본문 앞부분을 맥락으로 사용
+    const previousContent = nonLastSteps.length > 0
+      ? nonLastSteps.map(s => s.summary || s.content?.slice(0, 300) || '').filter(Boolean).join('\n')
+      : (selectedBook.content || '').slice(0, 1500);
 
     try {
       const result = await regenerateFn({

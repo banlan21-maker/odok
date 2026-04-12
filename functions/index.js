@@ -1758,7 +1758,7 @@ exports.enhanceBook = onCall(
       throw new HttpsError("internal", "텍스트 개선에 실패했습니다. 잠시 후 다시 시도해주세요.");
     }
 
-    return { enhancedContent };
+    return { enhancedContent: stripMetaTags(enhancedContent) };
   }
 );
 
@@ -1783,8 +1783,8 @@ exports.transformBookStyle = onCall(
       dialect: "주어진 텍스트를 경상도 사투리로 변환하라. '~카이', '~데이', '~라카이', '~가', '~아이가', '마', '와', '니', '우야꼬', '아이고' 등 경상도 특유의 방언과 어투를 자연스럽게 섞어라. 투박하지만 정감 넘치는 분위기를 살려라.",
       historical: "주어진 텍스트를 조선시대 사극 문체로 변환하라. '~하오', '~이옵니다', '~하셨나이까', '~하리이다', '소인', '전하', '마마' 등 고풍스러운 어휘와 존댓말을 사용하라. 운율감 있고 격조 높은 문체로 다듬어라.",
       literary: "주어진 텍스트를 순수문학 고전 명작 스타일로 변환하라. 유려하고 깊이 있는 문학적 문체로 다듬어라. 감각적인 묘사, 섬세한 심리 표현, 은유와 상징을 풍부하게 사용하라.",
-      trendy: "주어진 텍스트를 MZ세대 트렌디 감성으로 변환하라. '레전드', '갓생', '찐', '개잼', '핵인싸', '소름', '존버' 등 최신 인터넷 유행어를 자연스럽게 섞어라. 짧고 임팩트 있는 문장과 이모지를 활용해 힙한 감성을 살려라.",
-      cyber: "주어진 텍스트를 AI 보고서 사이버네틱 스타일로 변환하라. 'SYSTEM:', '[LOG]', '[DATA]', '처리 완료', 'ERROR:' 같은 기술적 문구를 섞고, 냉철하고 객관적인 보고 문체로 변환하라. 감정을 수치화하거나 알고리즘적으로 표현하라.",
+      trendy: "주어진 텍스트를 MZ세대 감성으로 변환하라. 유행어를 적절히 섞되 전체의 20% 이내로 제한하라. 기본은 깔끔하고 위트 있는 현대 구어체를 유지하면서 가끔 트렌디한 표현을 자연스럽게 녹여라. 이모지는 문단당 1~2개 이내로 절제하라. 읽기 불편할 정도로 과하면 안 된다.",
+      cyber: "주어진 텍스트를 근미래 SF 보고서 느낌으로 변환하라. 냉철하고 건조한 관찰자 문체를 기본으로 하되, 감정이나 상황을 데이터처럼 표현하라. 예: '심박수 상승 감지', '위협도 78%'. 'SYSTEM:'이나 '[LOG]' 같은 태그는 최소한으로만 사용하고, 소설로서 읽히는 것을 최우선으로 하라.",
     };
 
     const guide = styleGuides[style];
@@ -1819,7 +1819,7 @@ exports.transformBookStyle = onCall(
       throw new HttpsError("internal", "텍스트 변환에 실패했습니다. 잠시 후 다시 시도해주세요.");
     }
 
-    return { transformedContent };
+    return { transformedContent: stripMetaTags(transformedContent) };
   }
 );
 
@@ -1856,7 +1856,7 @@ exports.regenerateEnding = onCall(
       "[절대 규칙] 마지막 챕터만 완전히 새롭게 써라. 이전 내용과 자연스럽게 이어져야 한다.",
       "[절대 규칙] 마크다운 헤더, 라벨, 메타 정보 없이 오직 본문만 출력하라.",
       "[절대 규칙] 반드시 한국어만 사용하라.",
-      "공백 포함 약 600~1,000자 분량으로 써라.",
+      "공백 포함 약 1,500~2,000자 분량으로 충분히 써라. 서두르지 말고 감정과 장면을 깊이 있게 묘사하라.",
     ].join(" ");
 
     const prompt = `[작품 정보]
@@ -1891,7 +1891,7 @@ ${guide}
         const model = genAI.getGenerativeModel({
           model: modelName,
           systemInstruction,
-          generationConfig: { temperature: 0.85, maxOutputTokens: 4096 },
+          generationConfig: { temperature: 0.75, maxOutputTokens: 8192 },
         });
         const result = await model.generateContent(prompt);
         const text = result.response.text().trim();
@@ -1905,7 +1905,7 @@ ${guide}
       throw new HttpsError("internal", "결말 생성에 실패했습니다. 잠시 후 다시 시도해주세요.");
     }
 
-    return { newEnding };
+    return { newEnding: stripMetaTags(newEnding) };
   }
 );
 
