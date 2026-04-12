@@ -70,12 +70,12 @@ const PromoCarousel = ({ promotions, books, authorProfiles, handleBookClick, t }
       </div>
 
       {/* 카드 */}
-      <div className="relative rounded-3xl overflow-hidden shadow-xl" style={{ height: '230px' }}>
+      <div className="relative rounded-3xl overflow-hidden shadow-xl" style={{ height: '280px' }}>
         {items.map(({ promo, book }, i) => {
           const cover = getCoverImageFromBook(book);
-          const authorName = promo.authorNickname || (book?.isAnonymous ? '익명' : (authorProfiles[promo.authorId]?.nickname || book?.authorName || '익명'));
-          const authorBio = promo.authorBio || authorProfiles[promo.authorId]?.bio || '';
-          const authorImg = authorProfiles[promo.authorId]?.profileImageUrl || null;
+          const isAnonymous = !!book?.isAnonymous;
+          const authorName = isAnonymous ? '익명' : (promo.authorNickname || authorProfiles[promo.authorId]?.nickname || book?.authorName || '익명');
+          const authorImg = isAnonymous ? null : (authorProfiles[promo.authorId]?.profileImageUrl || null);
           const remaining = getRemainingHours(promo.expiresAt);
 
           return (
@@ -94,48 +94,55 @@ const PromoCarousel = ({ promotions, books, authorProfiles, handleBookClick, t }
                 />
               )}
               {/* 그라데이션 오버레이 */}
-              <div className="absolute inset-0 bg-gradient-to-b from-black/25 via-black/55 to-black/80" />
+              <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-black/60 to-black/85" />
 
               {/* 클릭 영역 */}
               <button
-                className="absolute inset-0 w-full flex flex-col justify-between p-5 text-left"
+                className="absolute inset-0 w-full flex flex-col p-4 text-left"
                 onClick={() => handleBookClick(book)}
               >
                 {/* 상단: 작가 정보 */}
-                <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-full overflow-hidden border border-white/30 shrink-0 bg-white/20">
-                    {authorImg
-                      ? <img src={authorImg} alt="" className="w-full h-full object-cover" />
-                      : <span className="w-full h-full flex items-center justify-center text-sm">👤</span>}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-white font-black text-xs leading-none">{authorName}</p>
-                    {authorBio && <p className="text-white/55 text-[10px] mt-0.5 truncate">{authorBio}</p>}
-                  </div>
+                <div className="flex items-center gap-2 mb-3">
+                  {!isAnonymous && (
+                    <div className="w-8 h-8 rounded-full overflow-hidden border border-white/30 shrink-0 bg-white/20">
+                      {authorImg
+                        ? <img src={authorImg} alt="" className="w-full h-full object-cover" />
+                        : <span className="w-full h-full flex items-center justify-center text-sm">👤</span>}
+                    </div>
+                  )}
+                  <p className="text-white font-black text-sm flex-1 truncate">{authorName}</p>
                   <div className="flex items-center gap-1 shrink-0">
-                    <span className="text-[9px] text-white/40">{remaining}</span>
+                    <span className="text-[9px] text-white/50">{remaining}</span>
                     <span className="text-[9px] font-bold text-violet-300 bg-violet-500/25 px-1.5 py-0.5 rounded-full">📢</span>
                   </div>
                 </div>
 
-                {/* 중앙: 홍보 문구 */}
-                <div className="text-center px-4 py-1">
-                  <p className="text-white text-xl font-black leading-tight drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)]">
-                    {promo.promoText}
-                  </p>
+                {/* 중단: 좌측 큰 표지 + 우측 책 정보 */}
+                <div className="flex gap-3 flex-1 min-h-0">
+                  {cover && (
+                    <img
+                      src={cover}
+                      alt=""
+                      className="w-24 h-32 rounded-lg object-cover shadow-lg shrink-0"
+                    />
+                  )}
+                  <div className="flex-1 min-w-0 flex flex-col">
+                    <h4 className="text-white font-black text-base leading-tight line-clamp-2 mb-1.5">
+                      {book.title}
+                    </h4>
+                    {promo.bookSummary && (
+                      <p className="text-white/70 text-[11px] leading-relaxed line-clamp-4 flex-1">
+                        {promo.bookSummary}
+                      </p>
+                    )}
+                  </div>
                 </div>
 
-                {/* 하단: 책 정보 + 소개글 */}
-                <div>
-                  {promo.bookSummary && (
-                    <p className="text-white/65 text-[11px] leading-relaxed line-clamp-2 mb-1.5">
-                      {promo.bookSummary}
-                    </p>
-                  )}
-                  <div className="flex items-center gap-2">
-                    {cover && <img src={cover} alt="" className="w-7 h-9 rounded object-cover shadow" />}
-                    <p className="text-white font-black text-sm truncate">{book.title}</p>
-                  </div>
+                {/* 하단: 홍보 문구 */}
+                <div className="mt-2 pt-2 border-t border-white/15">
+                  <p className="text-white text-sm font-black leading-tight line-clamp-2 drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)]">
+                    💬 {promo.promoText}
+                  </p>
                 </div>
               </button>
             </div>
@@ -427,78 +434,70 @@ const HomeView = ({
           <div className="space-y-2">
             {weeklyBestBooks.map((book, index) => {
               const rank = index + 1;
-              // 1, 2, 3위 메달 강조 (금/은/동)
-              const medalConfig =
-                rank === 1 ? {
-                  bg: 'bg-gradient-to-br from-yellow-400 to-yellow-500',
-                  text: 'text-white',
-                  icon: <Medal className="w-7 h-7 fill-yellow-700 stroke-yellow-800" />,
-                  rankDisplay: '🥇'
-                }
-                  : rank === 2 ? {
-                    bg: 'bg-gradient-to-br from-slate-300 to-slate-400',
-                    text: 'text-white',
-                    icon: <Medal className="w-7 h-7 fill-slate-500 stroke-slate-600" />,
-                    rankDisplay: '🥈'
-                  }
-                    : rank === 3 ? {
-                      bg: 'bg-gradient-to-br from-orange-300 to-orange-400',
-                      text: 'text-white',
-                      icon: <Medal className="w-7 h-7 fill-orange-500 stroke-orange-600" />,
-                      rankDisplay: '🥉'
-                    }
-                      : {
-                        bg: 'bg-slate-100',
-                        text: 'text-slate-500',
-                        icon: null,
-                        rankDisplay: rank
-                      };
+              const rankEmoji = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : `${rank}`;
+              const coverImage = getCoverImageFromBook(book);
+              const categoryLabel = book.category === 'webnovel' ? '웹소설' :
+                book.category === 'novel' ? '소설' :
+                  book.category === 'series' ? '시리즈' :
+                    book.category === 'essay' ? '에세이' :
+                      book.category === 'self-improvement' ? '자기계발' :
+                        book.category === 'self-help' ? '자기계발' :
+                          book.category === 'humanities' ? '인문·철학' : book.category;
 
               return (
                 <button
                   key={book.id}
                   onClick={() => handleBookClick(book)}
-                  className="w-full bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-100 dark:border-slate-700 shadow-sm flex items-center gap-4 hover:bg-orange-50 dark:hover:bg-slate-700 transition-colors active:scale-[0.98] text-left"
+                  className="w-full px-3 py-2.5 bg-white dark:bg-slate-800 rounded-xl border border-slate-100 dark:border-slate-700 shadow-sm active:bg-slate-50 dark:active:bg-slate-700 transition-colors text-left hover:border-orange-200"
                 >
-                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center font-black text-xl shrink-0 shadow-lg ${medalConfig.bg} ${medalConfig.text}`}>
-                    {medalConfig.icon || <span className="text-lg">{medalConfig.rankDisplay}</span>}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <h4 className="font-bold text-slate-800 dark:text-slate-100 truncate mb-1">{book.title}</h4>
-                    <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 flex-wrap">
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-gradient-to-r from-orange-500 to-rose-500 text-white text-[11px] font-black shadow-sm">
-                        <Book className="w-3 h-3" />
-                        {getAuthorImage(book) ? (
-                          <img src={getAuthorImage(book)} alt="" className="w-4 h-4 rounded-full object-cover" />
-                        ) : (
-                          <User className="w-3 h-3" />
-                        )}
-                        {getAuthorName(book)}
-                      </span>
+                  <div className="flex items-center gap-2.5">
+                    <div className="relative w-11 h-14 rounded-md overflow-hidden shrink-0 bg-slate-100 dark:bg-slate-700">
+                      <img
+                        src={coverImage}
+                        alt={book.title}
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          e.target.style.display = 'none';
+                          e.target.nextElementSibling.style.display = 'flex';
+                        }}
+                      />
+                      <div className="w-full h-full bg-gradient-to-br from-orange-100 to-orange-200 flex items-center justify-center hidden">
+                        <Book className="w-4 h-4 text-orange-600" />
+                      </div>
                       {(book.isSeries || book.category === 'series') && book.episodes && (
-                        <span className="text-[10px] font-bold text-orange-600">
-                          {book.episodes.length}화 {book.status === 'ongoing' ? t.ongoing : t.completed}
-                        </span>
+                        <div
+                          className={`absolute top-0.5 right-0.5 w-6 h-6 rounded-full flex items-center justify-center text-[7px] font-black shadow-md ${book.status === 'ongoing'
+                            ? 'bg-amber-400 text-amber-900'
+                            : 'bg-red-500 text-white'
+                            }`}
+                        >
+                          {book.status === 'ongoing' ? t.ongoing : t.completed}
+                        </div>
                       )}
-                      <span className="flex items-center gap-1 text-slate-400">
-                        <Eye className="w-3 h-3" />
-                        {formatCount(book.views)}
-                      </span>
-                      <span className="flex items-center gap-1 text-slate-400">
-                        <Heart className="w-3 h-3" />
-                        {formatCount(book.likes)}
-                      </span>
-                      <span className="flex items-center gap-1 text-slate-400">
-                        <Bookmark className="w-3 h-3" />
-                        {formatCount(book.favorites)}
-                      </span>
-                      <span className="flex items-center gap-1 text-slate-400">
-                        <CheckCircle className="w-3 h-3" />
-                        {formatCount(book.completions)}
-                      </span>
+                      <div className="absolute -top-0.5 -left-0.5 w-5 h-5 rounded-full bg-white dark:bg-slate-900 flex items-center justify-center text-[11px] shadow-md border border-slate-200 dark:border-slate-600">
+                        {rankEmoji}
+                      </div>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-black text-slate-800 dark:text-slate-100 text-sm mb-1 line-clamp-1">{book.title}</h3>
+                      <div className="flex items-center gap-1.5 text-[10px] text-slate-500 dark:text-slate-400 flex-wrap">
+                        <span className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-white text-[10px] font-black shadow-sm ${book?.isAnonymous ? 'bg-green-500' : (authorProfiles[book.authorId]?.badgeStyle || 'bg-green-500')}`}>
+                          <span className="text-[10px]">{book?.isAnonymous ? '🌱' : (authorProfiles[book.authorId]?.gradeIcon || '🌱')}</span>
+                          {getAuthorName(book)}
+                        </span>
+                        <span className="bg-slate-100 dark:bg-slate-700 px-1.5 py-0.5 rounded-full font-bold text-slate-600 dark:text-slate-300">{categoryLabel}</span>
+                        {book.subCategory && (
+                          <span className="bg-slate-100 dark:bg-slate-700 px-1.5 py-0.5 rounded-full text-slate-600 dark:text-slate-300">{formatGenreTag(book.subCategory)}</span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2.5 text-[10px] text-slate-400 mt-1">
+                        <span className="flex items-center gap-0.5"><Eye className="w-2.5 h-2.5" />{formatCount(book.views)}</span>
+                        <span className="flex items-center gap-0.5"><Heart className="w-2.5 h-2.5" />{formatCount(book.likes)}</span>
+                        <span className="flex items-center gap-0.5"><Bookmark className="w-2.5 h-2.5" />{formatCount(book.favorites)}</span>
+                        <span className="flex items-center gap-0.5"><CheckCircle className="w-2.5 h-2.5" />{formatCount(book.completions)}</span>
+                      </div>
                     </div>
                   </div>
-                  <ArrowRight className="w-4 h-4 text-slate-300 shrink-0" />
                 </button>
               );
             })}
