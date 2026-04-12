@@ -204,13 +204,13 @@ const HomeView = ({
   };
 
   return (
-    <div className="space-y-8 animate-in slide-in-from-bottom-2 fade-in pb-20">
+    <div className="space-y-8 animate-in slide-in-from-bottom-2 fade-in pb-20 pt-3">
 
       {/* 1. 상단 헤더 & 환영 메시지 */}
       <div className="space-y-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <img src="/icons/odok_waving.png" alt="" className="w-8 h-8" />
+            <img src="/icons/odok_waving.png" alt="" className="w-12 h-12" />
             <h1 className="text-lg font-jua font-black text-slate-800 dark:text-slate-100 leading-tight whitespace-pre-line">
               {t.home_main_title}
             </h1>
