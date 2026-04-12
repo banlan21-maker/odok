@@ -16,8 +16,6 @@ const ProfileView = ({
   setTempNickname,
   tempBio = '',
   setTempBio,
-  tempAnonymousActivity,
-  setTempAnonymousActivity,
   handleGoogleLogin,
   saveProfile,
   addInk,

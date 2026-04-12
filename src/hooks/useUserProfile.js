@@ -18,7 +18,6 @@ export const useUserProfile = ({ user, setView, setError, viewRef }) => {
   const [userProfile, setUserProfile] = useState(null);
   const [tempNickname, setTempNickname] = useState("");
   const [tempBio, setTempBio] = useState("");
-  const [tempAnonymousActivity, setTempAnonymousActivity] = useState(false);
   const [language, setLanguage] = useState('ko');
   const [fontSize, setFontSize] = useState('text-base');
   const [darkMode, setDarkMode] = useState(false);
@@ -170,7 +169,7 @@ export const useUserProfile = ({ user, setView, setError, viewRef }) => {
         setUserProfile(data);
         setTempNickname(data.nickname || '');
         setTempBio(data.bio || '');
-        setTempAnonymousActivity(!!data.anonymousActivity);
+
         if (data.language) setLanguage(data.language);
         if (data.fontSize) setFontSize(data.fontSize);
         if (data.darkMode !== undefined) setDarkMode(data.darkMode);
@@ -209,7 +208,7 @@ export const useUserProfile = ({ user, setView, setError, viewRef }) => {
         if (data.nickname) {
           setTempNickname(data.nickname);
         }
-        setTempAnonymousActivity(!!data.anonymousActivity);
+
         if (data.language) setLanguage(data.language);
         if (data.fontSize) setFontSize(data.fontSize);
         if (data.darkMode !== undefined) setDarkMode(data.darkMode);
@@ -296,7 +295,6 @@ export const useUserProfile = ({ user, setView, setError, viewRef }) => {
         fontSize: fontSize,
         darkMode: darkMode,
         notifSettings: notifSettings,
-        anonymousActivity: tempAnonymousActivity,
         bio: tempBio.trim().slice(0, 100),
         updatedAt: serverTimestamp()
       };
@@ -320,8 +318,7 @@ export const useUserProfile = ({ user, setView, setError, viewRef }) => {
       setUserProfile((prev) => ({
         ...prev,
         ...updateData,
-        nickname: newNickname,
-        anonymousActivity: tempAnonymousActivity
+        nickname: newNickname
       }));
 
       if (viewRef.current === 'profile_setup') {
@@ -440,8 +437,6 @@ export const useUserProfile = ({ user, setView, setError, viewRef }) => {
     setTempNickname,
     tempBio,
     setTempBio,
-    tempAnonymousActivity,
-    setTempAnonymousActivity,
     language,
     setLanguage,
     fontSize,

@@ -139,7 +139,7 @@ const App = () => {
   // 2. User Profile Hook
   const {
     userProfile, setUserProfile,
-    tempNickname, setTempNickname, tempBio, setTempBio, tempAnonymousActivity, setTempAnonymousActivity,
+    tempNickname, setTempNickname, tempBio, setTempBio,
     language, setLanguage,
     fontSize, setFontSize,
     darkMode, setDarkMode,
@@ -651,7 +651,7 @@ const App = () => {
               user={user} userProfile={userProfile} t={t} levelInfo={levelInfo}
               tempNickname={tempNickname} setTempNickname={setTempNickname}
               tempBio={tempBio} setTempBio={setTempBio}
-              tempAnonymousActivity={tempAnonymousActivity} setTempAnonymousActivity={setTempAnonymousActivity}
+
               handleGoogleLogin={handleGoogleLogin} saveProfile={saveProfile}
               addInk={addInk}
               error={error} setError={setError} appId={appId}
@@ -810,7 +810,7 @@ const App = () => {
                         user={user} userProfile={userProfile} t={t} levelInfo={levelInfo}
                         tempNickname={tempNickname} setTempNickname={setTempNickname}
                         tempBio={tempBio} setTempBio={setTempBio}
-                        tempAnonymousActivity={tempAnonymousActivity} setTempAnonymousActivity={setTempAnonymousActivity}
+          
                         handleGoogleLogin={handleGoogleLogin} saveProfile={saveProfile}
                         addInk={addInk} error={error} setError={setError} appId={appId}
                         onOpenHelp={() => storyReaderHook.setIsHelpModalOpen(true)}
