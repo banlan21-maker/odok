@@ -2130,6 +2130,12 @@ exports.onBookCreated = onDocumentCreated(
     const { authorId, title, isAnonymous, authorNickname } = book;
     if (!authorId) return;
 
+    // 익명 책은 팔로워에게 알림 보내지 않음 (익명성 보호)
+    if (isAnonymous) {
+      logger.info(`[NewBook] 익명 책 "${title}" — 팔로워 알림 생략`);
+      return;
+    }
+
     // 작가의 팔로워 목록 조회
     const followersSnap = await adminDb
       .collection("artifacts").doc(event.params.appId)

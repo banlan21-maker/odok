@@ -1069,8 +1069,8 @@ const BookDetail = ({ book, onClose, onBookUpdate, fontSize = 'text-base', user,
           </div>
         )}
 
-        {/* 잉크 보내기 (선물하기) - Lv 6 이상 해제 */}
-        {book.authorId !== user?.uid && (
+        {/* 잉크 보내기 (선물하기) - Lv 6 이상 해제, 익명 책 제외 */}
+        {book.authorId !== user?.uid && !book.isAnonymous && (
           <div className="flex flex-col items-center gap-2 mt-5">
             {!canDonate(getLevelFromXp(userProfile?.xp ?? 0)) ? (
               <div className="text-center py-3 px-4 bg-slate-100 dark:bg-slate-700 rounded-xl border border-slate-200 dark:border-slate-600">
