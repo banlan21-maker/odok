@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import imageCompression from 'browser-image-compression';
-import { Droplets, Save, Camera, Video, Lock, BookOpen, Flame, TrendingUp } from 'lucide-react';
+import { Droplets, Save, Camera, Video, Lock, BookOpen, Flame, TrendingUp, ChevronDown } from 'lucide-react';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { showRewardVideoAd } from '../utils/admobService';
 import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
@@ -34,6 +34,17 @@ const ProfileView = ({
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [isClaiming, setIsClaiming] = useState(false);
   const [expandedHighlightId, setExpandedHighlightId] = useState(null);
+
+  // 섹션별 접기/펼치기 (기본 모두 접힘, 탭 이동 시 리셋)
+  const [openSections, setOpenSections] = useState({
+    settings: false,
+    following: false,
+    highlights: false,
+    stats: false,
+    challenge: false,
+    achievements: false,
+  });
+  const toggleSection = (key) => setOpenSections(prev => ({ ...prev, [key]: !prev[key] }));
 
   // 월간 챌린지 계산 (현재달 기준, 2026_04부터 시작)
   const CHALLENGE_START = '2026_04';
@@ -213,8 +224,16 @@ const ProfileView = ({
         )}
 
         {/* 3. 사용자 설정 */}
-        <div className="bg-white dark:bg-slate-800 rounded-2xl p-4 border border-slate-100 dark:border-slate-700 shadow-sm space-y-4">
-          <h3 className="text-sm font-black text-slate-800 dark:text-slate-100 border-b border-slate-50 dark:border-slate-700 pb-2">사용자 설정</h3>
+        <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm overflow-hidden">
+          <button
+            onClick={() => toggleSection('settings')}
+            className="w-full flex items-center justify-between px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors"
+          >
+            <h3 className="text-sm font-black text-slate-800 dark:text-slate-100">⚙️ 사용자 설정</h3>
+            <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${openSections.settings ? 'rotate-180' : ''}`} />
+          </button>
+          {openSections.settings && (
+          <div className="px-4 pb-4 space-y-4 border-t border-slate-100 dark:border-slate-700 pt-4">
 
           {/* 프로필 사진 + 닉네임 */}
           <div className="flex gap-4 items-start">
@@ -283,15 +302,24 @@ const ProfileView = ({
             <Save className="w-5 h-5" />
             {t?.save_btn || "설정 저장"}
           </button>
+          </div>
+          )}
         </div>
 
         {/* 4. 팔로잉 목록 */}
         {Object.keys(follows).length > 0 && (
-          <div className="bg-white dark:bg-slate-800 rounded-2xl p-4 border border-slate-100 dark:border-slate-700 shadow-sm space-y-2">
-            <h3 className="text-sm font-black text-slate-800 dark:text-slate-100 border-b border-slate-50 dark:border-slate-700 pb-2 mb-1">
-              📚 팔로잉 ({Object.keys(follows).length}명)
-            </h3>
-            <div className="space-y-2">
+          <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm overflow-hidden">
+            <button
+              onClick={() => toggleSection('following')}
+              className="w-full flex items-center justify-between px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors"
+            >
+              <h3 className="text-sm font-black text-slate-800 dark:text-slate-100">
+                📚 팔로잉 ({Object.keys(follows).length}명)
+              </h3>
+              <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${openSections.following ? 'rotate-180' : ''}`} />
+            </button>
+            {openSections.following && (
+            <div className="px-4 pb-4 pt-2 space-y-2 border-t border-slate-100 dark:border-slate-700">
               {Object.entries(follows).map(([authorId, info]) => (
                 <div key={authorId} className="flex items-center justify-between gap-3">
                   <button
@@ -316,17 +344,25 @@ const ProfileView = ({
                 </div>
               ))}
             </div>
+            )}
           </div>
         )}
 
         {/* 5. 내 하이라이트 */}
         {highlights.length > 0 && (
-          <div className="bg-white dark:bg-slate-800 rounded-2xl p-4 border border-slate-100 dark:border-slate-700 shadow-sm">
-            <div className="flex items-center justify-between mb-3">
+          <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm overflow-hidden">
+            <button
+              onClick={() => toggleSection('highlights')}
+              className="w-full flex items-center justify-between px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors"
+            >
               <h3 className="text-sm font-black text-slate-800 dark:text-slate-100">🎨 내 하이라이트</h3>
-              <span className="text-xs font-bold text-slate-400">{highlights.length}개</span>
-            </div>
-            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold text-slate-400">{highlights.length}개</span>
+                <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${openSections.highlights ? 'rotate-180' : ''}`} />
+              </div>
+            </button>
+            {openSections.highlights && (
+            <div className="px-4 pb-4 pt-2 space-y-2 border-t border-slate-100 dark:border-slate-700">
               {highlights.map((h) => {
                 const isExpanded = expandedHighlightId === h.id;
                 const dateStr = h.createdAt
@@ -371,13 +407,22 @@ const ProfileView = ({
                 );
               })}
             </div>
+            )}
           </div>
         )}
 
         {/* 6. 독서 통계 */}
         {readingStats && (
-          <div className="bg-white dark:bg-slate-800 rounded-2xl p-4 border border-slate-100 dark:border-slate-700 shadow-sm">
-            <h3 className="text-sm font-black text-slate-800 dark:text-slate-100 mb-3">📊 {t.reading_stats_title || '독서 통계'}</h3>
+          <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm overflow-hidden">
+            <button
+              onClick={() => toggleSection('stats')}
+              className="w-full flex items-center justify-between px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors"
+            >
+              <h3 className="text-sm font-black text-slate-800 dark:text-slate-100">📊 {t.reading_stats_title || '독서 통계'}</h3>
+              <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${openSections.stats ? 'rotate-180' : ''}`} />
+            </button>
+            {openSections.stats && (
+            <div className="px-4 pb-4 pt-2 border-t border-slate-100 dark:border-slate-700">
             <div className="grid grid-cols-3 gap-2 mb-3">
               <div className="bg-orange-50 dark:bg-orange-900/20 rounded-xl p-3 text-center">
                 <BookOpen className="w-5 h-5 text-orange-500 mx-auto mb-1" />
@@ -410,15 +455,29 @@ const ProfileView = ({
                 </div>
               </div>
             )}
+            </div>
+            )}
           </div>
         )}
 
         {/* 7. 월간 챌린지 (4개) */}
         {userProfile && (
-          <div className="bg-white dark:bg-slate-800 rounded-2xl p-4 border border-slate-100 dark:border-slate-700 shadow-sm">
-            <div className="flex items-center justify-between mb-3">
+          <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm overflow-hidden">
+            <button
+              onClick={() => toggleSection('challenge')}
+              className="w-full flex items-center justify-between px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors"
+            >
               <h3 className="text-sm font-black text-slate-800 dark:text-slate-100">📅 월간 챌린지</h3>
-              <span className="text-[10px] font-bold text-slate-400">{challengeMonthKey.replace('_', '.')}</span>
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-bold text-slate-400">{challengeMonthKey.replace('_', '.')}</span>
+                <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${openSections.challenge ? 'rotate-180' : ''}`} />
+              </div>
+            </button>
+            {openSections.challenge && (
+            <div className="px-4 pb-4 pt-2 border-t border-slate-100 dark:border-slate-700">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-black text-slate-800 dark:text-slate-100 hidden">📅 월간 챌린지</h3>
+              <span className="text-[10px] font-bold text-slate-400 hidden">{challengeMonthKey.replace('_', '.')}</span>
             </div>
 
             {challengeActive ? (
@@ -480,6 +539,8 @@ const ProfileView = ({
             ) : (
               <div className="text-center py-4 text-xs text-slate-400">4월 1일부터 시작됩니다 🗓️</div>
             )}
+            </div>
+            )}
           </div>
         )}
 
@@ -490,11 +551,19 @@ const ProfileView = ({
           const unlockedCount = unlockedAchievements.length;
           const totalCount = ACHIEVEMENTS.length;
           return (
-            <div className="bg-white dark:bg-slate-800 rounded-2xl p-4 border border-slate-100 dark:border-slate-700 shadow-sm">
-              <div className="flex items-center justify-between mb-3">
+            <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm overflow-hidden">
+              <button
+                onClick={() => toggleSection('achievements')}
+                className="w-full flex items-center justify-between px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors"
+              >
                 <h3 className="text-sm font-black text-slate-800 dark:text-slate-100">🏆 내 업적</h3>
-                <span className="text-xs font-bold text-orange-500">{unlockedCount}/{totalCount}</span>
-              </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold text-orange-500">{unlockedCount}/{totalCount}</span>
+                  <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${openSections.achievements ? 'rotate-180' : ''}`} />
+                </div>
+              </button>
+              {openSections.achievements && (
+              <div className="px-4 pb-4 pt-2 border-t border-slate-100 dark:border-slate-700">
               <div className="grid grid-cols-4 gap-1.5">
                 {ACHIEVEMENTS.map((ach) => {
                   const isUnlocked = unlockedIds.has(ach.id);
@@ -522,6 +591,8 @@ const ProfileView = ({
                   );
                 })}
               </div>
+              </div>
+              )}
             </div>
           );
         })()}
