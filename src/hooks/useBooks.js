@@ -477,11 +477,34 @@ export const useBooks = ({ user, userProfile, setError, deductInk, setShowInkCon
             const profileRef = doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'info');
             try {
                 const nextDailyWriteCount = lastBookCreatedDate === todayDateKey ? dailyWriteCount + 1 : 1;
-                await updateDoc(profileRef, {
+                const _now = new Date();
+                const challengeMonthKey = `${_now.getFullYear()}_${String(_now.getMonth() + 1).padStart(2, '0')}`;
+                const CHALLENGE_START = '2026_04';
+                const isChallengeActive = challengeMonthKey >= CHALLENGE_START;
+                const storedMonth = userProfile?.challenge_month;
+
+                const updateData = {
                     bookCount: increment(1),
                     dailyWriteCount: nextDailyWriteCount,
                     lastBookCreatedDate: todayDateKey
-                });
+                };
+
+                if (isChallengeActive) {
+                    if (storedMonth === challengeMonthKey) {
+                        updateData.challenge_writes = increment(1);
+                    } else {
+                        // 월이 바뀌면 모든 챌린지 리셋
+                        updateData.challenge_month = challengeMonthKey;
+                        updateData.challenge_reads = 0;
+                        updateData.challenge_writes = 1;
+                        updateData.challenge_likes = 0;
+                        updateData.challenge_attendance = 0;
+                        updateData.challenge_claimed_map = {};
+                        updateData.challenge_claimed = false;
+                    }
+                }
+
+                await updateDoc(profileRef, updateData);
             } catch (profileErr) {
                 console.warn('프로필 업데이트 오류', profileErr);
                 // Fallback logic omitted for brevity, similar to original App.jsx

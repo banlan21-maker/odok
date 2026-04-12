@@ -479,7 +479,7 @@ const BookDetail = ({ book, onClose, onBookUpdate, fontSize = 'text-base', user,
     try {
       await setDoc(completionRef, { userId: user.uid, bookId, createdAt: serverTimestamp() });
       await updateDoc(bookRef, { completions: increment(1) });
-      // 월간 챌린지: 완독 버튼 누를 때만 카운트 (2026_04부터 시작)
+      // 월간 챌린지: 완독 챌린지 카운트 (2026_04부터, 본인 책 제외)
       const CHALLENGE_START = '2026_04';
       if (book?.authorId !== user.uid) {
         const profileRef = doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'info');
@@ -490,9 +490,14 @@ const BookDetail = ({ book, onClose, onBookUpdate, fontSize = 'text-base', user,
           if (storedMonth === challengeMonthKey) {
             await updateDoc(profileRef, { challenge_reads: increment(1) });
           } else {
+            // 월이 바뀌면 모든 챌린지 카운터/보상 리셋
             await updateDoc(profileRef, {
               challenge_month: challengeMonthKey,
               challenge_reads: 1,
+              challenge_writes: 0,
+              challenge_likes: 0,
+              challenge_attendance: 0,
+              challenge_claimed_map: {},
               challenge_claimed: false,
             });
           }

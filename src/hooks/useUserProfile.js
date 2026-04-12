@@ -51,7 +51,28 @@ export const useUserProfile = ({ user, setView, setError, viewRef }) => {
         }
       }
 
-      await updateDoc(profileRef, { lastAttendanceDate: today, ink: nextInk, attendanceStreak: newStreak });
+      const updatePayload = { lastAttendanceDate: today, ink: nextInk, attendanceStreak: newStreak };
+
+      // 월간 챌린지: 출석 카운터 증가 (2026_04부터)
+      const _now = new Date();
+      const challengeMonthKey = `${_now.getFullYear()}_${String(_now.getMonth() + 1).padStart(2, '0')}`;
+      const CHALLENGE_START = '2026_04';
+      if (challengeMonthKey >= CHALLENGE_START) {
+        if (data.challenge_month === challengeMonthKey) {
+          updatePayload.challenge_attendance = (data.challenge_attendance || 0) + 1;
+        } else {
+          // 월이 바뀌면 모든 챌린지 리셋
+          updatePayload.challenge_month = challengeMonthKey;
+          updatePayload.challenge_reads = 0;
+          updatePayload.challenge_writes = 0;
+          updatePayload.challenge_likes = 0;
+          updatePayload.challenge_attendance = 1;
+          updatePayload.challenge_claimed_map = {};
+          updatePayload.challenge_claimed = false;
+        }
+      }
+
+      await updateDoc(profileRef, updatePayload);
       setLastAttendanceInk(attendanceInk);
       setShowAttendanceModal(true);
     } catch (e) {

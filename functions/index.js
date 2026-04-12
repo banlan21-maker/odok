@@ -2163,6 +2163,67 @@ exports.onBookCreated = onDocumentCreated(
   }
 );
 
+// ─── 트리거 4: 책 좋아요 → 작가 challenge_likes 증가 ─────────────────────────
+exports.onBookLiked = onDocumentCreated(
+  {
+    document: "artifacts/{appId}/public/data/book_likes/{likeId}",
+    region: REGION,
+  },
+  async (event) => {
+    const like = event.data?.data();
+    if (!like?.bookId) return;
+
+    const appId = event.params.appId;
+    const CHALLENGE_START = "2026_04";
+    const now = new Date();
+    const challengeMonthKey = `${now.getFullYear()}_${String(now.getMonth() + 1).padStart(2, "0")}`;
+    if (challengeMonthKey < CHALLENGE_START) return;
+
+    try {
+      // 책 정보 조회
+      const bookRef = adminDb.collection("artifacts").doc(appId).collection("books").doc(like.bookId);
+      const bookSnap = await bookRef.get();
+      if (!bookSnap.exists) return;
+      const book = bookSnap.data();
+      const authorId = book.authorId;
+      if (!authorId) return;
+
+      // 본인 책 좋아요는 카운트 안 함
+      const likeDocId = event.params.likeId;
+      const likerUid = likeDocId.split("_")[1]; // 보통 bookId_userId 형식
+      if (likerUid === authorId) return;
+
+      // 작가 프로필 업데이트
+      const profileRef = adminDb.collection("artifacts").doc(appId)
+        .collection("users").doc(authorId)
+        .collection("profile").doc("info");
+      const profileSnap = await profileRef.get();
+      if (!profileSnap.exists) return;
+      const profile = profileSnap.data();
+
+      if (profile.challenge_month === challengeMonthKey) {
+        await profileRef.update({
+          challenge_likes: (profile.challenge_likes || 0) + 1,
+        });
+      } else {
+        // 월이 바뀌면 모든 챌린지 리셋
+        await profileRef.update({
+          challenge_month: challengeMonthKey,
+          challenge_reads: 0,
+          challenge_writes: 0,
+          challenge_likes: 1,
+          challenge_attendance: 0,
+          challenge_claimed_map: {},
+          challenge_claimed: false,
+        });
+      }
+      logger.info(`[onBookLiked] ${authorId} challenge_likes +1`);
+    } catch (err) {
+      logger.error("[onBookLiked] 오류:", err);
+    }
+  }
+);
+
 // ─── 시리즈 새 에피소드 → 즐겨찾기 유저들에게 알림 ──────────────────────────
 exports.notifySeriesEpisode = onCall(
   { region: REGION, maxInstances: 10 },

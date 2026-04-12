@@ -40,22 +40,31 @@ const ProfileView = ({
   const challengeMonthKey = `${_now.getFullYear()}_${String(_now.getMonth() + 1).padStart(2, '0')}`;
   const challengeActive = challengeMonthKey >= CHALLENGE_START;
   const storedMonth = userProfile?.challenge_month;
-  const challengeReads = (challengeActive && storedMonth === challengeMonthKey) ? (userProfile?.challenge_reads || 0) : 0;
-  // challenge_claimed = true이거나 settled_month가 현재달이면 이미 수령됨
-  const challengeClaimed = (challengeActive && storedMonth === challengeMonthKey)
-    ? ((userProfile?.challenge_claimed || false) || (userProfile?.challenge_settled_month === challengeMonthKey))
-    : false;
-  const challengeGoal = 5;
-  const challengeProgress = Math.min(challengeReads, challengeGoal);
-  const challengeComplete = challengeReads >= challengeGoal;
+  const isCurrentMonth = challengeActive && storedMonth === challengeMonthKey;
+  const claimedMap = userProfile?.challenge_claimed_map || {};
 
-  const handleClaimChallenge = async () => {
-    if (!user || !appId || isClaiming || challengeClaimed || !challengeComplete) return;
+  const CHALLENGES = [
+    { id: 'reads', icon: '📚', name: '완독 챌린지', field: 'challenge_reads', goal: 5, reward: 10, unit: '권', desc: '책 5권 완독하기' },
+    { id: 'writes', icon: '✏️', name: '집필 챌린지', field: 'challenge_writes', goal: 5, reward: 5, unit: '권', desc: '책 5권 집필하기' },
+    { id: 'likes', icon: '❤️', name: '소통 챌린지', field: 'challenge_likes', goal: 10, reward: 3, unit: '개', desc: '좋아요 10개 받기' },
+    { id: 'attendance', icon: '📅', name: '꾸준함 챌린지', field: 'challenge_attendance', goal: 10, reward: 5, unit: '일', desc: '10일 출석하기' },
+  ];
+
+  const getChallengeProgress = (ch) => isCurrentMonth ? (userProfile?.[ch.field] || 0) : 0;
+  const isChallengeClaimed = (ch) => isCurrentMonth && !!claimedMap[ch.id];
+
+  const handleClaimChallenge = async (challenge) => {
+    if (!user || !appId || isClaiming) return;
+    const progress = getChallengeProgress(challenge);
+    if (progress < challenge.goal) return;
+    if (isChallengeClaimed(challenge)) return;
     setIsClaiming(true);
     try {
       const profileRef = doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'info');
-      await updateDoc(profileRef, { challenge_claimed: true });
-      await addInk(10);
+      await updateDoc(profileRef, {
+        [`challenge_claimed_map.${challenge.id}`]: true
+      });
+      await addInk(challenge.reward);
     } catch (err) {
       console.error('챌린지 보상 오류:', err);
       if (setError) setError('보상 받기에 실패했습니다.');
@@ -400,59 +409,72 @@ const ProfileView = ({
           </div>
         )}
 
-        {/* 7. 월간 챌린지 */}
+        {/* 7. 월간 챌린지 (4개) */}
         {userProfile && (
           <div className="bg-white dark:bg-slate-800 rounded-2xl p-4 border border-slate-100 dark:border-slate-700 shadow-sm">
             <div className="flex items-center justify-between mb-3">
-              <div>
-                <h3 className="text-sm font-black text-slate-800 dark:text-slate-100">📅 월간 챌린지</h3>
-                <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-0.5">
-                  {challengeActive ? '이번 달 책 5권 완독하기' : `4월 1일부터 시작됩니다 🗓️`}
-                </p>
-              </div>
-              {challengeActive && (
-                <div className="text-right">
-                  <span className={`text-lg font-black ${challengeComplete ? 'text-emerald-500' : 'text-orange-500'}`}>
-                    {challengeProgress}
-                  </span>
-                  <span className="text-xs font-bold text-slate-400"> / {challengeGoal}</span>
-                </div>
-              )}
+              <h3 className="text-sm font-black text-slate-800 dark:text-slate-100">📅 월간 챌린지</h3>
+              <span className="text-[10px] font-bold text-slate-400">{challengeMonthKey.replace('_', '.')}</span>
             </div>
 
             {challengeActive ? (
-              <>
-                {/* 프로그레스 바 */}
-                <div className="w-full h-2.5 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden mb-3">
-                  <div
-                    className={`h-full rounded-full transition-all duration-500 ${challengeComplete ? 'bg-gradient-to-r from-emerald-400 to-emerald-500' : 'bg-gradient-to-r from-orange-400 to-orange-500'}`}
-                    style={{ width: `${(challengeProgress / challengeGoal) * 100}%` }}
-                  />
-                </div>
+              <div className="space-y-3">
+                {CHALLENGES.map((ch) => {
+                  const progress = getChallengeProgress(ch);
+                  const clampedProgress = Math.min(progress, ch.goal);
+                  const complete = progress >= ch.goal;
+                  const claimed = isChallengeClaimed(ch);
 
-                {/* 보상 버튼 */}
-                {challengeComplete ? (
-                  challengeClaimed ? (
-                    <div className="w-full py-2.5 rounded-xl text-sm font-bold bg-slate-100 dark:bg-slate-700 text-slate-400 text-center">
-                      ✅ 이번 달 보상 완료!
+                  return (
+                    <div key={ch.id} className="bg-slate-50 dark:bg-slate-700/50 rounded-xl p-3 border border-slate-100 dark:border-slate-700">
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                          <span className="text-base">{ch.icon}</span>
+                          <div>
+                            <p className="text-xs font-black text-slate-800 dark:text-slate-100">{ch.name}</p>
+                            <p className="text-[10px] text-slate-400 dark:text-slate-500">{ch.desc}</p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <span className={`text-sm font-black ${complete ? 'text-emerald-500' : 'text-orange-500'}`}>
+                            {clampedProgress}
+                          </span>
+                          <span className="text-[10px] font-bold text-slate-400"> / {ch.goal}{ch.unit}</span>
+                        </div>
+                      </div>
+
+                      <div className="w-full h-1.5 bg-slate-200 dark:bg-slate-600 rounded-full overflow-hidden mb-2">
+                        <div
+                          className={`h-full rounded-full transition-all duration-500 ${complete ? 'bg-gradient-to-r from-emerald-400 to-emerald-500' : 'bg-gradient-to-r from-orange-400 to-orange-500'}`}
+                          style={{ width: `${(clampedProgress / ch.goal) * 100}%` }}
+                        />
+                      </div>
+
+                      {complete ? (
+                        claimed ? (
+                          <div className="w-full py-1.5 rounded-lg text-[11px] font-bold bg-slate-100 dark:bg-slate-700 text-slate-400 text-center">
+                            ✅ 보상 수령 완료
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => handleClaimChallenge(ch)}
+                            disabled={isClaiming}
+                            className="w-full py-1.5 rounded-lg text-[11px] font-black bg-emerald-500 hover:bg-emerald-600 active:scale-95 text-white transition-all disabled:opacity-60"
+                          >
+                            {isClaiming ? '처리 중...' : `🎁 잉크 ${ch.reward}개 받기`}
+                          </button>
+                        )
+                      ) : (
+                        <p className="text-[10px] text-slate-400 dark:text-slate-500 text-center">
+                          {ch.goal - progress}{ch.unit} 더 달성하면 잉크 {ch.reward}개!
+                        </p>
+                      )}
                     </div>
-                  ) : (
-                    <button
-                      onClick={handleClaimChallenge}
-                      disabled={isClaiming}
-                      className="w-full py-2.5 rounded-xl text-sm font-black bg-emerald-500 hover:bg-emerald-600 active:scale-95 text-white transition-all disabled:opacity-60"
-                    >
-                      {isClaiming ? '처리 중...' : '🎁 보상 받기 (+10 잉크)'}
-                    </button>
-                  )
-                ) : (
-                  <p className="text-[11px] text-slate-400 dark:text-slate-500 text-center">
-                    {challengeGoal - challengeProgress}권 더 읽으면 잉크 10개를 받을 수 있어요!
-                  </p>
-                )}
-              </>
+                  );
+                })}
+              </div>
             ) : (
-              <div className="w-full h-2.5 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden" />
+              <div className="text-center py-4 text-xs text-slate-400">4월 1일부터 시작됩니다 🗓️</div>
             )}
           </div>
         )}
