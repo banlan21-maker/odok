@@ -27,6 +27,7 @@ const ProfileView = ({
   highlights = [],
   deleteHighlight,
   readingStats = null,
+  onAuthorClick,
 }) => {
   const [isCharging, setIsCharging] = useState(false);
   const [showChargeSuccess, setShowChargeSuccess] = useState(false);
@@ -293,7 +294,10 @@ const ProfileView = ({
             <div className="space-y-2">
               {Object.entries(follows).map(([authorId, info]) => (
                 <div key={authorId} className="flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-2 min-w-0">
+                  <button
+                    onClick={() => onAuthorClick?.(authorId)}
+                    className="flex items-center gap-2 min-w-0 flex-1 text-left hover:opacity-70 transition-opacity active:scale-[0.98]"
+                  >
                     {info.profileImageUrl ? (
                       <img src={info.profileImageUrl} alt="" className="w-8 h-8 rounded-full object-cover shrink-0" />
                     ) : (
@@ -302,7 +306,7 @@ const ProfileView = ({
                     <span className="text-sm font-bold text-slate-700 dark:text-slate-200 truncate">
                       {info.nickname || '익명'}
                     </span>
-                  </div>
+                  </button>
                   <button
                     onClick={() => unfollowAuthor && unfollowAuthor(authorId)}
                     className="shrink-0 text-xs text-slate-400 hover:text-red-400 bg-slate-100 dark:bg-slate-700 hover:bg-red-50 dark:hover:bg-red-950 px-3 py-1.5 rounded-full font-bold transition-colors"

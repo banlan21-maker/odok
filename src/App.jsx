@@ -807,13 +807,14 @@ const App = () => {
                         user={user} userProfile={userProfile} t={t} levelInfo={levelInfo}
                         tempNickname={tempNickname} setTempNickname={setTempNickname}
                         tempBio={tempBio} setTempBio={setTempBio}
-          
+
                         handleGoogleLogin={handleGoogleLogin} saveProfile={saveProfile}
                         addInk={addInk} error={error} setError={setError} appId={appId}
                         onOpenHelp={() => storyReaderHook.setIsHelpModalOpen(true)}
                         follows={follows} unfollowAuthor={unfollowAuthor}
                         highlights={highlights} deleteHighlight={deleteHighlight}
                         readingStats={readingStats}
+                        onAuthorClick={(authorId) => setAuthorProfileUserId(authorId)}
                       />
                     </div>
                   )}
