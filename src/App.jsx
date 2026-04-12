@@ -378,21 +378,18 @@ const App = () => {
           <div className="flex items-center gap-3">
             {userProfile && (
               <div className="flex items-center gap-1.5">
-                <div className="flex items-center gap-1 bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300 px-2 py-1 rounded-lg">
-                  <PenTool className="w-3.5 h-3.5" />
-                  <span className="text-xs font-bold">{remainingDailyWrites}</span>
+                <div className="flex items-center gap-1 bg-orange-50 dark:bg-orange-950/30 px-2 py-1 rounded-lg">
+                  <span className="text-xs">✏️</span>
+                  <span className="text-xs font-black text-orange-600 dark:text-orange-400">{remainingDailyWrites}</span>
                 </div>
-                <div className="flex items-center gap-1 bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300 px-2 py-1 rounded-lg">
-                  <Droplets className="w-3.5 h-3.5 fill-blue-500 text-blue-500" />
-                  <span className="text-xs font-bold">{userProfile.ink || 0}</span>
+                <div className="flex items-center gap-1 bg-sky-50 dark:bg-sky-950/30 px-2 py-1 rounded-lg">
+                  <span className="text-xs">💧</span>
+                  <span className="text-xs font-black text-sky-600 dark:text-sky-400">{userProfile.ink || 0}</span>
                 </div>
-                <div className="flex items-center gap-1 bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300 px-2 py-1 rounded-lg">
-                  <span className="text-xs font-black">Lv.{levelInfo.level}</span>
-                </div>
-                {/* 소식함 버튼 (알림 + 우편함 통합) */}
+                {/* 소식함 버튼 */}
                 <button
                   onClick={() => setShowNotifications(true)}
-                  className="relative flex items-center justify-center w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-950 hover:bg-blue-100 dark:hover:bg-blue-900 transition-colors"
+                  className="relative flex items-center justify-center w-8 h-8 rounded-lg bg-purple-50 dark:bg-purple-950/30 hover:bg-purple-100 dark:hover:bg-purple-900 transition-colors"
                 >
                   <span className="text-sm">📬</span>
                   {(unreadCount + unclaimedCount) > 0 && (
@@ -403,9 +400,9 @@ const App = () => {
                 </button>
                 <button
                   onClick={() => setShowBagModal(true)}
-                  className="relative flex items-center justify-center w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-950 hover:bg-blue-100 dark:hover:bg-blue-900 transition-colors"
+                  className="relative flex items-center justify-center w-8 h-8 rounded-lg bg-amber-50 dark:bg-amber-950/30 hover:bg-amber-100 dark:hover:bg-amber-900 transition-colors"
                 >
-                  <ShoppingBag className="w-4 h-4 text-blue-600 dark:text-blue-300" />
+                  <span className="text-sm">🎒</span>
                   {getTotalItems() > 0 && (
                     <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-orange-500 text-white text-[9px] font-black flex items-center justify-center leading-none">
                       {getTotalItems() > 9 ? '9+' : getTotalItems()}
