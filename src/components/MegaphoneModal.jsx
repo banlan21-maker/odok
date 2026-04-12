@@ -25,7 +25,7 @@ const MegaphoneModal = ({
 
   const myBooks = books.filter(b => b.authorId === user?.uid);
 
-  const authorNickname = userProfile?.anonymousActivity
+  const authorNickname = selectedBook?.isAnonymous
     ? '익명'
     : (userProfile?.nickname || '작가');
   const authorBio = userProfile?.bio || '';

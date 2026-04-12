@@ -201,6 +201,7 @@ const WriteView = ({ user, userProfile, t, onBookGenerated, slotStatus, setView,
   const [selectedPOV, setSelectedPOV] = useState(''); // 소설 시점 (누가 이야기하나요)
   const [selectedSpeechTone, setSelectedSpeechTone] = useState(''); // 소설 말투/문체
   const [selectedDialogueRatio, setSelectedDialogueRatio] = useState(''); // 대화 비중
+  const [isAnonymousBook, setIsAnonymousBook] = useState(false); // 이 책만 익명 작성
   const [isCustomInput, setIsCustomInput] = useState(false); // 직접 입력 모드
   const [isGenerating, setIsGenerating] = useState(false);
   const [nonfictionTopics, setNonfictionTopics] = useState([]);
@@ -687,7 +688,8 @@ const WriteView = ({ user, userProfile, t, onBookGenerated, slotStatus, setView,
           subCategory: null,
           isSeries: false,
           keywords: selectedTopic,
-          fontFamily: selectedFont
+          fontFamily: selectedFont,
+          isAnonymous: isAnonymousBook
         }, false, { skipDailyCheck: true, skipNavigate: isGeneratingHidden, skipInkDeduct: isAdReward });
         if (isGeneratingHidden) {
           await sendGenerationCompleteNotification(result.title || bookTitle);
@@ -825,7 +827,8 @@ const WriteView = ({ user, userProfile, t, onBookGenerated, slotStatus, setView,
           selectedPOV: selectedPOV,
           selectedSpeechTone: selectedSpeechTone,
           selectedDialogueRatio: selectedDialogueRatio,
-          fontFamily: selectedFont
+          fontFamily: selectedFont,
+          isAnonymous: isAnonymousBook
         }, false, { skipDailyCheck: true, skipNavigate: isGeneratingHidden, skipInkDeduct: isAdReward });
         if (isGeneratingHidden) {
           await sendGenerationCompleteNotification(result.title || bookTitle);
@@ -841,6 +844,7 @@ const WriteView = ({ user, userProfile, t, onBookGenerated, slotStatus, setView,
       setSeriesSubType(null);
       setKeywords('');
       setBookTitle('');
+      setIsAnonymousBook(false);
       setSelectedMood('');
       setSelectedPOV('');
       setSelectedSpeechTone('');
@@ -1170,6 +1174,15 @@ const WriteView = ({ user, userProfile, t, onBookGenerated, slotStatus, setView,
                     <div className="text-xs text-slate-400 dark:text-slate-500 font-bold text-right">
                       {bookTitle.length}/15
                     </div>
+                    <label className="flex items-center gap-2 mt-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={isAnonymousBook}
+                        onChange={(e) => setIsAnonymousBook(e.target.checked)}
+                        className="w-4 h-4 rounded border-slate-300 text-orange-500 focus:ring-orange-500"
+                      />
+                      <span className="text-xs font-bold text-slate-500 dark:text-slate-400">🌱 익명으로 작성</span>
+                    </label>
                   </div>
                 </div>
               )}
@@ -1335,6 +1348,15 @@ const WriteView = ({ user, userProfile, t, onBookGenerated, slotStatus, setView,
                     maxLength={15}
                   />
                   <div className="text-xs text-slate-400 dark:text-slate-500 font-bold text-right">{bookTitle.length}/15</div>
+                  <label className="flex items-center gap-2 mt-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={isAnonymousBook}
+                      onChange={(e) => setIsAnonymousBook(e.target.checked)}
+                      className="w-4 h-4 rounded border-slate-300 text-orange-500 focus:ring-orange-500"
+                    />
+                    <span className="text-xs font-bold text-slate-500 dark:text-slate-400">🌱 익명으로 작성</span>
+                  </label>
                 </div>
               )}
 

@@ -56,9 +56,9 @@ const AuthorProfileModal = ({
     ? authorBooks.filter(b => b.id !== representativeBook.id)
     : authorBooks;
 
-  const nickname = profile?.anonymousActivity ? (t.anonymous || '익명') : (profile?.nickname || (t.author_modal_default_name || '작가'));
+  const nickname = profile?.nickname || (t.author_modal_default_name || '작가');
   const bio = profile?.bio || '';
-  const profileImageUrl = profile?.anonymousActivity ? null : (profile?.profileImageUrl || null);
+  const profileImageUrl = profile?.profileImageUrl || null;
   const level = getLevelFromXp(profile?.xp ?? 0);
   const isMyself = currentUser?.uid === targetUserId;
   const following = isFollowing?.(targetUserId);

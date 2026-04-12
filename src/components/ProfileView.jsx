@@ -227,15 +227,7 @@ const ProfileView = ({
             <div className="flex-1 min-w-0">
               <div className="flex items-center justify-between gap-2 mb-1.5">
                 <label className="text-xs font-bold text-slate-500 dark:text-slate-400">{t?.nickname_label_required || "닉네임(필수)"}</label>
-                <label className="flex items-center gap-1 cursor-pointer shrink-0">
-                  <input
-                    type="checkbox"
-                    checked={tempAnonymousActivity}
-                    onChange={(e) => setTempAnonymousActivity(e.target.checked)}
-                    className="w-3.5 h-3.5 rounded border-slate-300 text-orange-500 focus:ring-orange-500"
-                  />
-                  <span className="text-xs font-bold text-slate-600 dark:text-slate-300">{t?.anonymous_activity || "익명으로 활동"}</span>
-                </label>
+                {/* 익명 기능은 책 집필 시 개별 선택으로 이동 */}
               </div>
               <input
                 type="text"

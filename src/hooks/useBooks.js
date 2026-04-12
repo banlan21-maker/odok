@@ -414,7 +414,7 @@ export const useBooks = ({ user, userProfile, setError, deductInk, setShowInkCon
                 throw queryErr;
             }
 
-            const isAnonymousMode = !!userProfile?.anonymousActivity;
+            const isAnonymousMode = !!bookData.isAnonymous;
             const authorName = isAnonymousMode ? '익명' : (userProfile?.nickname || '익명');
             const isSeries = bookData.isSeries || false;
 

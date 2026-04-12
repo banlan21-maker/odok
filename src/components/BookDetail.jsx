@@ -421,7 +421,7 @@ const BookDetail = ({ book, onClose, onBookUpdate, fontSize = 'text-base', user,
       await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'book_comments'), {
         bookId,
         userId: user.uid,
-        authorName: userProfile?.anonymousActivity ? '익명' : (userProfile?.nickname || '익명'),
+        authorName: userProfile?.nickname || '익명',
         text,
         parentId: replyTo?.id || null,
         parentAuthorName: replyTo?.authorName || null,
@@ -518,7 +518,8 @@ const BookDetail = ({ book, onClose, onBookUpdate, fontSize = 'text-base', user,
     try {
       const giftInkFn = httpsCallable(functions, 'giftInk');
       await giftInkFn({ recipientUid: book.authorId, amount, appId });
-      alert(`잉크 ${amount}개를 우편함으로 보냈습니다! 💧`);
+      const recipientName = book?.isAnonymous ? '익명' : (authorProfiles[book.authorId]?.nickname || book?.authorName || '작가');
+      alert(`${recipientName}님에게 잉크 ${amount}개를 보냈습니다! 💧`);
     } catch (err) {
       console.error('잉크 보내기 실패:', err);
       alert(err?.message || '잉크 보내기에 실패했습니다.');
@@ -605,8 +606,8 @@ const BookDetail = ({ book, onClose, onBookUpdate, fontSize = 'text-base', user,
         tx.set(dssRef, {
           bookId: book.id,
           authorId: user.uid,
-          authorName: userProfile?.anonymousActivity ? '익명' : (userProfile?.nickname || '익명'),
-          isAnonymous: !!userProfile?.anonymousActivity,
+          authorName: book?.isAnonymous ? '익명' : (userProfile?.nickname || '익명'),
+          isAnonymous: !!book?.isAnonymous,
           type: 'episode',
           createdAt: serverTimestamp()
         });
@@ -639,8 +640,8 @@ const BookDetail = ({ book, onClose, onBookUpdate, fontSize = 'text-base', user,
         title: result.isFinale ? `${book.title} [완결]` : `${book.title} ${episodes.length + 1}화`,
         content: result.content,
         writer: user.uid,
-        writerName: userProfile?.anonymousActivity ? '익명' : (userProfile?.nickname || '익명'),
-        isAnonymous: !!userProfile?.anonymousActivity,
+        writerName: book?.isAnonymous ? '익명' : (userProfile?.nickname || '익명'),
+        isAnonymous: !!book?.isAnonymous,
         createdAt: new Date().toISOString(),
         summary: result.summary
       };
@@ -1069,8 +1070,8 @@ const BookDetail = ({ book, onClose, onBookUpdate, fontSize = 'text-base', user,
           </div>
         )}
 
-        {/* 잉크 보내기 (선물하기) - Lv 6 이상 해제, 익명 책 제외 */}
-        {book.authorId !== user?.uid && !book.isAnonymous && (
+        {/* 잉크 보내기 (선물하기) - Lv 6 이상 해제 */}
+        {book.authorId !== user?.uid && (
           <div className="flex flex-col items-center gap-2 mt-5">
             {!canDonate(getLevelFromXp(userProfile?.xp ?? 0)) ? (
               <div className="text-center py-3 px-4 bg-slate-100 dark:bg-slate-700 rounded-xl border border-slate-200 dark:border-slate-600">
