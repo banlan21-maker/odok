@@ -968,10 +968,10 @@ const WriteView = ({ user, userProfile, t, onBookGenerated, slotStatus, setView,
     isSlotAvailable(selectedCategory.id);
 
   return (
-    <div className="space-y-6 animate-in slide-in-from-bottom-2 fade-in pb-20">
+    <div className="space-y-6 animate-in slide-in-from-bottom-2 fade-in pb-20 pt-3">
       {/* 헤더 */}
       <div className="space-y-2">
-        <h2 className="text-2xl font-black text-slate-800 dark:text-slate-100 leading-tight">
+        <h2 className="text-2xl font-jua text-slate-800 dark:text-slate-100 leading-tight">
           {t?.write_title || "집필"}
         </h2>
         <p className="text-sm text-slate-500 dark:text-slate-400 whitespace-pre-line">

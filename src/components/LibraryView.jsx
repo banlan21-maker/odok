@@ -124,10 +124,10 @@ const LibraryView = ({ books, onBookClick, filter = 'all', onFilterChange, t, au
   // 카테고리 선택 화면
   if (!selectedCategory) {
     return (
-      <div className="space-y-5 animate-in slide-in-from-bottom-2 fade-in pb-20">
+      <div className="space-y-5 animate-in slide-in-from-bottom-2 fade-in pb-20 pt-3">
         {/* 헤더 */}
         <div className="space-y-2">
-          <h2 className="text-2xl font-black text-slate-800 dark:text-slate-100 leading-tight">
+          <h2 className="text-2xl font-jua text-slate-800 dark:text-slate-100 leading-tight">
             {t?.library_title || "서재"}
           </h2>
           <p className="text-sm text-slate-500 dark:text-slate-400">

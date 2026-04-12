@@ -126,10 +126,10 @@ const ArchiveView = ({ books, user, onBookClick, favoriteBookIds = [], t, author
     : (t?.find_favorites || '마음에 드는 책을 즐겨찾기해보세요');
 
   return (
-    <div className="space-y-4 animate-in slide-in-from-bottom-2 fade-in pb-20">
+    <div className="space-y-4 animate-in slide-in-from-bottom-2 fade-in pb-20 pt-3">
       {/* 헤더 */}
       <div className="space-y-1">
-        <h2 className="text-2xl font-black text-slate-800 dark:text-slate-100 leading-tight">
+        <h2 className="text-2xl font-jua text-slate-800 dark:text-slate-100 leading-tight">
           {t?.archive_title || '보관함'}
         </h2>
         <p className="text-sm text-slate-500 dark:text-slate-400">
