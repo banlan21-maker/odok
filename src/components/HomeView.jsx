@@ -215,12 +215,6 @@ const HomeView = ({
               {t.home_main_title}
             </h1>
           </div>
-          <button
-            onClick={() => setView('notice_list')}
-            className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
-          >
-            <Bell className="w-5 h-5 text-slate-400" />
-          </button>
         </div>
         <div>
           <span className="text-orange-600 font-bold text-xs bg-orange-50 px-2 py-1 rounded-md mb-2 inline-block">

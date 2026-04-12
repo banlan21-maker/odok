@@ -24,6 +24,7 @@ const SettingsModal = ({
   saveProfile,
   onClose,
   onOpenHelp,
+  onOpenNotice,
   notifSettings = {},
   setNotifSettings,
 }) => {
@@ -89,6 +90,26 @@ const SettingsModal = ({
 
           {/* Scrollable body */}
           <div className="flex-1 overflow-y-auto px-5 pb-4 space-y-5">
+
+            {/* Section: 공지사항 & 사용설명서 */}
+            <div className="space-y-2">
+              {onOpenNotice && (
+                <button
+                  onClick={onOpenNotice}
+                  className="w-full py-3 rounded-2xl font-bold text-sm bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors flex items-center justify-center gap-2 active:scale-[0.98]"
+                >
+                  📢 {t?.notice_btn ?? '공지사항'}
+                </button>
+              )}
+              {onOpenHelp && (
+                <button
+                  onClick={() => { onOpenHelp(); onClose(); }}
+                  className="w-full py-3 rounded-2xl font-bold text-sm bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors flex items-center justify-center gap-2 active:scale-[0.98]"
+                >
+                  📖 {t?.help_btn ?? '사용 설명서'}
+                </button>
+              )}
+            </div>
 
             {/* Section: 화면 설정 */}
             <div>
@@ -244,19 +265,7 @@ const SettingsModal = ({
               </div>
             )}
 
-          {/* Section: 사용 설명서 */}
-          {onOpenHelp && (
-            <div>
-              <div className="bg-white dark:bg-slate-800 rounded-2xl p-4 border border-slate-100 dark:border-slate-700">
-                <button
-                  onClick={() => { onOpenHelp(); onClose(); }}
-                  className="w-full py-2.5 rounded-xl font-bold text-sm bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors flex items-center justify-center gap-2 active:scale-[0.98]"
-                >
-                  <span>{t?.help_btn ?? '📖 사용 설명서'}</span>
-                </button>
-              </div>
-            </div>
-          )}
+          {/* 사용설명서는 상단으로 이동 */}
 
           </div>
 

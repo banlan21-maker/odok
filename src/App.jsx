@@ -940,6 +940,7 @@ const App = () => {
             saveProfile={saveProfile}
             onClose={() => setShowSettingsModal(false)}
             onOpenHelp={() => storyReaderHook.setIsHelpModalOpen(true)}
+            onOpenNotice={() => { setShowSettingsModal(false); setView('notice_list'); }}
           />
         )}
 
