@@ -411,9 +411,9 @@ const App = () => {
                 </button>
                 <button
                   onClick={() => setShowSettingsModal(true)}
-                  className="flex items-center justify-center w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-950 hover:bg-blue-100 dark:hover:bg-blue-900 transition-colors"
+                  className="flex items-center justify-center w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors"
                 >
-                  <Settings className="w-4 h-4 text-blue-600 dark:text-blue-300" />
+                  <span className="text-sm">⚙️</span>
                 </button>
               </div>
             )}
