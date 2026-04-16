@@ -3,6 +3,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { X, Download, Loader, Share2 } from 'lucide-react';
 import { Capacitor } from '@capacitor/core';
+import { Share } from '@capacitor/share';
+import { Filesystem, Directory } from '@capacitor/filesystem';
 
 const BACKGROUNDS = [
   '/sharing/bg1.jpeg',
@@ -30,6 +32,20 @@ function wrapText(ctx, text, maxWidth) {
   }
   if (line) lines.push(line);
   return lines;
+}
+
+// Blob → base64 문자열 변환
+function blobToBase64(blob) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      // data:image/png;base64,XXXX → XXXX 부분만 추출
+      const result = reader.result;
+      resolve(result.split(',')[1]);
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
 }
 
 const ShareImageModal = ({ selectedText, bookTitle, authorName, onClose, t = {} }) => {
@@ -178,6 +194,18 @@ const ShareImageModal = ({ selectedText, bookTitle, authorName, onClose, t = {} 
     });
   };
 
+  // 네이티브용: blob → 캐시 파일 저장 후 URI 반환
+  const saveToCacheAndGetUri = async (blob) => {
+    const base64 = await blobToBase64(blob);
+    const fileName = `odok_quote_${Date.now()}.png`;
+    const result = await Filesystem.writeFile({
+      path: fileName,
+      data: base64,
+      directory: Directory.Cache,
+    });
+    return result.uri;
+  };
+
   // 네이티브 공유
   const handleShare = async () => {
     if (isGenerating) return;
@@ -185,8 +213,18 @@ const ShareImageModal = ({ selectedText, bookTitle, authorName, onClose, t = {} 
     setError(null);
     try {
       const blob = await generateBlob();
-      const file = new File([blob], 'odok_quote.png', { type: 'image/png' });
-      if (navigator.share) {
+
+      if (Capacitor.isNativePlatform()) {
+        // Capacitor Share 플러그인 사용 (WebView navigator.share 미지원 우회)
+        const uri = await saveToCacheAndGetUri(blob);
+        await Share.share({
+          title: '오독오독',
+          text: `"${displayText}"`,
+          files: [uri],
+          dialogTitle: t.share_title || '이미지로 공유하기',
+        });
+      } else if (navigator.share) {
+        const file = new File([blob], 'odok_quote.png', { type: 'image/png' });
         try {
           await navigator.share({ files: [file], title: '오독오독', text: `"${displayText}"` });
         } catch (shareErr) {
@@ -211,9 +249,15 @@ const ShareImageModal = ({ selectedText, bookTitle, authorName, onClose, t = {} 
     setError(null);
     try {
       const blob = await generateBlob();
-      if (Capacitor.isNativePlatform() && navigator.share) {
-        const file = new File([blob], 'odok_quote.png', { type: 'image/png' });
-        await navigator.share({ files: [file], title: 'odok_quote.png' });
+
+      if (Capacitor.isNativePlatform()) {
+        // 네이티브: 캐시에 저장 후 공유 시트 열기 (갤러리 저장 가능)
+        const uri = await saveToCacheAndGetUri(blob);
+        await Share.share({
+          files: [uri],
+          title: 'odok_quote.png',
+          dialogTitle: t.share_download || '이미지 저장',
+        });
       } else {
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -247,9 +291,16 @@ const ShareImageModal = ({ selectedText, bookTitle, authorName, onClose, t = {} 
 
       <div
         className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 backdrop-blur-sm"
+        style={{ paddingTop: 'env(safe-area-inset-top, 44px)' }}
         onClick={handleBackdrop}
       >
-        <div className="share-modal-sheet w-full max-w-sm bg-white dark:bg-slate-800 rounded-t-3xl shadow-2xl pb-10">
+        <div
+          className="share-modal-sheet w-full max-w-sm bg-white dark:bg-slate-800 rounded-t-3xl shadow-2xl overflow-y-auto"
+          style={{
+            maxHeight: 'calc(100vh - env(safe-area-inset-top, 44px) - 20px)',
+            paddingBottom: 'calc(env(safe-area-inset-bottom, 16px) + 16px)',
+          }}
+        >
 
           {/* 헤더 */}
           <div className="flex items-center justify-between px-5 pt-5 pb-4">
@@ -259,7 +310,7 @@ const ShareImageModal = ({ selectedText, bookTitle, authorName, onClose, t = {} 
             </button>
           </div>
 
-          <div className="px-5 space-y-4">
+          <div className="px-5 space-y-4 pb-4">
 
             {/* 미리보기 */}
             <div className="rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-600 shadow-sm">
