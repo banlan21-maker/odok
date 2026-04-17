@@ -894,61 +894,60 @@ const WriteView = ({ user, userProfile, t, onBookGenerated, slotStatus, setView,
     if (setError) setError('집필이 취소되었습니다.');
   };
 
-  const GeneratingNotice = () => {
-    const [showQuiz, setShowQuiz] = useState(false);
-    return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-6">
-        <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 w-full max-w-sm shadow-xl space-y-4 animate-in fade-in zoom-in-95 duration-200 text-center max-h-[85vh] overflow-y-auto scrollbar-hide">
-          {showQuiz ? (
-            <>
-              <div className="flex items-center justify-between">
-                <p className="text-xs font-bold text-slate-400">{currentLoadingMessage || (t?.generating_title || "집필 중...")}</p>
-                <button onClick={() => setShowQuiz(false)} className="text-xs text-orange-500 font-bold">돌아가기</button>
-              </div>
-              <OXQuizGame t={t} />
-            </>
-          ) : (
-            <>
-              <div className="flex items-center justify-center">
-                <img src="/icons/odok_thinking.png" alt="" className="w-20 h-20 animate-bounce" />
-              </div>
-              <p className="text-sm text-slate-700 dark:text-slate-200 font-bold">
-                {t?.generating_title || "집필 중입니다..."}
+  const [showQuizInGenerating, setShowQuizInGenerating] = useState(false);
+
+  const GeneratingNotice = () => (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-6">
+      <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 w-full max-w-sm shadow-xl space-y-4 animate-in fade-in zoom-in-95 duration-200 text-center max-h-[85vh] overflow-y-auto scrollbar-hide">
+        {showQuizInGenerating ? (
+          <>
+            <div className="flex items-center justify-between">
+              <p className="text-xs font-bold text-slate-400">{currentLoadingMessage || (t?.generating_title || "집필 중...")}</p>
+              <button onClick={() => setShowQuizInGenerating(false)} className="text-xs text-orange-500 font-bold">돌아가기</button>
+            </div>
+            <OXQuizGame t={t} />
+          </>
+        ) : (
+          <>
+            <div className="flex items-center justify-center">
+              <img src="/icons/odok_thinking.png" alt="" className="w-20 h-20 animate-bounce" />
+            </div>
+            <p className="text-sm text-slate-700 dark:text-slate-200 font-bold">
+              {t?.generating_title || "집필 중입니다..."}
+            </p>
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              {t?.generating_desc || "책 생성에는 약 2~3분이 소요될 수 있어요."}
+            </p>
+            {currentLoadingMessage && (
+              <p className="text-xs text-slate-500 dark:text-slate-400 font-bold">
+                {currentLoadingMessage}
               </p>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
-                {t?.generating_desc || "책 생성에는 약 2~3분이 소요될 수 있어요."}
-              </p>
-              {currentLoadingMessage && (
-                <p className="text-xs text-slate-500 dark:text-slate-400 font-bold">
-                  {currentLoadingMessage}
-                </p>
-              )}
+            )}
+            <button
+              onClick={() => setShowQuizInGenerating(true)}
+              className="w-full py-3 rounded-xl text-sm font-black bg-orange-500 text-white hover:bg-orange-600 active:scale-95 transition-all"
+            >
+              ⭕❌ OX퀴즈 풀면서 기다리기
+            </button>
+            <div className="flex gap-2">
               <button
-                onClick={() => setShowQuiz(true)}
-                className="w-full py-3 rounded-xl text-sm font-black bg-orange-500 text-white hover:bg-orange-600 active:scale-95 transition-all"
+                onClick={() => setIsGeneratingHidden(true)}
+                className="flex-1 py-3 rounded-xl text-sm font-black bg-slate-900 dark:bg-slate-700 text-white hover:bg-slate-800 dark:hover:bg-slate-600"
               >
-                ⭕❌ OX퀴즈 풀면서 기다리기
+                {t?.hide_btn || "숨기기"}
               </button>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setIsGeneratingHidden(true)}
-                  className="flex-1 py-3 rounded-xl text-sm font-black bg-slate-900 dark:bg-slate-700 text-white hover:bg-slate-800 dark:hover:bg-slate-600"
-                >
-                  {t?.hide_btn || "숨기기"}
-                </button>
-                <button
-                  onClick={handleCancelGenerate}
-                  className="flex-1 py-3 rounded-xl text-sm font-black bg-white dark:bg-slate-800 border border-orange-300 text-orange-600 hover:bg-orange-100 dark:hover:bg-orange-900/20"
-                >
-                  {t?.cancel_write_btn || "집필 취소"}
-                </button>
-              </div>
-            </>
-          )}
-        </div>
+              <button
+                onClick={handleCancelGenerate}
+                className="flex-1 py-3 rounded-xl text-sm font-black bg-white dark:bg-slate-800 border border-orange-300 text-orange-600 hover:bg-orange-100 dark:hover:bg-orange-900/20"
+              >
+                {t?.cancel_write_btn || "집필 취소"}
+              </button>
+            </div>
+          </>
+        )}
       </div>
-    );
-  };
+    </div>
+  );
 
   // 생성 가능 여부 확인
   const canGenerateNovel = selectedCategory &&
@@ -1097,66 +1096,86 @@ const WriteView = ({ user, userProfile, t, onBookGenerated, slotStatus, setView,
       {/* 2. 선택된 카테고리에 따른 폼 */}
       {selectedCategory && (
         <div className="bg-white dark:bg-slate-800 rounded-2xl p-5 border border-slate-100 dark:border-slate-700 shadow-sm space-y-4">
-          {/* 비문학 카테고리 (에세이/자기계발/인문철학) - 주제 선택만 */}
+          {/* 비문학 카테고리 (에세이/자기계발/인문철학) */}
           {!selectedCategory.isNovel && (
             <>
-              <div className="space-y-3">
-                <div className="flex items-center justify-between gap-2">
-                  <h3 className="text-base font-black text-slate-800 dark:text-slate-100">
-                    {t?.what_story || "어떤 이야기를 쓰고 싶으신가요?"}
-                  </h3>
-                  <button
-                    type="button"
-                    onMouseDown={(event) => {
-                      event.preventDefault();
-                      event.stopPropagation();
-                    }}
-                    onTouchStart={(event) => {
-                      event.preventDefault();
-                      event.stopPropagation();
-                    }}
-                    onClick={(event) => {
-                      event.preventDefault();
-                      event.stopPropagation();
-                      handleRefreshKeywords();
-                    }}
-                    disabled={isRefreshingKeywords || isGenerating || !isSlotAvailable(selectedCategory.id)}
-                    className={`w-8 h-8 rounded-full border flex items-center justify-center transition-colors ${isRefreshingKeywords || isGenerating || !isSlotAvailable(selectedCategory.id)
-                      ? 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed'
-                      : 'bg-blue-50 text-blue-600 border-blue-200 hover:bg-blue-100'
-                      }`}
-                    title={isKeywordRefreshFree(getLevelFromXp(userProfile?.xp ?? 0)) ? (t?.refresh_keywords_free || "키워드 새로고침 (무료)") : (t?.refresh_keywords_paid || "키워드 새로고침 (잉크 1)")}
-                  >
-                    <RefreshCw className={`w-4 h-4 ${isRefreshingKeywords ? 'animate-spin' : ''}`} />
-                  </button>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {nonfictionTopics.map((item, index) => {
-                    const isSelected = selectedTopic === item.ko;
-
-                    return (
-                      <button
-                        key={item.id || index}
-                        onClick={() => {
-                          handleTopicSelect(item.ko);
-                        }}
-                        disabled={isGenerating || !isSlotAvailable(selectedCategory.id)}
-                        className={`px-4 py-3 rounded-full text-sm font-bold transition-all relative ${isGenerating || !isSlotAvailable(selectedCategory.id)
-                          ? 'bg-slate-100 dark:bg-slate-700 text-slate-400 cursor-not-allowed'
-                          : isSelected
-                            ? 'bg-orange-500 text-white shadow-md'
-                            : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600 active:scale-95'
-                          }`}
-                      >
-                        <span>{t?.['kw_' + item.id] || item.ko}</span>
-                        {isGenerating && isSelected && (
-                          <RefreshCw className="w-4 h-4 inline-block ml-2 animate-spin" />
-                        )}
-                      </button>
-                    );
-                  })}
-                </div>
+              {/* 모드 선택: 키워드 추천 / 직접 입력 */}
+              <div className="flex border-b border-slate-200 dark:border-slate-700">
+                <button
+                  onClick={() => { setIsCustomInput(false); setSelectedTopic(null); setKeywords(''); }}
+                  className={`flex-1 py-2 text-xs font-black transition-colors ${!isCustomInput ? 'text-orange-600 border-b-2 border-orange-500' : 'text-slate-400'}`}
+                >
+                  🎲 키워드 추천
+                </button>
+                <button
+                  onClick={() => { setIsCustomInput(true); setSelectedTopic(null); }}
+                  className={`flex-1 py-2 text-xs font-black transition-colors ${isCustomInput ? 'text-orange-600 border-b-2 border-orange-500' : 'text-slate-400'}`}
+                >
+                  ✏️ 직접 입력
+                </button>
               </div>
+
+              {isCustomInput ? (
+                <div className="space-y-3">
+                  <h3 className="text-base font-black text-slate-800 dark:text-slate-100">
+                    {t?.custom_topic_title || "주제와 키워드를 직접 입력하세요"}
+                  </h3>
+                  <textarea
+                    value={keywords}
+                    onChange={(e) => { setKeywords(e.target.value); setSelectedTopic(e.target.value.trim() || null); }}
+                    placeholder="예: 직장인의 번아웃과 회복, 작은 정원 가꾸기의 행복, 아이와 함께 성장하는 부모..."
+                    className="w-full bg-slate-50 dark:bg-slate-700 border-2 border-slate-200 dark:border-slate-600 rounded-xl py-3 px-4 text-sm focus:border-orange-500 focus:bg-white dark:focus:bg-slate-700 outline-none transition-colors text-slate-800 dark:text-slate-100 resize-none leading-relaxed"
+                    maxLength={100}
+                    rows={3}
+                  />
+                  <div className="text-xs text-slate-400 dark:text-slate-500 font-bold text-right">{keywords.length}/100</div>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <h3 className="text-base font-black text-slate-800 dark:text-slate-100">
+                      {t?.what_story || "어떤 이야기를 쓰고 싶으신가요?"}
+                    </h3>
+                    <button
+                      type="button"
+                      onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                      onTouchStart={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                      onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleRefreshKeywords(); }}
+                      disabled={isRefreshingKeywords || isGenerating || !isSlotAvailable(selectedCategory.id)}
+                      className={`w-8 h-8 rounded-full border flex items-center justify-center transition-colors ${isRefreshingKeywords || isGenerating || !isSlotAvailable(selectedCategory.id)
+                        ? 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed'
+                        : 'bg-blue-50 text-blue-600 border-blue-200 hover:bg-blue-100'
+                        }`}
+                      title={isKeywordRefreshFree(getLevelFromXp(userProfile?.xp ?? 0)) ? (t?.refresh_keywords_free || "키워드 새로고침 (무료)") : (t?.refresh_keywords_paid || "키워드 새로고침 (잉크 1)")}
+                    >
+                      <RefreshCw className={`w-4 h-4 ${isRefreshingKeywords ? 'animate-spin' : ''}`} />
+                    </button>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {nonfictionTopics.map((item, index) => {
+                      const isSelected = selectedTopic === item.ko;
+                      return (
+                        <button
+                          key={item.id || index}
+                          onClick={() => handleTopicSelect(item.ko)}
+                          disabled={isGenerating || !isSlotAvailable(selectedCategory.id)}
+                          className={`px-4 py-3 rounded-full text-sm font-bold transition-all relative ${isGenerating || !isSlotAvailable(selectedCategory.id)
+                            ? 'bg-slate-100 dark:bg-slate-700 text-slate-400 cursor-not-allowed'
+                            : isSelected
+                              ? 'bg-orange-500 text-white shadow-md'
+                              : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600 active:scale-95'
+                            }`}
+                        >
+                          <span>{t?.['kw_' + item.id] || item.ko}</span>
+                          {isGenerating && isSelected && (
+                            <RefreshCw className="w-4 h-4 inline-block ml-2 animate-spin" />
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
               {selectedTopic && (
                 <div className="space-y-2">
                   <label className="text-sm font-bold text-slate-700 dark:text-slate-200">
@@ -1327,9 +1346,9 @@ const WriteView = ({ user, userProfile, t, onBookGenerated, slotStatus, setView,
                     onChange={(e) => setKeywords(e.target.value)}
                     placeholder={t?.keyword_placeholder || "예: 가을 낙엽, 첫 사랑, 성장, 일상의 소중함..."}
                     className="w-full bg-slate-50 dark:bg-slate-700 border-2 border-slate-200 dark:border-slate-600 rounded-xl py-3 px-4 text-sm focus:border-orange-500 focus:bg-white dark:focus:bg-slate-700 outline-none transition-colors text-slate-800 dark:text-slate-100"
-                    maxLength={50}
+                    maxLength={100}
                   />
-                  <div className="text-xs text-slate-400 dark:text-slate-500 font-bold text-right">{keywords.length}/50</div>
+                  <div className="text-xs text-slate-400 dark:text-slate-500 font-bold text-right">{keywords.length}/100</div>
                 </div>
               )}
 

@@ -770,53 +770,52 @@ const BookDetail = ({ book, onClose, onBookUpdate, fontSize = 'text-base', user,
     }
   };
 
-  const EpisodeGeneratingNotice = () => {
-    const [showQuiz, setShowQuiz] = useState(false);
-    return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-6">
-        <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 w-full max-w-sm shadow-xl space-y-4 animate-in fade-in zoom-in-95 duration-200 text-center max-h-[85vh] overflow-y-auto scrollbar-hide">
-          {showQuiz ? (
-            <>
-              <div className="flex items-center justify-between">
-                <p className="text-xs font-bold text-slate-400">{episodeLoadingMessages[episodeLoadingMessageIndex] || "집필 중..."}</p>
-                <button onClick={() => setShowQuiz(false)} className="text-xs text-orange-500 font-bold">돌아가기</button>
-              </div>
-              <OXQuizGame t={t} />
-            </>
-          ) : (
-            <>
-              <div className="flex items-center justify-center">
-                <img src="/icons/odok_thinking.png" alt="" className="w-20 h-20 animate-bounce" />
-              </div>
-              <p className="text-sm text-slate-700 dark:text-slate-200 font-bold">
-                집필 중입니다…
+  const [showQuizInEpisode, setShowQuizInEpisode] = useState(false);
+
+  const EpisodeGeneratingNotice = () => (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-6">
+      <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 w-full max-w-sm shadow-xl space-y-4 animate-in fade-in zoom-in-95 duration-200 text-center max-h-[85vh] overflow-y-auto scrollbar-hide">
+        {showQuizInEpisode ? (
+          <>
+            <div className="flex items-center justify-between">
+              <p className="text-xs font-bold text-slate-400">{episodeLoadingMessages[episodeLoadingMessageIndex] || "집필 중..."}</p>
+              <button onClick={() => setShowQuizInEpisode(false)} className="text-xs text-orange-500 font-bold">돌아가기</button>
+            </div>
+            <OXQuizGame t={t} />
+          </>
+        ) : (
+          <>
+            <div className="flex items-center justify-center">
+              <img src="/icons/odok_thinking.png" alt="" className="w-20 h-20 animate-bounce" />
+            </div>
+            <p className="text-sm text-slate-700 dark:text-slate-200 font-bold">
+              집필 중입니다…
+            </p>
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              다음 화 생성에는 약 2~3분이 소요될 수 있어요.
+            </p>
+            {episodeLoadingMessages[episodeLoadingMessageIndex] && (
+              <p className="text-xs text-slate-500 font-bold">
+                {episodeLoadingMessages[episodeLoadingMessageIndex]}
               </p>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
-                다음 화 생성에는 약 2~3분이 소요될 수 있어요.
-              </p>
-              {episodeLoadingMessages[episodeLoadingMessageIndex] && (
-                <p className="text-xs text-slate-500 font-bold">
-                  {episodeLoadingMessages[episodeLoadingMessageIndex]}
-                </p>
-              )}
-              <button
-                onClick={() => setShowQuiz(true)}
-                className="w-full py-3 rounded-xl text-sm font-black bg-orange-500 text-white hover:bg-orange-600 active:scale-95 transition-all"
-              >
-                ⭕❌ OX퀴즈 풀면서 기다리기
-              </button>
-              <button
-                onClick={() => setIsGeneratingEpisodeModalHidden(true)}
-                className="w-full py-3 rounded-xl text-sm font-black bg-slate-900 dark:bg-slate-700 text-white hover:bg-slate-800"
-              >
-                숨기기
-              </button>
-            </>
-          )}
-        </div>
+            )}
+            <button
+              onClick={() => setShowQuizInEpisode(true)}
+              className="w-full py-3 rounded-xl text-sm font-black bg-orange-500 text-white hover:bg-orange-600 active:scale-95 transition-all"
+            >
+              ⭕❌ OX퀴즈 풀면서 기다리기
+            </button>
+            <button
+              onClick={() => setIsGeneratingEpisodeModalHidden(true)}
+              className="w-full py-3 rounded-xl text-sm font-black bg-slate-900 dark:bg-slate-700 text-white hover:bg-slate-800"
+            >
+              숨기기
+            </button>
+          </>
+        )}
       </div>
-    );
-  };
+    </div>
+  );
 
   return (
     <>
