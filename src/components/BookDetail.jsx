@@ -772,7 +772,9 @@ const BookDetail = ({ book, onClose, onBookUpdate, fontSize = 'text-base', user,
 
   const [showQuizInEpisode, setShowQuizInEpisode] = useState(false);
 
-  const EpisodeGeneratingNotice = () => (
+  // EpisodeGeneratingNotice를 JSX 변수로 (함수 컴포넌트가 아닌)
+  // → 매 렌더마다 새 컴포넌트 reference 생성 방지 → OXQuizGame 재마운트 방지
+  const episodeGeneratingNoticeJSX = (isGeneratingEpisode && !isGeneratingEpisodeModalHidden) ? (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-6">
       <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 w-full max-w-sm shadow-xl space-y-4 animate-in fade-in zoom-in-95 duration-200 text-center max-h-[85vh] overflow-y-auto scrollbar-hide">
         {showQuizInEpisode ? (
@@ -815,7 +817,7 @@ const BookDetail = ({ book, onClose, onBookUpdate, fontSize = 'text-base', user,
         )}
       </div>
     </div>
-  );
+  ) : null;
 
   return (
     <>
@@ -1394,7 +1396,7 @@ const BookDetail = ({ book, onClose, onBookUpdate, fontSize = 'text-base', user,
         )}
 
         {/* 시리즈 다음 화 집필 중 모달 */}
-        {isGeneratingEpisode && !isGeneratingEpisodeModalHidden && <EpisodeGeneratingNotice />}
+        {episodeGeneratingNoticeJSX}
 
         {/* 시리즈 집필 완료 모달 */}
         {showSeriesCompleteModal && (

@@ -896,7 +896,9 @@ const WriteView = ({ user, userProfile, t, onBookGenerated, slotStatus, setView,
 
   const [showQuizInGenerating, setShowQuizInGenerating] = useState(false);
 
-  const GeneratingNotice = () => (
+  // GeneratingNotice를 JSX 변수로 (함수 컴포넌트가 아닌)
+  // → 매 렌더마다 새 컴포넌트 reference 생성 방지 → OXQuizGame 재마운트 방지
+  const generatingNoticeJSX = (isGenerating && !isGeneratingHidden) ? (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-6">
       <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 w-full max-w-sm shadow-xl space-y-4 animate-in fade-in zoom-in-95 duration-200 text-center max-h-[85vh] overflow-y-auto scrollbar-hide">
         {showQuizInGenerating ? (
@@ -947,7 +949,7 @@ const WriteView = ({ user, userProfile, t, onBookGenerated, slotStatus, setView,
         )}
       </div>
     </div>
-  );
+  ) : null;
 
   // 생성 가능 여부 확인
   const canGenerateNovel = selectedCategory &&
@@ -1269,7 +1271,7 @@ const WriteView = ({ user, userProfile, t, onBookGenerated, slotStatus, setView,
                   )}
                 </button>
               )}
-              {isGenerating && !isGeneratingHidden && <GeneratingNotice />}
+              {generatingNoticeJSX}
             </>
           )}
 
@@ -1546,7 +1548,7 @@ const WriteView = ({ user, userProfile, t, onBookGenerated, slotStatus, setView,
                   )}
                 </button>
               )}
-              {isGenerating && !isGeneratingHidden && <GeneratingNotice />}
+              {generatingNoticeJSX}
             </>
           )}
         </div>
