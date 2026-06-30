@@ -3175,7 +3175,7 @@ const FAIRY_STEPS = {
   ],
 };
 
-function buildFairySystemPrompt({ age, gender, theme, wantQuestions, name }) {
+function buildFairySystemPrompt({ age, gender, theme, setting, wantQuestions, name }) {
   const ageGuide = age === "lower"
     ? "대상은 초등 저학년(6~8세)입니다. 인과관계가 분명한 문장('~해서 ~했어요')을 쓰고, 단순한 갈등과 해결 구조, 모험·우정 같은 테마, 약간의 놀라움이나 반전을 넣어도 좋습니다."
     : "대상은 유아(3~5세)입니다. 한 문장은 아주 짧게, 한 장면에 한두 문장만 씁니다. 의성어·의태어(폴짝폴짝, 데굴데굴, 살금살금)를 풍부하게 써서 소리내어 읽을 때 재미있게. 갈등은 아주 약하게(잃어버린 인형 찾기 수준), 반복되는 리듬으로 아이가 다음을 예측하며 참여하게. 교훈은 단순하고 명확하게.";
@@ -3187,6 +3187,9 @@ function buildFairySystemPrompt({ age, gender, theme, wantQuestions, name }) {
   const themeGuide = theme
     ? `이 동화의 교훈·테마는 "${theme}"입니다. 설교하듯 말하지 말고 이야기 속에 자연스럽게 녹여내세요.`
     : "특정 교훈을 강요하지 말고, 따뜻하고 포근한 일상 이야기로 만드세요.";
+  const settingGuide = setting
+    ? `이야기의 배경(무대)은 "${setting}"입니다. 그 배경의 분위기와 특징을 살려 생생하게 그려주세요.`
+    : "배경(무대)은 이야기에 가장 잘 어울리도록 자유롭게 정하세요.";
   const questionGuide = wantQuestions
     ? `이야기의 장면 전환 지점에 아이에게 묻는 질문을 전체에서 2~3회만 자연스럽게 넣으세요(예: "${name}는 어떻게 했을까요?", "다음엔 무슨 일이 일어날까요?"). 너무 자주 넣어 몰입을 깨지 마세요.`
     : "독자에게 묻는 질문은 넣지 말고, 매끄럽게 흐르는 이야기로 만드세요.";
@@ -3195,6 +3198,7 @@ function buildFairySystemPrompt({ age, gender, theme, wantQuestions, name }) {
     ageGuide,
     genderGuide,
     themeGuide,
+    settingGuide,
     questionGuide,
     "공통 규칙: 소리내어 읽기 좋은 리듬과 운율을 살립니다. 너무 긴 문장은 금지(읽어주다 숨차지 않게). 무섭거나 자극적인 내용은 금지(잠들기 전에도 안전하게). 안심되는 따뜻하고 포근한 결말로 끝냅니다.",
     `주인공의 이름은 "${name}"이며, 이야기 내내 이 이름을 자연스럽게 사용합니다.`,
@@ -3223,12 +3227,13 @@ exports.generateFairytale = onCall(
       if (!request.auth) throw new HttpsError("unauthenticated", "로그인이 필요합니다.");
       if (!GEMINI_API_KEY) throw new HttpsError("failed-precondition", "Gemini API 키가 설정되지 않았습니다.");
 
-      const { childName, age, gender, theme, interaction, appId } = request.data || {};
+      const { childName, age, gender, theme, setting, interaction, appId } = request.data || {};
       const name = String(childName || "").trim().replace(/[<>]/g, "").slice(0, 12);
       if (!name) throw new HttpsError("invalid-argument", "자녀 이름이 필요합니다.");
       const ageKey = age === "lower" ? "lower" : "toddler";
       const genderKey = gender === "boy" ? "boy" : gender === "girl" ? "girl" : "neutral";
       const cleanTheme = String(theme || "").trim().slice(0, 30);
+      const cleanSetting = String(setting || "").trim().slice(0, 40);
       const wantQuestions = interaction === "questions";
       const uid = request.auth.uid;
 
@@ -3236,7 +3241,7 @@ exports.generateFairytale = onCall(
         ? adminDb.doc(`artifacts/${appId}/users/${uid}/generationProgress/current`)
         : null;
 
-      const systemPrompt = buildFairySystemPrompt({ age: ageKey, gender: genderKey, theme: cleanTheme, wantQuestions, name });
+      const systemPrompt = buildFairySystemPrompt({ age: ageKey, gender: genderKey, theme: cleanTheme, setting: cleanSetting, wantQuestions, name });
       const steps = FAIRY_STEPS[ageKey];
 
       if (progressRef) progressRef.set({ status: "preparing", stepName: null, stepIndex: 0, totalSteps: steps.length, updatedAt: admin.firestore.FieldValue.serverTimestamp() }).catch(() => {});

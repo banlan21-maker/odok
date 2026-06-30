@@ -315,6 +315,16 @@ const FAIRY_THEME_GROUPS = [
   { cat: '✨ 모험·상상', items: ['모험', '상상력', '우주 탐험', '바다 여행', '마법', '시간 여행'] },
 ];
 
+// 동화공방 배경·무대 (선택 입력 — 자유 입력 + 카테고리). 미선택 시 AI가 이야기에 맞게 자동.
+const FAIRY_SETTING_GROUPS = [
+  { cat: '🕰️ 시대', items: ['옛날(전래동화풍)', '현대(우리 동네)', '미래(우주 시대)', '공룡 시대'] },
+  { cat: '🦊 상상의 나라', items: ['동물의 나라', '로봇의 나라', '요정·마법의 숲', '사탕·과자 나라', '장난감 나라', '인형의 나라', '구름 위 나라', '거인의 나라', '소인국'] },
+  { cat: '🌊 자연·탐험', items: ['깊은 바다 속', '우주·별나라', '정글·밀림', '눈 덮인 북극', '사막', '신비한 섬', '무지개 너머'] },
+  { cat: '🏡 포근한 일상', items: ['우리 집·방 안', '할머니 댁·시골', '놀이공원', '동물원', '바닷가', '숲속 오두막', '농장'] },
+  { cat: '🏰 판타지·마법', items: ['마법 왕국·성', '구름성', '마법 학교', '책 속 세상', '꿈속 나라', '거울 속 나라'] },
+  { cat: '🎨 색다른 상상', items: ['계절 나라', '무지개·색깔 나라', '음악 나라', '그림 속 세상', '시간 여행'] },
+];
+
 const WriteView = ({ user, userProfile, t, onBookGenerated, slotStatus, setView, setSelectedBook, error, setError, deductInk, addInk, onGeneratingChange, onGenerationComplete, authorProfiles = {}, appId, onSaveFairytale }) => {
   // 메인 카테고리 목록 (6개)
   const categories = [
@@ -364,7 +374,9 @@ const WriteView = ({ user, userProfile, t, onBookGenerated, slotStatus, setView,
   const [fairyGender, setFairyGender] = useState(null);       // 'boy' | 'girl' | 'neutral'
   const [fairyTheme, setFairyTheme] = useState('');           // 교훈·테마 (선택)
   const [fairyInteraction, setFairyInteraction] = useState(null); // 'questions' | 'none'
-  const [openThemeCat, setOpenThemeCat] = useState(null); // 교훈·테마 펼친 카테고리
+  const [fairySetting, setFairySetting] = useState('');           // 배경·무대 (선택)
+  const [openThemeCat, setOpenThemeCat] = useState(null);   // 교훈·테마 펼친 카테고리
+  const [openSettingCat, setOpenSettingCat] = useState(null); // 배경 펼친 카테고리
   const [isFairyGenerating, setIsFairyGenerating] = useState(false);
 
   const handleGenerateFairytale = async () => {
@@ -385,11 +397,11 @@ const WriteView = ({ user, userProfile, t, onBookGenerated, slotStatus, setView,
       deducted = true;
       const result = await generateFairytale({
         childName: childName.trim(), age: fairyAge, gender: fairyGender,
-        theme: fairyTheme.trim(), interaction: fairyInteraction, appId,
+        theme: fairyTheme.trim(), setting: fairySetting.trim(), interaction: fairyInteraction, appId,
       });
       const saved = await onSaveFairytale({
         title: result.title, content: result.content, childName: childName.trim(),
-        age: fairyAge, gender: fairyGender, theme: fairyTheme.trim(), interaction: fairyInteraction,
+        age: fairyAge, gender: fairyGender, theme: fairyTheme.trim(), setting: fairySetting.trim(), interaction: fairyInteraction,
       });
       if (setSelectedBook) setSelectedBook(saved);
       if (setView) setView('book_detail');
@@ -1268,6 +1280,46 @@ const WriteView = ({ user, userProfile, t, onBookGenerated, slotStatus, setView,
                           onClick={() => setFairyTheme(ex)}
                           disabled={isFairyGenerating}
                           className={`px-2.5 py-1 rounded-full text-xs font-bold border transition-colors disabled:opacity-60 ${fairyTheme === ex ? 'border-purple-400 bg-purple-50 dark:bg-purple-900/20 text-purple-600' : 'border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400'}`}
+                        >
+                          {ex}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* 배경·무대 (선택) */}
+          <div className="space-y-2">
+            <label className="text-sm font-bold text-slate-600 dark:text-slate-300 px-1">배경·무대 <span className="text-[11px] text-slate-400 font-normal">(선택, 없으면 AI가 정함)</span></label>
+            <input
+              type="text" value={fairySetting} onChange={(e) => setFairySetting(e.target.value)}
+              maxLength={30} placeholder="예: 동물의 나라, 깊은 바다 속, 옛날" disabled={isFairyGenerating}
+              className="w-full bg-white dark:bg-slate-700 dark:text-slate-100 border-2 border-slate-200 dark:border-slate-600 rounded-xl py-3 px-4 text-sm focus:border-purple-500 focus:outline-none transition-colors disabled:opacity-60"
+            />
+            <div className="space-y-1.5">
+              {FAIRY_SETTING_GROUPS.map((grp, gi) => (
+                <div key={grp.cat} className="border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden">
+                  <button
+                    type="button"
+                    onClick={() => setOpenSettingCat(openSettingCat === gi ? null : gi)}
+                    disabled={isFairyGenerating}
+                    className="w-full flex items-center justify-between px-3 py-2 text-xs font-bold text-slate-600 dark:text-slate-300 bg-slate-50 dark:bg-slate-800/60 disabled:opacity-60"
+                  >
+                    <span>{grp.cat}</span>
+                    <ChevronDown className={`w-4 h-4 transition-transform ${openSettingCat === gi ? 'rotate-180' : ''}`} />
+                  </button>
+                  {openSettingCat === gi && (
+                    <div className="flex flex-wrap gap-1.5 p-2.5 bg-white dark:bg-slate-800">
+                      {grp.items.map((ex) => (
+                        <button
+                          key={ex}
+                          type="button"
+                          onClick={() => setFairySetting(ex)}
+                          disabled={isFairyGenerating}
+                          className={`px-2.5 py-1 rounded-full text-xs font-bold border transition-colors disabled:opacity-60 ${fairySetting === ex ? 'border-purple-400 bg-purple-50 dark:bg-purple-900/20 text-purple-600' : 'border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400'}`}
                         >
                           {ex}
                         </button>
