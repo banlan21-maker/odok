@@ -5,7 +5,9 @@ import { KeepAwake } from '@capacitor-community/keep-awake';
 import { LocalNotifications } from '@capacitor/local-notifications';
 import { PenTool, RefreshCw, Book, Edit2, Lock, Droplets, Video, Check, X } from 'lucide-react';
 import { generateBook } from '../utils/aiService';
-import { getExtraWriteInkCost, isKeywordRefreshFree, getLevelFromXp } from '../utils/levelUtils';
+import { db } from '../firebase';
+import { doc, onSnapshot, deleteDoc } from 'firebase/firestore';
+import { isKeywordRefreshFree, getLevelFromXp } from '../utils/levelUtils';
 import { showRewardVideoAd } from '../utils/admobService';
 import { BOOK_FONTS } from '../utils/fontOptions';
 import OXQuizGame from './OXQuizGame';
@@ -50,6 +52,37 @@ const NONFICTION_TONE_OPTIONS = {
   'self-help': ['따뜻한 위로/격려', '강한 동기부여/독설', '논리적인/분석적인', '경험담 위주'],
   humanities: ['질문을 던지는/사색적인', '날카로운 비판', '대화 형식/인터뷰', '쉬운 해설/스토리텔링']
 };
+
+const ESSAY_NARRATOR_OPTIONS = [
+  { value: '고백하는 나', desc: '1인칭, 속마음을 꺼내놓는' },
+  { value: '인생 선배', desc: '먼저 살아본 경험 공유' },
+  { value: '츤데레 아저씨', desc: '투박하지만 속정 깊은' },
+  { value: '또래 친구', desc: '같은 눈높이, 편한 구어체' },
+  { value: '관찰자', desc: '거리두기, 판단 절제' },
+  { value: '전문가', desc: '지식과 근거, 안내하는 자세' },
+];
+
+const ESSAY_ANGLE_OPTIONS = [
+  { value: '회고형', desc: '지나간 일을 돌아보며' },
+  { value: '분석형', desc: '원인과 구조를 논리적으로' },
+  { value: '위로형', desc: '당신만 그런 게 아니다' },
+  { value: '질문형', desc: '독자가 스스로 생각하게' },
+  { value: '수용형', desc: '있는 그대로 받아들이며' },
+  { value: '경고형', desc: '반복하지 말라고 일러주며' },
+];
+
+const SELF_HELP_AUDIENCE_OPTIONS = [
+  { value: '막 시작하는 사람', desc: '개념부터, 최소한의 첫 발' },
+  { value: '이미 시도했지만 실패한 사람', desc: '실패 원인 분석, 재시작 방법' },
+  { value: '완전히 지쳐버린 사람', desc: '멈춰도 된다, 회복 중심' },
+];
+
+const HUMANITIES_STARTING_POINT_OPTIONS = [
+  { value: '일상 장면에서', desc: '공감 가는 장면을 입구로' },
+  { value: '개념 정의에서', desc: '용어를 해체하고 재정의' },
+  { value: '역사적 사례에서', desc: '과거에서 출발해 현재로' },
+  { value: '역설·모순에서', desc: '예상을 뒤집고 다시 생각하게' },
+];
 
 const TONE_TO_KEY = {
   '담백한/건조한': 'tone_essay_dry',
@@ -151,6 +184,86 @@ const MOOD_TO_NAMEKEY = {
   '철학적/사색적': 'mood_philosophical'
 };
 
+// Guard Rail: map full mood string → short key for matrix lookup
+const MOOD_SHORT_KEYS = {
+  '사이다/먼치킨(압도적 힘)': '사이다/먼치킨',
+  '달달/힐링(설렘)':           '달달/힐링',
+  '후회/집착(도파민)':          '후회/집착',
+  '오컬트/기담(공포)':          '오컬트/기담',
+  '하드보일드/건조한':          '하드보일드',
+  '철학적/사색적':              '철학/사색',
+  '혐관/배틀(티키타카)':        '혐관/배틀',
+  '슬래셔/고어(잔혹)':          '슬래셔/고어',
+  '서정적/잔잔한':              '서정적/잔잔한',
+  '현실적/사실주의':            '현실적/사실주의',
+  '정통 추리/논리적':           '정통 추리/논리적',
+};
+
+// Matrix 1: Genre × Mood
+const GUARD_RAIL_MOOD_BLOCKED = {
+  '로맨스':        ['사이다/먼치킨', '오컬트/기담', '하드보일드'],
+  '로맨스 판타지': ['오컬트/기담', '하드보일드'],
+  '무협':          ['달달/힐링'],
+  '미스터리/공포': ['사이다/먼치킨', '달달/힐링'],
+  '드라마':        ['사이다/먼치킨'],
+  '힐링':          ['사이다/먼치킨', '후회/집착', '오컬트/기담', '하드보일드'],
+  '미스터리/추리': ['사이다/먼치킨', '달달/힐링'],
+  '스릴러':        ['달달/힐링'],
+};
+const GUARD_RAIL_MOOD_CAUTION = {
+  '로맨스 판타지': ['철학/사색'],
+  '판타지':        ['달달/힐링', '후회/집착', '하드보일드'],
+  '현대 판타지':   ['달달/힐링', '후회/집착', '하드보일드', '철학/사색'],
+  '무협':          ['오컬트/기담'],
+  '미스터리/공포': ['후회/집착'],
+  'SF':            ['사이다/먼치킨', '달달/힐링', '후회/집착'],
+  '드라마':        ['오컬트/기담'],
+  '힐링':          ['철학/사색'],
+};
+
+// Matrix 2: Mood × Speech Tone  (friendly=친근체, formal=단정체, polite=정중체)
+const GUARD_RAIL_TONE_BLOCKED = {
+  '사이다/먼치킨': ['polite'],
+  '후회/집착':     ['polite'],
+  '혐관/배틀':     ['polite'],
+  '슬래셔/고어':   ['friendly', 'polite'],
+  '하드보일드':    ['friendly', 'polite'],
+};
+const GUARD_RAIL_TONE_CAUTION = {
+  '달달/힐링':          ['formal', 'polite'],
+  '후회/집착':          ['friendly'],
+  '혐관/배틀':          ['friendly'],
+  '오컬트/기담':        ['friendly', 'polite'],
+  '서정적/잔잔한':      ['friendly'],
+  '현실적/사실주의':    ['polite'],
+  '정통 추리/논리적':   ['friendly'],
+  '철학/사색':          ['friendly'],
+};
+
+// Matrix 3: Mood × POV  (first_person=1인칭, third_limited=3인칭 관찰자, omniscient=전지적)
+const GUARD_RAIL_POV_BLOCKED = {
+  '후회/집착':  ['omniscient'],
+  '오컬트/기담': ['omniscient'],
+  '슬래셔/고어': ['omniscient'],
+  '하드보일드':  ['omniscient'],
+};
+const GUARD_RAIL_POV_CAUTION = {
+  '사이다/먼치킨':     ['omniscient'],
+  '후회/집착':         ['third_limited'],
+  '서정적/잔잔한':     ['third_limited'],
+  '철학/사색':         ['third_limited'],
+  '정통 추리/논리적':  ['omniscient'],
+};
+
+function getMoodGuardRail(genreName, moodFull) {
+  const shortKey = MOOD_SHORT_KEYS[moodFull] || moodFull;
+  const blocked = GUARD_RAIL_MOOD_BLOCKED[genreName] || [];
+  const caution = GUARD_RAIL_MOOD_CAUTION[genreName] || [];
+  if (blocked.some(k => shortKey.startsWith(k))) return 'blocked';
+  if (caution.some(k => shortKey.startsWith(k))) return 'caution';
+  return 'ok';
+}
+
 const endingStyleIds = [
   { id: 'closed_happy', value: '닫힌 결말 (해피 엔딩)' },
   { id: 'closed_sad', value: '닫힌 결말 (비극/새드 엔딩)' },
@@ -169,13 +282,28 @@ const novelKeywords = [
   "미래 도시 SF"
 ];
 
+const GENRE_EXAMPLE_TOPICS = {
+  'romance':         ['사랑하는 사람이 기억을 잃고 낯선 사람이 된다', '오해로 헤어진 첫사랑과 10년 만에 재회한다'],
+  'romance-fantasy': ['마법 금지령 속 마법사와 기사의 금지된 사랑', '전생의 원수가 이생에서 운명의 상대로 나타난다'],
+  'fantasy':         ['신에게 버림받은 세계에서 마지막 영웅의 선택', '마법을 쓸수록 기억을 잃는 소녀가 세계를 구해야 한다'],
+  'modern-fantasy':  ['평범한 직장인이 도시 속 숨겨진 이계의 문을 발견', '귀신이 보이는 능력으로 억울한 영혼의 한을 풀어준다'],
+  'wuxia':           ['무림 최강 고수가 모든 것을 잃고 다시 일어서는 이야기', '문파를 멸한 원수를 갚기 위해 10년을 와신상담한 제자'],
+  'mystery-horror':  ['폐교 의문 실종 사건, 유일한 목격자는 말을 못 한다', '이사한 집에서 매일 밤 같은 시간에 들리는 발소리'],
+  'sf':              ['로봇이 모든 일을 대신하는 세상에서 의미를 찾는 인간', '달 기지에서 혼자 깨어난 우주인, 지구와 연락이 끊겼다'],
+  'drama':           ['가족 중 한 명의 숨겨진 비밀이 모든 관계를 뒤흔든다', '평생 남을 위해 살아온 사람의 처음으로 자신을 위한 선택'],
+  'mystery':         ['매년 같은 날 사라지는 마을 사람들, 숨겨진 패턴이 있다', '죽은 줄 알았던 친구가 5년 후 살인 사건 피의자로 나타난다'],
+  'thriller':        ['납치된 딸을 구하기 위해 범죄 세계에 발을 들인 아버지', '자신이 연쇄살인마의 다음 표적임을 알게 된 형사'],
+  'history':         ['조선 시대 신분을 넘은 금지된 사랑과 혁명', '전쟁 속 적군의 편지를 전달해야만 하는 전령의 이야기'],
+  'healing':         ['번아웃으로 시골에 내려온 작가가 마을과 함께 치유되는 이야기', '유기견 보호소에서 상처 입은 개와 사람이 함께 회복하는 이야기'],
+};
+
 // 시리즈 세부 장르 (웹소설형 vs 일반소설형)
 const seriesSubTypes = [
   { id: 'webnovel', name: '웹소설형', description: '연재 웹소설 스타일' },
   { id: 'novel', name: '일반소설형', description: '전통 소설 스타일' }
 ];
 
-const WriteView = ({ user, userProfile, t, onBookGenerated, slotStatus, setView, setSelectedBook, error, setError, deductInk, onGeneratingChange, onGenerationComplete, authorProfiles = {} }) => {
+const WriteView = ({ user, userProfile, t, onBookGenerated, slotStatus, setView, setSelectedBook, error, setError, deductInk, addInk, onGeneratingChange, onGenerationComplete, authorProfiles = {}, appId }) => {
   // 메인 카테고리 목록 (6개)
   const categories = [
     { id: 'webnovel', name: t?.cat_webnovel || '웹소설', icon: '📱', isNovel: true, isSingle: true },
@@ -194,9 +322,13 @@ const WriteView = ({ user, userProfile, t, onBookGenerated, slotStatus, setView,
   const [keywords, setKeywords] = useState(''); // 소설류 키워드
   const [bookTitle, setBookTitle] = useState(''); // 사용자 입력 제목
   const [selectedFont, setSelectedFont] = useState('default'); // 본문 폰트
-  const [styleMode, setStyleMode] = useState(null); // 'webnovel' | 'literary' | 'custom' | null
+
   const [endingStyle, setEndingStyle] = useState(''); // 소설 결말 스타일
   const [selectedTone, setSelectedTone] = useState(''); // 비문학 문체
+  const [essayNarrator, setEssayNarrator] = useState(''); // 에세이 화자 정체성
+  const [essayAngle, setEssayAngle] = useState(''); // 에세이 접근 각도
+  const [selfHelpAudience, setSelfHelpAudience] = useState(''); // 자기개발 독자 상황
+  const [humanitiesStartingPoint, setHumanitiesStartingPoint] = useState(''); // 철학/인문 사유 출발점
   const [selectedMood, setSelectedMood] = useState(''); // 소설 분위기
   const [selectedPOV, setSelectedPOV] = useState(''); // 소설 시점 (누가 이야기하나요)
   const [selectedSpeechTone, setSelectedSpeechTone] = useState(''); // 소설 말투/문체
@@ -215,7 +347,8 @@ const WriteView = ({ user, userProfile, t, onBookGenerated, slotStatus, setView,
   const [loadingMessageIndex, setLoadingMessageIndex] = useState(0);
   const [currentLoadingMessage, setCurrentLoadingMessage] = useState('');
   const [currentLoadingMessages, setCurrentLoadingMessages] = useState([]);
-  const [isAdWatched, setIsAdWatched] = useState(false); // 광고 시청 완료 상태 추가
+  const [isAdWatched, setIsAdWatched] = useState(false);
+  const [generationProgress, setGenerationProgress] = useState(null); // { stepName, stepIndex, totalSteps }
   const [showKeywordRefreshModal, setShowKeywordRefreshModal] = useState(false);
   const [pendingRefreshAd, setPendingRefreshAd] = useState(false); // 광고 시청 후 리프레시 대기 상태
 
@@ -299,12 +432,16 @@ const WriteView = ({ user, userProfile, t, onBookGenerated, slotStatus, setView,
     return NONFICTION_TONE_OPTIONS[categoryId] || [];
   };
 
+  // 개발/테스트 계정: 모든 제한 무시
+  const DEV_BYPASS_EMAILS_LIMIT = ['banlan21@gmail.com'];
+  const isDevUser = DEV_BYPASS_EMAILS_LIMIT.includes(user?.email);
+
   const todayKey = getTodayKey();
   const lastWriteDate = userProfile?.lastBookCreatedDate || null;
   const dailyWriteCount = userProfile?.dailyWriteCount || 0;
   const effectiveWriteCount = lastWriteDate === todayKey ? dailyWriteCount : 0;
   const remainingDailyWrites = Math.max(0, DAILY_WRITE_LIMIT - effectiveWriteCount);
-  const requiresPaidWrite = effectiveWriteCount >= DAILY_FREE_WRITES;
+  const requiresPaidWrite = !isDevUser && effectiveWriteCount >= DAILY_FREE_WRITES;
 
   useEffect(() => {
     if (remainingDailyWrites === 0) {
@@ -317,6 +454,23 @@ const WriteView = ({ user, userProfile, t, onBookGenerated, slotStatus, setView,
       onGeneratingChange(isGenerating);
     }
   }, [isGenerating, onGeneratingChange]);
+
+  useEffect(() => {
+    if (!isGenerating || !appId || !user?.uid) {
+      setGenerationProgress(null);
+      return;
+    }
+    const progressDocRef = doc(db, 'artifacts', appId, 'users', user.uid, 'generationProgress', 'current');
+    const unsubscribe = onSnapshot(progressDocRef, (snap) => {
+      if (snap.exists()) {
+        const data = snap.data();
+        setGenerationProgress({ stepName: data.stepName, stepIndex: data.stepIndex || 0, totalSteps: data.totalSteps || 0 });
+      } else {
+        setGenerationProgress(null);
+      }
+    });
+    return () => unsubscribe();
+  }, [isGenerating, appId, user?.uid]);
 
   useEffect(() => {
     const requestNotificationPermission = async () => {
@@ -402,6 +556,7 @@ const WriteView = ({ user, userProfile, t, onBookGenerated, slotStatus, setView,
   };
 
   const isSlotAvailable = (categoryId, subCategoryId = null) => {
+    if (isDevUser) return true;
     return getSlotStatus(categoryId, subCategoryId) === null;
   };
 
@@ -409,24 +564,25 @@ const WriteView = ({ user, userProfile, t, onBookGenerated, slotStatus, setView,
 
   // 카테고리 선택 핸들러
   const handleCategorySelect = (category) => {
-    if (category.id === 'series') {
-      if (!isSeriesCategoryAvailable()) {
-        const seriesSlot = getSlotStatus('series');
-        if (seriesSlot?.book && setSelectedBook && setView) {
-          setSelectedBook(seriesSlot.book);
-          setView('book_detail');
+    if (!isDevUser) {
+      if (category.id === 'series') {
+        if (!isSeriesCategoryAvailable()) {
+          const seriesSlot = getSlotStatus('series');
+          if (seriesSlot?.book && setSelectedBook && setView) {
+            setSelectedBook(seriesSlot.book);
+            setView('book_detail');
+          }
+          return;
         }
-        return;
-      }
-    } else {
-      // 일반 카테고리는 슬롯이 차있으면 차단
-      if (!isSlotAvailable(category.id)) {
-        const slotInfo = getSlotStatus(category.id);
-        if (slotInfo?.book && setSelectedBook && setView) {
-          setSelectedBook(slotInfo.book);
-          setView('book_detail');
+      } else {
+        if (!isSlotAvailable(category.id)) {
+          const slotInfo = getSlotStatus(category.id);
+          if (slotInfo?.book && setSelectedBook && setView) {
+            setSelectedBook(slotInfo.book);
+            setView('book_detail');
+          }
+          return;
         }
-        return;
       }
     }
 
@@ -437,9 +593,13 @@ const WriteView = ({ user, userProfile, t, onBookGenerated, slotStatus, setView,
     setKeywords('');
     setBookTitle('');
     setSelectedFont('default');
-    setStyleMode(null);
+
     setEndingStyle('');
     setSelectedTone('');
+    setEssayNarrator('');
+    setEssayAngle('');
+    setSelfHelpAudience('');
+    setHumanitiesStartingPoint('');
     setSelectedMood('');
     setIsCustomInput(false);
     setNonfictionTopics([]);
@@ -561,15 +721,6 @@ const WriteView = ({ user, userProfile, t, onBookGenerated, slotStatus, setView,
     setPendingPaidWriteType(null);
   };
 
-  const confirmPaidWrite = async () => {
-    const type = pendingPaidWriteType;
-    closePaidWriteConfirm();
-    if (type === 'nonfiction') {
-      await startNonfictionGenerate(true); // forcePaid = true
-    } else if (type === 'novel') {
-      await startNovelGenerate(true); // forcePaid = true
-    }
-  };
 
   // 광고 시청 후 상태 변화 감지하여 로직 실행 (Closure 문제 해결)
   useEffect(() => {
@@ -584,7 +735,7 @@ const WriteView = ({ user, userProfile, t, onBookGenerated, slotStatus, setView,
           await startNovelGenerate(true, true);
         }
         setIsAdWatched(false); // 리셋
-        // setPendingPaidWriteType(null); // 타입 초기화는 로직 실행 후나 모달 닫을 때 (여기선 닫힘)
+        setPendingPaidWriteType(null); // 타입도 집필 시작 후 초기화
       };
 
       proceed();
@@ -596,7 +747,8 @@ const WriteView = ({ user, userProfile, t, onBookGenerated, slotStatus, setView,
       async () => {
         // 광고 시청 보상: 무료 집필 (잉크 차감 없이 진행)
         console.log('🎉 광고 시청 완료! 무료 집필 플래그 설정');
-        closePaidWriteConfirm();
+        // 모달만 닫고 pendingPaidWriteType은 유지 — useEffect가 타입을 읽어 집필을 시작함
+        setShowPaidWriteConfirm(false);
         setIsAdWatched(true); // 상태 업데이트로 트리거
       },
       (errorMsg) => {
@@ -611,38 +763,17 @@ const WriteView = ({ user, userProfile, t, onBookGenerated, slotStatus, setView,
       return;
     }
 
-    if (remainingDailyWrites <= 0) {
+    if (!isDevUser && remainingDailyWrites <= 0) {
       const errorMsg = '하루에 최대 2회까지만 집필할 수 있어요.';
       setLocalError(errorMsg);
       if (setError) setError(errorMsg);
       return;
     }
 
-    if (requiresPaidWrite && !forcePaid && !isAdReward) {
+    // 2회차 집필은 광고 시청 필수 (잉크 결제 불가)
+    if (requiresPaidWrite && !isAdReward) {
       openPaidWriteConfirm('nonfiction');
       return;
-    }
-
-    if (requiresPaidWrite && forcePaid && !isAdReward) {
-      const extraCost = getExtraWriteInkCost(getLevelFromXp(userProfile?.xp ?? 0));
-      const currentInk = userProfile?.ink || 0;
-      if (currentInk < extraCost) {
-        const errorMsg = '잉크가 부족합니다! 💧 잉크를 충전해주세요.';
-        setLocalError(errorMsg);
-        if (setError) setError(errorMsg);
-        return;
-      }
-      if (typeof deductInk !== 'function') {
-        setLocalError('잉크 차감 기능을 사용할 수 없습니다.');
-        if (setError) setError('잉크 차감 기능을 사용할 수 없습니다.');
-        return;
-      }
-      const success = await deductInk(extraCost);
-      if (!success) {
-        setLocalError('잉크 차감에 실패했습니다. 다시 시도해주세요.');
-        if (setError) setError('잉크 차감에 실패했습니다. 다시 시도해주세요.');
-        return;
-      }
     }
 
     // 슬롯 확인
@@ -672,7 +803,12 @@ const WriteView = ({ user, userProfile, t, onBookGenerated, slotStatus, setView,
         keywords: selectedTopic,
         isSeries: false,
         title: bookTitle.trim(),
-        selectedTone: selectedTone
+        selectedTone: selectedTone,
+        essayNarrator: selectedCategory.id === 'essay' ? essayNarrator : null,
+        essayAngle: selectedCategory.id === 'essay' ? essayAngle : null,
+        selfHelpAudience: selectedCategory.id === 'self-help' ? selfHelpAudience : null,
+        humanitiesStartingPoint: selectedCategory.id === 'humanities' ? humanitiesStartingPoint : null,
+        appId: appId || null
       });
 
       if (cancelRequestedRef.current) return;
@@ -711,7 +847,6 @@ const WriteView = ({ user, userProfile, t, onBookGenerated, slotStatus, setView,
       console.error('❌ [WriteView] 원본 에러:', err?.originalError);
 
       if (err.message !== 'SLOT_ALREADY_TAKEN') {
-        // 에러 메시지 추출 (Firebase Functions 에러 구조 고려)
         const errorMsg = err?.message || err?.originalError?.message || '책 생성에 실패했습니다. 다시 시도해주세요.';
         setLocalError(errorMsg);
         if (setError) setError(errorMsg);
@@ -733,42 +868,21 @@ const WriteView = ({ user, userProfile, t, onBookGenerated, slotStatus, setView,
   };
 
   const startNovelGenerate = async (forcePaid = false, isAdReward = false) => {
-    if (!selectedCategory || !selectedGenre || !keywords.trim() || !bookTitle.trim() || !selectedMood || !selectedPOV || !selectedSpeechTone || !selectedDialogueRatio || isGenerating) {
+    if (!selectedCategory || !selectedGenre || !keywords.trim() || !bookTitle.trim() || !selectedMood || !selectedPOV || !selectedSpeechTone || isGenerating) {
       return;
     }
 
-    if (remainingDailyWrites <= 0) {
+    if (!isDevUser && remainingDailyWrites <= 0) {
       const errorMsg = '하루에 최대 2회까지만 집필할 수 있어요.';
       setLocalError(errorMsg);
       if (setError) setError(errorMsg);
       return;
     }
 
-    if (requiresPaidWrite && !forcePaid && !isAdReward) {
+    // 2회차 집필은 광고 시청 필수 (잉크 결제 불가)
+    if (requiresPaidWrite && !isAdReward) {
       openPaidWriteConfirm('novel');
       return;
-    }
-
-    if (requiresPaidWrite && forcePaid && !isAdReward) {
-      const extraCost = getExtraWriteInkCost(getLevelFromXp(userProfile?.xp ?? 0));
-      const currentInk = userProfile?.ink || 0;
-      if (currentInk < extraCost) {
-        const errorMsg = '잉크가 부족합니다! 💧 잉크를 충전해주세요.';
-        setLocalError(errorMsg);
-        if (setError) setError(errorMsg);
-        return;
-      }
-      if (typeof deductInk !== 'function') {
-        setLocalError('잉크 차감 기능을 사용할 수 없습니다.');
-        if (setError) setError('잉크 차감 기능을 사용할 수 없습니다.');
-        return;
-      }
-      const success = await deductInk(extraCost);
-      if (!success) {
-        setLocalError('잉크 차감에 실패했습니다. 다시 시도해주세요.');
-        if (setError) setError('잉크 차감에 실패했습니다. 다시 시도해주세요.');
-        return;
-      }
     }
 
     // 슬롯 확인 (시리즈는 subCategory로 구분)
@@ -801,7 +915,7 @@ const WriteView = ({ user, userProfile, t, onBookGenerated, slotStatus, setView,
       const endingStyleToSend = selectedCategory.isNovel ? endingStyle : null;
       const result = await generateBook({
         category: selectedCategory.id === 'series' ? 'series' : selectedCategory.id,
-        subCategory: selectedGenre.id,
+        subCategory: selectedCategory.id === 'series' ? seriesSubType?.id : selectedGenre.id,
         genre: selectedGenre.name,
         keywords: keywords.trim(),
         isSeries: selectedCategory.id === 'series',
@@ -810,7 +924,8 @@ const WriteView = ({ user, userProfile, t, onBookGenerated, slotStatus, setView,
         selectedMood: selectedMood,
         selectedPOV: selectedPOV,
         selectedSpeechTone: selectedSpeechTone,
-        selectedDialogueRatio: selectedDialogueRatio
+        selectedDialogueRatio: selectedDialogueRatio,
+        appId: appId || null
       });
 
       if (cancelRequestedRef.current) return;
@@ -858,7 +973,6 @@ const WriteView = ({ user, userProfile, t, onBookGenerated, slotStatus, setView,
       console.error('❌ [WriteView] 원본 에러:', err?.originalError);
 
       if (err.message !== 'SLOT_ALREADY_TAKEN') {
-        // 에러 메시지 추출 (Firebase Functions 에러 구조 고려)
         const errorMsg = err?.message || err?.originalError?.message || '책 생성에 실패했습니다. 다시 시도해주세요.';
         setLocalError(errorMsg);
         if (setError) setError(errorMsg);
@@ -920,6 +1034,19 @@ const WriteView = ({ user, userProfile, t, onBookGenerated, slotStatus, setView,
             <p className="text-xs text-slate-500 dark:text-slate-400">
               {t?.generating_desc || "책 생성에는 약 2~3분이 소요될 수 있어요."}
             </p>
+            {generationProgress && generationProgress.stepName && generationProgress.totalSteps > 0 && (
+              <div className="space-y-1.5">
+                <p className="text-xs font-black text-orange-500">
+                  {generationProgress.stepName} 작성 중... ({generationProgress.stepIndex}/{generationProgress.totalSteps})
+                </p>
+                <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-1.5">
+                  <div
+                    className="bg-orange-500 h-1.5 rounded-full transition-all duration-500"
+                    style={{ width: `${(generationProgress.stepIndex / generationProgress.totalSteps) * 100}%` }}
+                  />
+                </div>
+              </div>
+            )}
             {currentLoadingMessage && (
               <p className="text-xs text-slate-500 dark:text-slate-400 font-bold">
                 {currentLoadingMessage}
@@ -960,11 +1087,17 @@ const WriteView = ({ user, userProfile, t, onBookGenerated, slotStatus, setView,
     remainingDailyWrites > 0 &&
     isSlotAvailable(selectedCategory.id);
 
+  const essayOptionsReady = selectedCategory?.id !== 'essay' || (essayNarrator && essayAngle);
+  const selfHelpOptionsReady = selectedCategory?.id !== 'self-help' || selfHelpAudience;
+  const humanitiesOptionsReady = selectedCategory?.id !== 'humanities' || humanitiesStartingPoint;
   const canGenerateNonfiction = selectedCategory &&
     !selectedCategory.isNovel &&
     selectedTopic &&
     bookTitle.trim().length > 0 &&
     selectedTone &&
+    essayOptionsReady &&
+    selfHelpOptionsReady &&
+    humanitiesOptionsReady &&
     remainingDailyWrites > 0 &&
     isSlotAvailable(selectedCategory.id);
 
@@ -1051,9 +1184,9 @@ const WriteView = ({ user, userProfile, t, onBookGenerated, slotStatus, setView,
         <h3 className="text-sm font-bold text-slate-500 dark:text-slate-400 px-1">{t?.category_label || "카테고리 선택"}</h3>
         <div className="grid grid-cols-2 gap-3">
           {categories.map((category) => {
-            const isSoldOut = category.id === 'series'
+            const isSoldOut = !isDevUser && (category.id === 'series'
               ? !isSeriesCategoryAvailable()
-              : getSlotStatus(category.id) !== null;
+              : getSlotStatus(category.id) !== null);
             const slotInfo = getSlotStatus(category.id);
 
             return (
@@ -1249,6 +1382,82 @@ const WriteView = ({ user, userProfile, t, onBookGenerated, slotStatus, setView,
                   </select>
                 </div>
               )}
+              {selectedTopic && selectedCategory.id === 'essay' && (
+                <>
+                  <div className="space-y-2">
+                    <label className="text-sm font-bold text-slate-700 dark:text-slate-200">
+                      화자의 정체성 <span className="text-orange-500">*</span>
+                    </label>
+                    <select
+                      value={essayNarrator}
+                      onChange={(e) => setEssayNarrator(e.target.value)}
+                      className="w-full bg-slate-50 dark:bg-slate-700 border-2 border-slate-200 dark:border-slate-600 rounded-xl py-3 px-4 text-sm focus:border-orange-500 focus:bg-white dark:focus:bg-slate-700 outline-none transition-colors text-slate-800 dark:text-slate-100"
+                    >
+                      <option value="">화자를 선택하세요</option>
+                      {ESSAY_NARRATOR_OPTIONS.map((opt) => (
+                        <option key={opt.value} value={opt.value}>
+                          {opt.value} — {opt.desc}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-bold text-slate-700 dark:text-slate-200">
+                      접근 각도 <span className="text-orange-500">*</span>
+                    </label>
+                    <select
+                      value={essayAngle}
+                      onChange={(e) => setEssayAngle(e.target.value)}
+                      className="w-full bg-slate-50 dark:bg-slate-700 border-2 border-slate-200 dark:border-slate-600 rounded-xl py-3 px-4 text-sm focus:border-orange-500 focus:bg-white dark:focus:bg-slate-700 outline-none transition-colors text-slate-800 dark:text-slate-100"
+                    >
+                      <option value="">접근 방식을 선택하세요</option>
+                      {ESSAY_ANGLE_OPTIONS.map((opt) => (
+                        <option key={opt.value} value={opt.value}>
+                          {opt.value} — {opt.desc}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </>
+              )}
+              {selectedTopic && selectedCategory.id === 'self-help' && (
+                <div className="space-y-2">
+                  <label className="text-sm font-bold text-slate-700 dark:text-slate-200">
+                    독자 상황 <span className="text-orange-500">*</span>
+                  </label>
+                  <select
+                    value={selfHelpAudience}
+                    onChange={(e) => setSelfHelpAudience(e.target.value)}
+                    className="w-full bg-slate-50 dark:bg-slate-700 border-2 border-slate-200 dark:border-slate-600 rounded-xl py-3 px-4 text-sm focus:border-orange-500 focus:bg-white dark:focus:bg-slate-700 outline-none transition-colors text-slate-800 dark:text-slate-100"
+                  >
+                    <option value="">독자 상황을 선택하세요</option>
+                    {SELF_HELP_AUDIENCE_OPTIONS.map((opt) => (
+                      <option key={opt.value} value={opt.value}>
+                        {opt.value} — {opt.desc}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+              {selectedTopic && selectedCategory.id === 'humanities' && (
+                <div className="space-y-2">
+                  <label className="text-sm font-bold text-slate-700 dark:text-slate-200">
+                    사유의 출발점 <span className="text-orange-500">*</span>
+                  </label>
+                  <select
+                    value={humanitiesStartingPoint}
+                    onChange={(e) => setHumanitiesStartingPoint(e.target.value)}
+                    className="w-full bg-slate-50 dark:bg-slate-700 border-2 border-slate-200 dark:border-slate-600 rounded-xl py-3 px-4 text-sm focus:border-orange-500 focus:bg-white dark:focus:bg-slate-700 outline-none transition-colors text-slate-800 dark:text-slate-100"
+                  >
+                    <option value="">출발점을 선택하세요</option>
+                    {HUMANITIES_STARTING_POINT_OPTIONS.map((opt) => (
+                      <option key={opt.value} value={opt.value}>
+                        {opt.value} — {opt.desc}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
               {canGenerateNonfiction && (
                 <button
                   onClick={handleNonfictionGenerate}
@@ -1266,7 +1475,7 @@ const WriteView = ({ user, userProfile, t, onBookGenerated, slotStatus, setView,
                   ) : (
                     <>
                       <PenTool className="w-5 h-5" />
-                      <span>{requiresPaidWrite ? (t?.use_ink_create || '잉크 {cost} 사용하고 집필').replace('{cost}', getExtraWriteInkCost(getLevelFromXp(userProfile?.xp ?? 0))) : (t?.create_book || '책 생성하기')}</span>
+                      <span>{requiresPaidWrite ? (t?.ad_write_create || '광고 보고 추가 집필') : (t?.create_book || '책 생성하기')}</span>
                     </>
                   )}
                 </button>
@@ -1350,6 +1559,21 @@ const WriteView = ({ user, userProfile, t, onBookGenerated, slotStatus, setView,
                     className="w-full bg-slate-50 dark:bg-slate-700 border-2 border-slate-200 dark:border-slate-600 rounded-xl py-3 px-4 text-sm focus:border-orange-500 focus:bg-white dark:focus:bg-slate-700 outline-none transition-colors text-slate-800 dark:text-slate-100"
                     maxLength={100}
                   />
+                  <p className="text-xs text-slate-400 dark:text-slate-500">갈등이 담긴 주제일수록 깊이 있는 이야기가 만들어져요 ✨</p>
+                  {GENRE_EXAMPLE_TOPICS[selectedGenre?.id] && (
+                    <div className="flex flex-wrap gap-1.5">
+                      {GENRE_EXAMPLE_TOPICS[selectedGenre.id].map((ex, i) => (
+                        <button
+                          key={i}
+                          type="button"
+                          onClick={() => setKeywords(ex)}
+                          className="px-3 py-1.5 rounded-full text-xs font-bold bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400 border border-orange-200 dark:border-orange-800 hover:bg-orange-100 dark:hover:bg-orange-900/40 active:scale-95 transition-all text-left"
+                        >
+                          {ex}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                   <div className="text-xs text-slate-400 dark:text-slate-500 font-bold text-right">{keywords.length}/100</div>
                 </div>
               )}
@@ -1381,96 +1605,67 @@ const WriteView = ({ user, userProfile, t, onBookGenerated, slotStatus, setView,
                 </div>
               )}
 
-              {/* 3. 스타일 프리셋 (빠른 설정) */}
+              {/* 3. 세부 설정 — 칩 버튼 */}
               {selectedGenre && selectedCategory?.isNovel && (
-                <div className="space-y-2">
-                  <label className="text-sm font-bold text-slate-700 dark:text-slate-200">
-                    {t?.style_preset || "스타일"}
-                  </label>
-                  <div className="grid grid-cols-3 gap-2">
-                    <button
-                      onClick={() => { setStyleMode('webnovel'); setSelectedMood('tension'); setSelectedPOV('first_person'); setSelectedSpeechTone('friendly'); setSelectedDialogueRatio('dialogue_heavy'); }}
-                      className={`py-2.5 px-2 rounded-xl text-[11px] font-black border-2 transition-all text-center ${
-                        styleMode === 'webnovel'
-                          ? 'border-orange-500 bg-orange-50 dark:bg-orange-900/20 text-orange-600' : 'border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300'
-                      }`}
-                    >
-                      📱 {t?.preset_webnovel || '웹소설풍'}
-                      <p className="text-[9px] font-normal text-slate-400 mt-0.5">1인칭·친근·대화중심</p>
-                    </button>
-                    <button
-                      onClick={() => { setStyleMode('literary'); setSelectedMood('lyrical'); setSelectedPOV('third_limited'); setSelectedSpeechTone('formal'); setSelectedDialogueRatio('description_heavy'); }}
-                      className={`py-2.5 px-2 rounded-xl text-[11px] font-black border-2 transition-all text-center ${
-                        styleMode === 'literary'
-                          ? 'border-orange-500 bg-orange-50 dark:bg-orange-900/20 text-orange-600' : 'border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300'
-                      }`}
-                    >
-                      📖 {t?.preset_literary || '문학 소설'}
-                      <p className="text-[9px] font-normal text-slate-400 mt-0.5">3인칭·단정·묘사중심</p>
-                    </button>
-                    <button
-                      onClick={() => { setStyleMode('custom'); setSelectedMood(''); setSelectedPOV(''); setSelectedSpeechTone(''); setSelectedDialogueRatio(''); }}
-                      className={`py-2.5 px-2 rounded-xl text-[11px] font-black border-2 transition-all text-center ${
-                        styleMode === 'custom'
-                          ? 'border-orange-500 bg-orange-50 dark:bg-orange-900/20 text-orange-600' : 'border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300'
-                      }`}
-                    >
-                      ⚙️ {t?.preset_custom || '직접 설정'}
-                      <p className="text-[9px] font-normal text-slate-400 mt-0.5">하나씩 선택</p>
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {/* 4. 직접 설정 모드 — 칩 버튼 */}
-              {selectedGenre && selectedCategory?.isNovel && styleMode === 'custom' && (
                 <div className="space-y-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl p-4 border border-slate-200 dark:border-slate-700">
                   {/* 분위기 */}
                   <div className="space-y-1.5">
                     <p className="text-xs font-bold text-slate-500 dark:text-slate-400">{t?.mood_label || "분위기"} *</p>
                     <div className="flex flex-wrap gap-1.5">
-                      {getMoodOptions().map((mood) => (
-                        <button key={mood} onClick={() => setSelectedMood(mood)}
-                          className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all ${selectedMood === mood ? 'bg-orange-500 text-white' : 'bg-white dark:bg-slate-700 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-600'}`}>
-                          {t?.[MOOD_TO_NAMEKEY[mood]] || mood}
-                        </button>
-                      ))}
+                      {getMoodOptions().map((mood) => {
+                        const grMood = getMoodGuardRail(selectedGenre?.name || '', mood);
+                        const moodBlocked = grMood === 'blocked';
+                        const moodCaution = grMood === 'caution';
+                        return (
+                          <button key={mood}
+                            onClick={() => !moodBlocked && setSelectedMood(mood)}
+                            disabled={moodBlocked}
+                            title={moodBlocked ? '이 장르에는 어울리지 않습니다' : moodCaution ? '실험적 조합입니다' : undefined}
+                            className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all ${moodBlocked ? 'opacity-40 cursor-not-allowed bg-white dark:bg-slate-700 text-slate-400 dark:text-slate-500 border border-slate-200 dark:border-slate-600' : selectedMood === mood ? 'bg-orange-500 text-white' : 'bg-white dark:bg-slate-700 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-600'}`}>
+                            {t?.[MOOD_TO_NAMEKEY[mood]] || mood}{moodCaution && !moodBlocked && <span className="ml-1 text-[9px] text-amber-500 font-bold">실험적</span>}
+                          </button>
+                        );
+                      })}
                     </div>
                   </div>
                   {/* 시점 */}
                   <div className="space-y-1.5">
                     <p className="text-xs font-bold text-slate-500 dark:text-slate-400">{t?.pov_label || "시점"} *</p>
                     <div className="flex flex-wrap gap-1.5">
-                      {[{ v: 'first_person', l: t?.pov_first_person || '내가 직접 말하기' }, { v: 'third_limited', l: t?.pov_third_limited || '옆에서 지켜보기' }, { v: 'omniscient', l: t?.pov_omniscient || '전지적 시점' }].map(p => (
-                        <button key={p.v} onClick={() => setSelectedPOV(p.v)}
-                          className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all ${selectedPOV === p.v ? 'bg-orange-500 text-white' : 'bg-white dark:bg-slate-700 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-600'}`}>
-                          {p.l}
-                        </button>
-                      ))}
+                      {[{ v: 'first_person', l: t?.pov_first_person || '내가 직접 말하기' }, { v: 'third_limited', l: t?.pov_third_limited || '옆에서 지켜보기' }, { v: 'omniscient', l: t?.pov_omniscient || '전지적 시점' }].map(p => {
+                        const moodShort = MOOD_SHORT_KEYS[selectedMood] || selectedMood || '';
+                        const povBlocked = (GUARD_RAIL_POV_BLOCKED[moodShort] || []).includes(p.v);
+                        const povCaution = !povBlocked && (GUARD_RAIL_POV_CAUTION[moodShort] || []).includes(p.v);
+                        return (
+                          <button key={p.v}
+                            onClick={() => !povBlocked && setSelectedPOV(p.v)}
+                            disabled={povBlocked}
+                            title={povBlocked ? '이 분위기에는 어울리지 않습니다' : povCaution ? '실험적 조합입니다' : undefined}
+                            className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all ${povBlocked ? 'opacity-40 cursor-not-allowed bg-white dark:bg-slate-700 text-slate-400 dark:text-slate-500 border border-slate-200 dark:border-slate-600' : selectedPOV === p.v ? 'bg-orange-500 text-white' : 'bg-white dark:bg-slate-700 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-600'}`}>
+                            {p.l}{povCaution && <span className="ml-1 text-[9px] text-amber-500 font-bold">실험적</span>}
+                          </button>
+                        );
+                      })}
                     </div>
                   </div>
                   {/* 말투 */}
                   <div className="space-y-1.5">
                     <p className="text-xs font-bold text-slate-500 dark:text-slate-400">{t?.speech_tone_label || "말투"} *</p>
                     <div className="flex flex-wrap gap-1.5">
-                      {[{ v: 'friendly', l: t?.speech_tone_friendly || '친근한' }, { v: 'formal', l: t?.speech_tone_formal || '단정한' }, { v: 'polite', l: t?.speech_tone_polite || '정중한' }].map(s => (
-                        <button key={s.v} onClick={() => setSelectedSpeechTone(s.v)}
-                          className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all ${selectedSpeechTone === s.v ? 'bg-orange-500 text-white' : 'bg-white dark:bg-slate-700 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-600'}`}>
-                          {s.l}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                  {/* 대화 비중 */}
-                  <div className="space-y-1.5">
-                    <p className="text-xs font-bold text-slate-500 dark:text-slate-400">{t?.dialogue_ratio_label || "대화 비중"} *</p>
-                    <div className="flex flex-wrap gap-1.5">
-                      {[{ v: 'dialogue_heavy', l: t?.dialogue_ratio_heavy || '대화 중심' }, { v: 'description_heavy', l: t?.dialogue_ratio_desc || '묘사 중심' }].map(d => (
-                        <button key={d.v} onClick={() => setSelectedDialogueRatio(d.v)}
-                          className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all ${selectedDialogueRatio === d.v ? 'bg-orange-500 text-white' : 'bg-white dark:bg-slate-700 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-600'}`}>
-                          {d.l}
-                        </button>
-                      ))}
+                      {[{ v: 'friendly', l: t?.speech_tone_friendly || '친근한' }, { v: 'formal', l: t?.speech_tone_formal || '단정한' }, { v: 'polite', l: t?.speech_tone_polite || '정중한' }].map(s => {
+                        const moodShort = MOOD_SHORT_KEYS[selectedMood] || selectedMood || '';
+                        const toneBlocked = (GUARD_RAIL_TONE_BLOCKED[moodShort] || []).includes(s.v);
+                        const toneCaution = !toneBlocked && (GUARD_RAIL_TONE_CAUTION[moodShort] || []).includes(s.v);
+                        return (
+                          <button key={s.v}
+                            onClick={() => !toneBlocked && setSelectedSpeechTone(s.v)}
+                            disabled={toneBlocked}
+                            title={toneBlocked ? '이 분위기에는 어울리지 않습니다' : toneCaution ? '실험적 조합입니다' : undefined}
+                            className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all ${toneBlocked ? 'opacity-40 cursor-not-allowed bg-white dark:bg-slate-700 text-slate-400 dark:text-slate-500 border border-slate-200 dark:border-slate-600' : selectedSpeechTone === s.v ? 'bg-orange-500 text-white' : 'bg-white dark:bg-slate-700 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-600'}`}>
+                            {s.l}{toneCaution && <span className="ml-1 text-[9px] text-amber-500 font-bold">실험적</span>}
+                          </button>
+                        );
+                      })}
                     </div>
                   </div>
                 </div>
@@ -1543,7 +1738,7 @@ const WriteView = ({ user, userProfile, t, onBookGenerated, slotStatus, setView,
                   ) : (
                     <>
                       <PenTool className="w-5 h-5" />
-                      <span>{requiresPaidWrite ? (t?.use_ink_create || '잉크 {cost} 사용하고 집필').replace('{cost}', getExtraWriteInkCost(getLevelFromXp(userProfile?.xp ?? 0))) : (t?.create_book || '책 생성하기')}</span>
+                      <span>{requiresPaidWrite ? (t?.ad_write_create || '광고 보고 추가 집필') : (t?.create_book || '책 생성하기')}</span>
                     </>
                   )}
                 </button>
@@ -1558,7 +1753,7 @@ const WriteView = ({ user, userProfile, t, onBookGenerated, slotStatus, setView,
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-6">
           <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 w-full max-w-sm shadow-xl space-y-4 animate-in fade-in zoom-in-95 duration-200">
             <div className="text-center space-y-2">
-              <Droplets className="w-12 h-12 text-orange-500 mx-auto" />
+              <Video className="w-12 h-12 text-blue-500 mx-auto" />
               <h3 className="text-xl font-black text-slate-800 dark:text-slate-100">
                 {t?.extra_write_title || "추가 집필"}
               </h3>
@@ -1566,13 +1761,8 @@ const WriteView = ({ user, userProfile, t, onBookGenerated, slotStatus, setView,
                 {t?.extra_write_desc_2 || "하루 무료 횟수를 사용했습니다."}
               </p>
               <p className="text-sm text-slate-600 dark:text-slate-300 font-bold">
-                <span className="text-orange-500">{(t?.extra_write_confirm || "{cost} 잉크를 사용하여 집필하시겠습니까?").replace('{cost}', getExtraWriteInkCost(getLevelFromXp(userProfile?.xp ?? 0)) + ' 잉크')}</span>
+                <span className="text-blue-500">{t?.ad_write_required || "추가 집필은 광고를 시청해야 가능합니다."}</span>
               </p>
-              <div className="pt-2">
-                <p className="text-xs text-slate-400 dark:text-slate-500">
-                  {(t?.current_hold || "현재 보유: {ink} 잉크").replace('{ink}', userProfile?.ink || 0)}
-                </p>
-              </div>
             </div>
             <div className="flex flex-col gap-2">
               <button
@@ -1580,30 +1770,14 @@ const WriteView = ({ user, userProfile, t, onBookGenerated, slotStatus, setView,
                 className="w-full bg-blue-500 text-white py-3 rounded-xl font-black hover:bg-blue-600 transition-colors flex items-center justify-center gap-2"
               >
                 <Video className="w-5 h-5" />
-                {t?.ad_write_free || "광고 보고 무료로 0.3초 집필"}
+                {t?.ad_write_free || "광고 보고 집필하기"}
               </button>
-
-              <div className="relative flex items-center py-2">
-                <div className="flex-grow border-t border-slate-200 dark:border-slate-600"></div>
-                <span className="flex-shrink-0 mx-4 text-xs text-slate-400 dark:text-slate-500 font-bold">{t?.or || "또는"}</span>
-                <div className="flex-grow border-t border-slate-200 dark:border-slate-600"></div>
-              </div>
-
-              <div className="flex gap-2">
-                <button
-                  onClick={closePaidWriteConfirm}
-                  className="flex-1 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 py-3 rounded-xl font-bold hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors"
-                >
-                  {t?.cancel || "취소(안함)"}
-                </button>
-                <button
-                  onClick={confirmPaidWrite}
-                  className="flex-[2] bg-orange-100 text-orange-600 border border-orange-200 py-3 rounded-xl font-bold hover:bg-orange-200 transition-colors flex items-center justify-center gap-1.5"
-                >
-                  <Droplets className="w-4 h-4" />
-                  {(t?.use_ink_btn || "잉크 {cost}개 쓰기").replace('{cost}', getExtraWriteInkCost(getLevelFromXp(userProfile?.xp ?? 0)))}
-                </button>
-              </div>
+              <button
+                onClick={closePaidWriteConfirm}
+                className="w-full bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 py-3 rounded-xl font-bold hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors"
+              >
+                {t?.cancel || "취소(안함)"}
+              </button>
             </div>
           </div>
         </div>

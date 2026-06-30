@@ -17,6 +17,16 @@ const BACKGROUNDS = [
 const W = 720;
 const H = 1280;
 
+const MAX_CHARS = 200; // 이미지에 표시할 최대 글자수
+
+// 공유 이미지용 글꼴 (App.jsx @import로 로드: Noto Serif KR / Noto Sans KR / Song Myung / Gaegu)
+const SHARE_FONTS = [
+  { id: 'serif',   label: '명조',   primary: '"Noto Serif KR"', family: '"Noto Serif KR","Nanum Myeongjo","Malgun Gothic",serif', weight: '600' },
+  { id: 'sans',    label: '고딕',   primary: '"Noto Sans KR"',  family: '"Noto Sans KR","Malgun Gothic",sans-serif',            weight: '600' },
+  { id: 'gungseo', label: '궁서',   primary: '"Song Myung"',    family: '"Song Myung","Nanum Myeongjo","Batang",serif',         weight: '400' },
+  { id: 'hand',    label: '손글씨', primary: '"Gaegu"',         family: '"Gaegu","Malgun Gothic",cursive',                      weight: '700' },
+];
+
 // 텍스트 줄바꿈 처리 (Canvas에는 자동 줄바꿈이 없으므로 직접 계산)
 function wrapText(ctx, text, maxWidth) {
   const lines = [];
@@ -50,14 +60,15 @@ function blobToBase64(blob) {
 
 const ShareImageModal = ({ selectedText, bookTitle, authorName, onClose, t = {} }) => {
   const [selectedBg, setSelectedBg] = useState(0);
+  const [selectedFont, setSelectedFont] = useState(0);
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState(null);
   const [previewUrl, setPreviewUrl] = useState(null);
   const bgCacheRef = useRef({});
   const openedAt = useRef(Date.now());
 
-  const displayText = selectedText?.length > 120
-    ? selectedText.slice(0, 120).trimEnd() + '…'
+  const displayText = selectedText?.length > MAX_CHARS
+    ? selectedText.slice(0, MAX_CHARS).trimEnd() + '…'
     : selectedText;
 
   // 배경 이미지 프리로드 + 캐시
@@ -103,18 +114,33 @@ const ShareImageModal = ({ selectedText, bookTitle, authorName, onClose, t = {} 
     // 3~6) 텍스트 블록 전체를 세로 중앙 정렬
     ctx.textAlign = 'center';
 
-    // 본문 줄바꿈 계산
-    ctx.font = '600 34px "Noto Serif KR","Nanum Myeongjo","Malgun Gothic",serif';
-    const lines = wrapText(ctx, displayText, W - 128);
-    const lineHeight = 60;
+    const font = SHARE_FONTS[selectedFont] || SHARE_FONTS[0];
+    // 선택한 웹폰트가 캔버스에 실제 적용되도록 로드 보장 (미로드 시 폴백되어 폰트가 안 바뀜)
+    try { await document.fonts.load(`${font.weight} 34px ${font.primary}`); } catch { /* noop */ }
+    const bodyFont = (size) => `${font.weight} ${size}px ${font.family}`;
 
-    // 전체 블록 높이: 여는따옴표 + 간격 + 본문 + 간격 + 닫는따옴표 + 간격 + 출처
+    // 블록 고정 높이 요소 (여는따옴표 + 간격 + 닫는따옴표 + 간격 + 출처)
     const quoteSize = 70;
     const gapAfterOpenQuote = 20;
     const gapBeforeCloseQuote = 24;
     const gapBeforeCredit = 36;
     const creditHeight = bookTitle ? 30 : 0;
-    const totalHeight = quoteSize + gapAfterOpenQuote + (lines.length * lineHeight) + gapBeforeCloseQuote + quoteSize + gapBeforeCredit + creditHeight;
+    const fixedHeight = quoteSize + gapAfterOpenQuote + gapBeforeCloseQuote + quoteSize + gapBeforeCredit + creditHeight;
+
+    // 본문 자동 맞춤: 200자 + 어떤 글꼴이어도 잘리지 않도록 폰트 크기를 줄여가며 맞춤
+    const MAX_BLOCK_HEIGHT = 1040; // 하단 브랜딩과 겹치지 않는 안전 높이
+    let fontSize = 34;
+    let lines = [];
+    let lineHeight = 60;
+    while (true) {
+      ctx.font = bodyFont(fontSize);
+      lines = wrapText(ctx, displayText, W - 128);
+      lineHeight = Math.round(fontSize * 1.76);
+      const total = fixedHeight + lines.length * lineHeight;
+      if (total <= MAX_BLOCK_HEIGHT || fontSize <= 22) break;
+      fontSize -= 2;
+    }
+    const totalHeight = fixedHeight + lines.length * lineHeight;
 
     // 블록 시작 Y (세로 중앙)
     const blockStartY = (H - totalHeight) / 2;
@@ -127,7 +153,7 @@ const ShareImageModal = ({ selectedText, bookTitle, authorName, onClose, t = {} 
     curY += quoteSize + gapAfterOpenQuote;
 
     // 본문
-    ctx.font = '600 34px "Noto Serif KR","Nanum Myeongjo","Malgun Gothic",serif';
+    ctx.font = bodyFont(fontSize);
     ctx.fillStyle = '#ffffff';
     ctx.shadowColor = 'rgba(0,0,0,0.55)';
     ctx.shadowBlur = 16;
@@ -183,7 +209,7 @@ const ShareImageModal = ({ selectedText, bookTitle, authorName, onClose, t = {} 
     });
     return () => { cancelled = true; };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedBg, displayText, bookTitle, authorName]);
+  }, [selectedBg, selectedFont, displayText, bookTitle, authorName]);
 
   const generateBlob = async () => {
     const canvas = await renderCanvas();
@@ -338,6 +364,27 @@ const ShareImageModal = ({ selectedText, bookTitle, authorName, onClose, t = {} 
                     }`}
                   >
                     <img src={bg} alt={`${t.share_bg_alt || '배경'} ${i + 1}`} className="w-full h-full object-cover" />
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* 폰트 선택 */}
+            <div>
+              <p className="text-xs font-bold text-slate-500 dark:text-slate-400 mb-2">{t.share_font_label || '글꼴 선택'}</p>
+              <div className="flex gap-2 overflow-x-auto pb-1">
+                {SHARE_FONTS.map((f, i) => (
+                  <button
+                    key={f.id}
+                    onClick={() => setSelectedFont(i)}
+                    style={{ fontFamily: f.family }}
+                    className={`shrink-0 px-4 py-2 rounded-xl border-2 text-sm font-bold transition-all ${
+                      selectedFont === i
+                        ? 'border-orange-500 bg-orange-50 dark:bg-orange-950/30 text-orange-600'
+                        : 'border-slate-200 dark:border-slate-600 text-slate-500 dark:text-slate-400'
+                    }`}
+                  >
+                    {f.label}
                   </button>
                 ))}
               </div>

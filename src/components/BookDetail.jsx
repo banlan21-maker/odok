@@ -3,7 +3,7 @@
 import React, { useEffect, useMemo, useState, useRef, useCallback } from 'react';
 import { Capacitor } from '@capacitor/core';
 import { KeepAwake } from '@capacitor-community/keep-awake';
-import { ChevronLeft, ChevronRight, Book, Calendar, User, Heart, Send, Bookmark, CheckCircle, PenTool, RefreshCw, Trash2, Eye, Megaphone } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Book, Calendar, User, Heart, Send, Bookmark, CheckCircle, PenTool, RefreshCw, Trash2, Eye, Megaphone, FileDown } from 'lucide-react';
 import { formatDateDetailed } from '../utils/dateUtils';
 import { getCoverImageFromBook, hasPremiumCover } from '../utils/bookCovers';
 import { collection, addDoc, deleteDoc, doc, onSnapshot, serverTimestamp, setDoc, updateDoc, increment, runTransaction, getDoc } from 'firebase/firestore';
@@ -12,23 +12,56 @@ import { db } from '../firebase';
 import { httpsCallable } from 'firebase/functions';
 import { functions } from '../firebase';
 import { generateSeriesEpisode } from '../utils/aiService';
+import { showRewardVideoAd } from '../utils/admobService';
 import { getTodayDateKey } from '../utils/dateUtils';
-import { getExtraWriteInkCost, getFreeWriteRewardInk, canDonate, getLevelFromXp, getXpPerInk } from '../utils/levelUtils';
+import { canDonate, getLevelFromXp, getXpPerInk } from '../utils/levelUtils';
 import OXQuizGame from './OXQuizGame';
 import { formatGenreTag } from '../utils/formatGenre';
 import { useReadingProgress } from '../hooks/useReadingProgress';
 import { getFontFamily } from '../utils/fontOptions';
 import ShareImageModal from './ShareImageModal';
+import { downloadBookPdf } from '../utils/pdfService';
 
 const DAILY_WRITE_LIMIT = 2;
 const DAILY_FREE_WRITES = 1;
-const INK_MAX = 999;
 
-const BookDetail = ({ book, onClose, onBookUpdate, fontSize = 'text-base', user, userProfile, appId, slotStatus, deductInk, t, isAdmin, authorProfiles = {}, promotions = [], createPromotion, followAuthor, unfollowAuthor, isFollowing, onAuthorClick, addHighlight }) => {
+const BookDetail = ({ book, onClose, onBookUpdate, fontSize = 'text-base', user, userProfile, appId, slotStatus, deductInk, t, isAdmin, authorProfiles = {}, promotions = [], createPromotion, followAuthor, unfollowAuthor, isFollowing, onAuthorClick, addHighlight, useItem }) => {
   if (!book) return null;
 
   // 관리자: 모든 책 수정/삭제 가능. 일반 사용자: 본인 책만 수정/삭제 가능
   const canEditOrDelete = isAdmin || book.authorId === user?.uid;
+
+  // 도화지(PDF 저장) — 본인이 집필한 책만
+  const isOwnBook = book.authorId === user?.uid;
+  const drawingPaperCount = userProfile?.inventory?.drawing_paper ?? 0;
+  const [isPdfGenerating, setIsPdfGenerating] = useState(false);
+
+  const handleDownloadPdf = async () => {
+    if (isPdfGenerating) return;
+    if (drawingPaperCount < 1) {
+      alert('도화지가 필요해요. 문방구에서 구매할 수 있어요. (50잉크)');
+      return;
+    }
+    if (!confirm('도화지 1개를 사용해 이 책을 PDF로 저장할까요?')) return;
+    setIsPdfGenerating(true);
+    try {
+      const pdfAuthor = book?.isAnonymous ? '익명' : (userProfile?.nickname || book?.authorName || '');
+      await downloadBookPdf(book, { authorName: pdfAuthor });
+      // PDF가 실제로 만들어진 뒤에만 도화지 1개 소비
+      if (typeof useItem === 'function') {
+        const res = await useItem('drawing_paper', 1);
+        if (!res?.success) console.warn('도화지 소비 실패:', res?.error);
+      }
+    } catch (err) {
+      const msg = (err?.message || '').toLowerCase();
+      if (err?.name !== 'AbortError' && !msg.includes('cancel')) {
+        console.error('PDF 생성 실패:', err);
+        alert('PDF 생성에 실패했습니다. 다시 시도해주세요.');
+      }
+    } finally {
+      setIsPdfGenerating(false);
+    }
+  };
 
   // 수정 5: fontSize 값을 Tailwind 클래스로 매핑
   const fontSizeClass = fontSize === 'small' || fontSize === 'text-sm' ? 'text-sm' :
@@ -285,7 +318,9 @@ const BookDetail = ({ book, onClose, onBookUpdate, fontSize = 'text-base', user,
   const currentEpisode = isSeries && episodes.length > 0 ? episodes[currentEpisodeIndex] : null;
   const displayContent = isSeries ? (currentEpisode?.content || '') : (book.content || '');
   const isLastEpisode = isSeries && currentEpisodeIndex === episodes.length - 1;
-  const seriesSlotTaken = !!(slotStatus?.series);
+  const DEV_BYPASS_EMAILS = ['banlan21@gmail.com'];
+  const isDevUser = DEV_BYPASS_EMAILS.includes(user?.email);
+  const seriesSlotTaken = !isDevUser && !!(slotStatus?.series);
 
   const bookId = book.id;
   const likeDocId = useMemo(() => (user && bookId ? `${user.uid}_${bookId}` : null), [user, bookId]);
@@ -609,29 +644,20 @@ const BookDetail = ({ book, onClose, onBookUpdate, fontSize = 'text-base', user,
       dailyWriteCount = Number(d.dailyWriteCount || 0);
     }
     if (lastBookCreatedDate !== todayKey) dailyWriteCount = 0;
-    if (dailyWriteCount >= DAILY_WRITE_LIMIT) {
+    if (!isDevUser && dailyWriteCount >= DAILY_WRITE_LIMIT) {
       alert('하루에 최대 2회까지만 집필할 수 있어요.');
       return;
     }
 
-    // 2회째 집필 시 잉크 소모 (레벨에 따라 할인)
-    if (dailyWriteCount >= DAILY_FREE_WRITES) {
-      const level = getLevelFromXp(profileSnap.exists() ? (profileSnap.data().xp ?? 0) : 0);
-      const extraCost = getExtraWriteInkCost(level);
-      const currentInk = profileSnap.exists() ? Number(profileSnap.data().ink || 0) : 0;
-      if (currentInk < extraCost) {
-        alert('잉크가 부족합니다! 💧 잉크를 충전해주세요.');
-        return;
-      }
-      if (typeof deductInk !== 'function') {
-        alert('잉크 차감 기능을 사용할 수 없습니다.');
-        return;
-      }
-      const success = await deductInk(extraCost);
-      if (!success) {
-        alert('잉크 차감에 실패했습니다. 다시 시도해주세요.');
-        return;
-      }
+    // 2회차 집필은 광고 시청 필수 (잉크 결제 불가)
+    if (!isDevUser && dailyWriteCount >= DAILY_FREE_WRITES) {
+      const adWatched = await new Promise((resolve) => {
+        showRewardVideoAd(
+          () => resolve(true),
+          (errMsg) => { alert(errMsg || '광고를 불러오지 못했어요. 잠시 후 다시 시도해주세요.'); resolve(false); }
+        );
+      });
+      if (!adWatched) return;
     }
 
     setShowContinuationModal(false);
@@ -657,11 +683,12 @@ const BookDetail = ({ book, onClose, onBookUpdate, fontSize = 'text-base', user,
       claimCreated = true;
 
       const lastEpisode = episodes[episodes.length - 1];
+      const recentCliffhangerTypes = (book.cliffhangerTypes || []).slice(-10);
       const result = await generateSeriesEpisode({
         seriesId: book.seriesId || book.id,
         category: book.category,
-        subCategory: book.subCategory,
-        genre: book.subCategory,
+        subCategory: book.seriesSubType || book.subCategory,
+        genre: book.genre || book.subCategory,
         keywords: book.keywords || '',
         title: book.title,
         cumulativeSummary: book.summary || '',
@@ -674,7 +701,9 @@ const BookDetail = ({ book, onClose, onBookUpdate, fontSize = 'text-base', user,
         selectedPOV: book.selectedPOV || null,
         selectedSpeechTone: book.selectedSpeechTone || null,
         selectedDialogueRatio: book.selectedDialogueRatio || null,
-        endingStyle
+        endingStyle,
+        recentCliffhangerTypes,
+        episodeNum: episodes.length + 1
       });
 
       const newEpisode = {
@@ -689,9 +718,13 @@ const BookDetail = ({ book, onClose, onBookUpdate, fontSize = 'text-base', user,
       };
 
       const bookRef = doc(db, 'artifacts', appId, 'books', book.id);
+      const updatedCliffhangerTypes = result.cliffhangerType
+        ? [...recentCliffhangerTypes, result.cliffhangerType].slice(-10)
+        : recentCliffhangerTypes;
       const updateData = {
         episodes: [...episodes, newEpisode],
         summary: result.cumulativeSummary,
+        cliffhangerTypes: updatedCliffhangerTypes,
         updatedAt: serverTimestamp()
       };
       if (result.isFinale) updateData.status = 'completed';
@@ -702,15 +735,11 @@ const BookDetail = ({ book, onClose, onBookUpdate, fontSize = 'text-base', user,
       const updatedBook = { ...book, episodes: [...episodes, newEpisode], summary: result.cumulativeSummary, ...(result.isFinale ? { status: 'completed' } : {}) };
       if (typeof onBookUpdate === 'function') onBookUpdate(updatedBook);
 
-      // 시리즈 다음 화 집필도 하루 집필 1회로 카운트 + 잉크 보상 (1회 무료 시 레벨별 보상)
+      // 시리즈 다음 화 집필도 하루 집필 1회로 카운트 (집필은 비용 행동 — 잉크 보상 없음)
       const nextDailyWriteCount = lastBookCreatedDate === todayKey ? dailyWriteCount + 1 : 1;
-      const level = profileSnap.exists() ? (profileSnap.data().level || 1) : 1;
-      const rewardInk = dailyWriteCount === 0 ? getFreeWriteRewardInk(level) : 0;
-      const currentInk = profileSnap.exists() ? Number(profileSnap.data().ink || 0) : 0;
       await updateDoc(profileRef, {
         dailyWriteCount: nextDailyWriteCount,
-        lastBookCreatedDate: todayKey,
-        ink: Math.min(INK_MAX, currentInk + rewardInk)
+        lastBookCreatedDate: todayKey
       });
 
       // 즐겨찾기 유저에게 새 에피소드 알림
@@ -833,6 +862,16 @@ const BookDetail = ({ book, onClose, onBookUpdate, fontSize = 'text-base', user,
             </button>
             {canEditOrDelete && (
               <div className="flex items-center gap-1">
+                {isOwnBook && (
+                  <button
+                    onClick={handleDownloadPdf}
+                    disabled={isPdfGenerating}
+                    className="p-2 rounded-full hover:bg-indigo-50 text-slate-400 hover:text-indigo-600 transition-colors disabled:opacity-50"
+                    title={`${t?.pdf_save || 'PDF로 저장'} (${t?.drawing_paper_name || '도화지'} ${drawingPaperCount})`}
+                  >
+                    {isPdfGenerating ? <RefreshCw className="w-5 h-5 animate-spin" /> : <FileDown className="w-5 h-5" />}
+                  </button>
+                )}
                 <button
                   onClick={handleAdminStartEditContent}
                   disabled={isEditingContent}

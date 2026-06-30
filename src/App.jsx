@@ -18,7 +18,7 @@ import { useFollows } from './hooks/useFollows';
 
 // Utils & Data
 import { T, genres } from './data';
-import { getReadInkCost, getExtraWriteInkCost } from './utils/levelUtils';
+import { getReadInkCost } from './utils/levelUtils';
 import { getTodayDateKey } from './utils/dateUtils';
 import { Capacitor } from '@capacitor/core';
 import { App as CapApp } from '@capacitor/app';
@@ -65,7 +65,22 @@ import { doc, getDoc, setDoc } from 'firebase/firestore';
 const rawAppId = typeof __app_id !== 'undefined' ? __app_id : 'odok-app-default';
 const appId = rawAppId.replace(/\//g, '_');
 
-const APP_VERSION = "2.1.2";
+const APP_VERSION = "2.2.3";
+
+const STORE_URL = 'https://play.google.com/store/apps/details?id=com.banlan21.odok';
+const DEFAULT_UPDATE_MSG = '새로운 버전이 출시되었습니다. 원활한 사용을 위해 업데이트를 진행해주세요.';
+
+const compareVersions = (v1, v2) => {
+  const p1 = v1.split('.').map(Number);
+  const p2 = v2.split('.').map(Number);
+  for (let i = 0; i < Math.max(p1.length, p2.length); i++) {
+    const a = p1[i] || 0;
+    const b = p2[i] || 0;
+    if (a < b) return -1;
+    if (a > b) return 1;
+  }
+  return 0;
+};
 
 const App = () => {
 
@@ -77,43 +92,26 @@ const App = () => {
     viewRef.current = view;
   }, [view]);
 
-  // 앱 시작 시 버전 체크 & Firestore 초기화
+  // 앱 시작 시 버전 체크
   useEffect(() => {
-    const STORE_URL = 'https://play.google.com/store/apps/details?id=com.banlan21.odok';
-    const DEFAULT_SETTINGS = {
-      min_version: '2.0.0',
-      store_url: STORE_URL,
-      update_msg: '오독오독 2.0 대규모 업데이트! 확성기, 문방구, 작가 프로필 기능이 추가되었습니다. 원활한 사용을 위해 업데이트를 진행해주세요.',
-    };
-
-    const compareVersions = (v1, v2) => {
-      const p1 = v1.split('.').map(Number);
-      const p2 = v2.split('.').map(Number);
-      for (let i = 0; i < Math.max(p1.length, p2.length); i++) {
-        const a = p1[i] || 0;
-        const b = p2[i] || 0;
-        if (a < b) return -1;
-        if (a > b) return 1;
-      }
-      return 0;
-    };
-
     const checkVersion = async () => {
       try {
         const versionRef = doc(db, 'app_settings', 'version_info');
         const snap = await getDoc(versionRef);
-        let settings;
         if (!snap.exists()) {
-          await setDoc(versionRef, DEFAULT_SETTINGS);
-          settings = DEFAULT_SETTINGS;
-        } else {
-          settings = snap.data();
+          await setDoc(versionRef, {
+            latest_version: APP_VERSION,
+            store_url: STORE_URL,
+            update_msg: DEFAULT_UPDATE_MSG,
+          });
+          return;
         }
-        const minVer = settings.min_version || '1.0.0';
-        if (compareVersions(APP_VERSION, minVer) < 0) {
+        const settings = snap.data();
+        const latestVer = settings.latest_version || settings.min_version || APP_VERSION;
+        if (compareVersions(APP_VERSION, latestVer) < 0) {
           setForceUpdate({
             storeUrl: settings.store_url || STORE_URL,
-            updateMsg: settings.update_msg || DEFAULT_SETTINGS.update_msg,
+            updateMsg: settings.update_msg || DEFAULT_UPDATE_MSG,
           });
         }
       } catch (err) {
@@ -153,6 +151,31 @@ const App = () => {
     levelInfo, remainingDailyWrites
   } = useUserProfile({ user, setView, setError, viewRef });
 
+  // 관리자 자동 버전 동기화: 관리자가 새 버전 APK로 앱을 열면 Firestore latest_version 자동 업데이트
+  useEffect(() => {
+    if (!user?.email) return;
+    const isAdmin = user.email === 'banlan21@gmail.com' || user.email.includes('banlan21');
+    if (!isAdmin) return;
+
+    const syncAdminVersion = async () => {
+      try {
+        const versionRef = doc(db, 'app_settings', 'version_info');
+        const snap = await getDoc(versionRef);
+        const currentLatest = snap.exists()
+          ? (snap.data().latest_version || snap.data().min_version || '1.0.0')
+          : '1.0.0';
+        if (compareVersions(APP_VERSION, currentLatest) > 0) {
+          await setDoc(versionRef, { latest_version: APP_VERSION, min_version: APP_VERSION }, { merge: true });
+          console.log(`[버전 동기화] ${currentLatest} → ${APP_VERSION}`);
+        }
+      } catch (err) {
+        console.warn('[버전 동기화] 오류:', err);
+      }
+    };
+
+    syncAdminVersion();
+  }, [user]);
+
   // 3. Ink System Hook
   const {
     showInkConfirmModal, setShowInkConfirmModal,
@@ -190,6 +213,7 @@ const App = () => {
     userProfile,
     setError,
     deductInk,
+    addInk,
     setShowInkConfirmModal,
     setPendingBookData
   });
@@ -329,7 +353,7 @@ const App = () => {
 
   return (
     <div className={`${darkMode ? 'dark' : ''} bg-gray-100 dark:bg-slate-950 min-h-screen flex justify-center items-center`}>
-      <style>{`@import url('https://fonts.googleapis.com/css2?family=Jua&family=Noto+Serif+KR:wght@400;700&family=Nanum+Myeongjo:wght@400;700;800&family=Noto+Sans+KR:wght@400;700&family=Gaegu:wght@400;700&display=swap'); .font-jua { font-family: 'Jua', sans-serif; } .scrollbar-hide::-webkit-scrollbar { display: none; }`}</style>
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=Jua&family=Noto+Serif+KR:wght@400;700&family=Nanum+Myeongjo:wght@400;700;800&family=Noto+Sans+KR:wght@400;700&family=Gaegu:wght@400;700&family=Song+Myung&display=swap'); .font-jua { font-family: 'Jua', sans-serif; } .scrollbar-hide::-webkit-scrollbar { display: none; }`}</style>
       <div className="w-full max-w-md bg-slate-50 dark:bg-slate-900 h-[100dvh] flex flex-col shadow-2xl relative overflow-hidden text-slate-900 dark:text-slate-50 font-sans selection:bg-orange-200" style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}>
 
         {/* In-App Browser Warning */}
@@ -441,7 +465,7 @@ const App = () => {
                   <section>
                     <h4 className="font-bold text-slate-800 dark:text-slate-100 mb-1">{t.help_section_ink}</h4>
                     <ul className="list-disc list-inside space-y-1 text-xs text-slate-600 dark:text-slate-400">
-                      <li><strong>획득:</strong> 출석(레벨별 2~5개), 레벨업 보너스, 집필 완료 보상, 월간 챌린지 달성(10개).</li>
+                      <li><strong>획득:</strong> 출석(1개), 레벨업 보너스, 월간 챌린지 달성(10개), 광고 시청.</li>
                       <li><strong>사용:</strong> 책 읽기(1~2개), 추가 집필, 키워드 변경, 작가 후원, 문방구 아이템 구매.</li>
                       <li><strong>XP:</strong> 잉크 1개 사용 시 10XP 적립 → 레벨업.</li>
                     </ul>
@@ -452,7 +476,7 @@ const App = () => {
                     <p className="text-xs mb-1 text-slate-500 dark:text-slate-400">잉크 사용 시 XP 적립 → 레벨 상승 → 칭호·아이콘이 책 표지 등에 표시됩니다.</p>
                     <ul className="list-disc list-inside space-y-1 text-xs text-slate-600 dark:text-slate-400">
                       <li>🌱 새싹 → ✏️ 작가 → 🪶 숙련 작가 → 🖊️ 베스트 작가 → ✒️ 스타 작가 → 🖋️ 거장 → 🌈 마스터</li>
-                      <li>레벨이 오를수록 출석 잉크 증가, 읽기/집필 비용 할인, 후원 기능 개방.</li>
+                      <li>레벨이 오를수록 읽기/집필 비용 할인, 후원 기능 개방.</li>
                     </ul>
                   </section>
 
@@ -584,15 +608,6 @@ const App = () => {
               <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 w-full max-w-sm shadow-xl space-y-4">
                 <div className="text-center space-y-2"><h3 className="text-lg font-black text-slate-800 dark:text-slate-100">{t.ink_confirm_title}</h3><p className="text-sm text-slate-600 dark:text-slate-300">{(t.ink_confirm_desc || "").replace('{amount}', getReadInkCost(levelInfo.level))}</p></div>
                 <div className="space-y-3"><button onClick={handleWatchAdForRead} className="w-full bg-blue-500 text-white py-3 rounded-xl font-black flex items-center justify-center gap-2"><Video className="w-5 h-5" />{t.watch_ad_read}</button><button onClick={() => confirmOpenBook(false)} className="w-full bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 py-3 rounded-xl font-bold">{t.use_my_ink}</button><button onClick={() => { setShowInkConfirmModal(false); setPendingBook(null); }} className="w-full text-slate-400 py-2 text-xs font-bold underline">{t.close}</button></div>
-              </div>
-            </div>
-          )}
-
-          {showInkConfirmModal && pendingBookData && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-6">
-              <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 w-full max-w-sm shadow-xl space-y-4">
-                <div className="text-center space-y-2"><h3 className="text-xl font-black text-slate-800 dark:text-slate-100">{t.extra_write_title}</h3><p className="text-sm text-slate-600 dark:text-slate-300">{(t.extra_write_desc || "").replace('{amount}', getExtraWriteInkCost(levelInfo.level))}</p></div>
-                <div className="flex gap-3"><button onClick={() => { setShowInkConfirmModal(false); setPendingBookData(null); }} className="flex-1 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-200 py-3 rounded-xl font-bold">{t.cancel}</button><button onClick={async () => { setShowInkConfirmModal(false); const bookData = pendingBookData; setPendingBookData(null); await handleBookGenerated(bookData, true); }} className="flex-1 bg-orange-500 text-white py-3 rounded-xl font-black">{t.write_btn}</button></div>
               </div>
             </div>
           )}
@@ -742,9 +757,9 @@ const App = () => {
                   <WriteView
                     user={user} userProfile={userProfile} t={t} onBookGenerated={handleBookGenerated}
                     slotStatus={slotStatus} setView={setView} setSelectedBook={setSelectedBook}
-                    error={error} setError={setError} deductInk={deductInk}
+                    error={error} setError={setError} deductInk={deductInk} addInk={addInk}
                     onGeneratingChange={setIsWritingInProgress} onGenerationComplete={() => { }}
-                    authorProfiles={authorProfiles}
+                    authorProfiles={authorProfiles} appId={appId}
                   />
                 </div>
               )}
@@ -774,6 +789,7 @@ const App = () => {
                   followAuthor={followAuthor} unfollowAuthor={unfollowAuthor} isFollowing={isFollowing}
                   onAuthorClick={(uid) => setAuthorProfileUserId(uid)}
                   addHighlight={addHighlight}
+                  useItem={useItem}
                   onClose={() => {
                     const isMyBook = selectedBook.authorId === user?.uid;
                     setSelectedBook(null);
@@ -1021,7 +1037,7 @@ const App = () => {
                   <p className="text-xs text-orange-500 font-bold">{(t.force_update_version || '').replace('{version}', APP_VERSION)}</p>
                 </div>
                 <button
-                  onClick={() => window.open(forceUpdate.storeUrl, '_system')}
+                  onClick={() => window.open(forceUpdate.storeUrl, '_blank')}
                   className="w-full py-4 bg-orange-500 hover:bg-orange-600 active:scale-95 text-white font-black text-base rounded-2xl transition-all shadow-lg shadow-orange-200"
                 >
                   {t.force_update_btn}

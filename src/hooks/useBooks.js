@@ -5,10 +5,13 @@ import {
 import { db } from '../firebase';
 import { startOfDay, startOfWeek, endOfWeek } from 'date-fns';
 import { getTodayDateKey } from '../utils/dateUtils';
-import { getExtraWriteInkCost, getLevelFromXp, getGradeInfo, INK_MAX, DAILY_WRITE_LIMIT, DAILY_FREE_WRITES } from '../utils/levelUtils';
+import { getLevelFromXp, getGradeInfo, INK_MAX, DAILY_WRITE_LIMIT, DAILY_FREE_WRITES } from '../utils/levelUtils';
 
 const rawAppId = typeof __app_id !== 'undefined' ? __app_id : 'odok-app-default';
 const appId = rawAppId.replace(/\//g, '_');
+
+// 개발/테스트 계정: 일일 제한·슬롯 제한·잉크 제한 모두 무시
+const DEV_BYPASS_EMAILS = ['banlan21@gmail.com'];
 
 function computeSlotStatus(booksData, todayDateKey, dssData) {
     let todayBooksForSlots = (booksData || []).filter((b) => {
@@ -39,7 +42,7 @@ function computeSlotStatus(booksData, todayDateKey, dssData) {
     return st;
 }
 
-export const useBooks = ({ user, userProfile, setError, deductInk, setShowInkConfirmModal, setPendingBookData: setGlobalPendingBookData }) => {
+export const useBooks = ({ user, userProfile, setError, deductInk, addInk, setShowInkConfirmModal, setPendingBookData: setGlobalPendingBookData }) => {
     const [books, setBooks] = useState([]);
     const [currentBook, setCurrentBook] = useState(null);
     const [selectedBook, setSelectedBook] = useState(null);
@@ -334,7 +337,8 @@ export const useBooks = ({ user, userProfile, setError, deductInk, setShowInkCon
         }
 
         try {
-            const { skipDailyCheck = false, skipInkDeduct = false } = options || {};
+            const { skipDailyCheck = false } = options || {};
+            const isDevBypass = DEV_BYPASS_EMAILS.includes(user?.email);
             const profileRefForCheck = doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'info');
             const profileSnapForCheck = await getDoc(profileRefForCheck);
             const todayDateKey = getTodayDateKey();
@@ -351,30 +355,18 @@ export const useBooks = ({ user, userProfile, setError, deductInk, setShowInkCon
                 dailyWriteCount = 0;
             }
 
-            if (dailyWriteCount >= DAILY_WRITE_LIMIT) {
+            if (!isDevBypass && dailyWriteCount >= DAILY_WRITE_LIMIT) {
                 setError('하루에 최대 2회까지만 집필할 수 있어요.');
                 if (setGlobalPendingBookData) setGlobalPendingBookData(null);
                 return;
             }
 
-            if (!skipDailyCheck && !useInk && dailyWriteCount >= DAILY_FREE_WRITES) {
-                if (setGlobalPendingBookData) setGlobalPendingBookData(bookData);
-                if (setShowInkConfirmModal) setShowInkConfirmModal(true);
+            // 2회차 집필은 광고 시청 필수 (WriteView에서 광고 게이트 후 skipDailyCheck로 호출됨)
+            // 안전망: 광고를 거치지 않은 2회차 호출은 차단 (잉크 결제 불가)
+            if (!isDevBypass && !skipDailyCheck && dailyWriteCount >= DAILY_FREE_WRITES) {
+                setError('2회차 집필은 광고를 시청해야 가능해요.');
+                if (setGlobalPendingBookData) setGlobalPendingBookData(null);
                 return;
-            }
-
-            // 잉크 사용 로직
-            if (useInk && !skipInkDeduct) {
-                const currentInk = userProfile?.ink || 0;
-                const requiredInk = getExtraWriteInkCost(getLevelFromXp(userProfile?.xp ?? 0));
-
-                if (currentInk < requiredInk) {
-                    setError('잉크가 부족합니다! 💧 잉크를 충전해주세요.');
-                    if (setGlobalPendingBookData) setGlobalPendingBookData(null);
-                    return;
-                }
-
-                await deductInk(requiredInk);
             }
 
             // 동시성 제어
@@ -394,13 +386,13 @@ export const useBooks = ({ user, userProfile, setError, deductInk, setShowInkCon
                     return bookSlotKey === slotKey;
                 });
 
-                if (existingBook) {
+                if (!isDevBypass && existingBook) {
                     const existingAuthor = existingBook.authorName || '익명';
                     setError(`아쉽지만 간발의 차로 다른 작가님이 먼저 집필하셨어요! (By. ${existingAuthor}) 서재에서 읽어보세요.`);
                     throw new Error('SLOT_ALREADY_TAKEN');
                 }
 
-                if (slotKey === 'series') {
+                if (!isDevBypass && slotKey === 'series') {
                     const dssRef = doc(db, 'artifacts', appId, 'public', 'data', 'daily_series_slot', todayDateKey);
                     const dssSnap = await getDoc(dssRef);
                     if (dssSnap.exists()) {

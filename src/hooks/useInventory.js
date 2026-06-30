@@ -67,6 +67,16 @@ export const STORE_ITEMS = [
     border: 'border-violet-200',
     badge: 'bg-violet-100 text-violet-700',
   },
+  {
+    id: 'drawing_paper',
+    name: '도화지',
+    emoji: '🎨',
+    description: '내가 집필한 책을 PDF 파일로 저장합니다. (책 1권당 1개 소비)',
+    price: 50,
+    color: 'from-sky-50 to-indigo-50',
+    border: 'border-indigo-200',
+    badge: 'bg-indigo-100 text-indigo-700',
+  },
 ];
 
 export const useInventory = ({ user, userProfile }) => {

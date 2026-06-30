@@ -25,12 +25,13 @@ const REGION = "asia-northeast3";
 // Gemini API 키
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || process.env.GOOGLE_GENERATIVE_AI_API_KEY;
 
-// Gemini API 모델 설정 (운영 비용 절감 - Flash 모델 사용)
-// 429 시 순서대로 시도 (모델별 쿼터가 다를 수 있음)
+// Gemini API 모델 설정 (Pro 메인, 장애 시 순서대로 폴백)
+// 429/500/503/타임아웃 발생 시 다음 순위로 자동 전환
 const MODEL_FALLBACK_CHAIN = [
-  "gemini-2.5-flash",       // 메인
-  "gemini-2.5-flash-lite",  // 대체 1
-  "gemini-2.5-pro",         // 대체 2 (고품질, 비용 높음)
+  "gemini-2.5-pro",         // 메인
+  "gemini-2.5-pro",         // 재시도 (동일 모델, 1초 대기)
+  "gemini-2.5-flash",       // 폴백 1
+  "gemini-2.5-flash-lite",  // 폴백 2 (최종 안전망)
 ];
 
 // 프롬프트 설정 (Strategy Pattern)
@@ -46,7 +47,11 @@ const NOVEL_BASE_GUIDE = [
   "[Show, Don't Tell] '그는 슬펐다', '그녀는 화가 났다' 같은 감정 직접 서술을 절대 하지 마라. 대신 행동·표정·신체 반응으로 보여줘라. 예: '주먹을 쥔 손이 하얗게 질렸다', '목소리가 가늘게 떨렸다', '시선을 피하며 입술을 깨물었다'. 독자가 감정을 스스로 느끼게 하라.",
   "[대화문 품질] 대화는 캐릭터의 성격·나이·직업이 묻어나게 써라. 모든 캐릭터가 같은 말투로 말하면 안 된다. 대화 사이에 행동 묘사(비트)를 넣어 장면감을 살려라. 예: '\"괜찮아.\" 그는 고개를 돌리며 말했다. 손끝이 미세하게 떨리고 있었다.'",
   "인위적이거나 너무 뻔한 전개는 피하라. 예상을 빗나가는 반전과 자연스러운 개연성을 동시에 갖춰라.",
-  "[금지] '마치 ~처럼', '~인 듯 했다', '~할 수밖에 없었다' 같은 상투적 표현의 남용을 피하라. 신선한 비유와 구체적 묘사를 사용하라."
+  "[CRITICAL RULE - 어미 다양성 강제] 한국어 어미 사용 시 다음 규칙을 절대 준수하라: (1) 한 단락 내에서 같은 어미를 연속 3회 이상 사용 금지. (2) '~했었다'는 대과거(과거의 더 먼 과거) 표현일 때만 허용. 단순 과거엔 '~했다' 사용. (3) 다음 9가지 어미 패턴을 의식적으로 교차 사용: E1 기본 단정(-했다/였다) · E2 상태/지각(-있었다/보였다/느껴졌다) · E3 진행(-하고 있었다) · E4 명사 종결(어두운 방./낯선 침묵.) · E5 도치/생략(걸었다, 천천히.) · E6 의문/감탄(왜였을까.) · E7 현재형 삽입(지금도 생각난다.) · E8 대사/인용 마무리 · E9 부사구/조사 종결(그저 그뿐.). (4) 한 단락(3~6문장)에 최소 3종류 어미 패턴 사용.",
+  "[직유법 빈도 제한] '~듯/~듯한/~듯이/~듯해', '~처럼', '~같다/~같은/~같이', '~것 같다', '마치 ~' 같은 직유법 표현을 5,000자 기준 최대 5회 이내로 제한하라. 한 단락에 2회 이상 사용 금지. 대신 단정적 표현을 사용하라('~인 듯하다' → '~이다', '~처럼 보였다' → '~보였다').",
+  "[주어 생략 & 대명사 규칙] 한국어는 주어를 자주 생략하는 언어다. 같은 인물이 연속 행동 시 첫 문장만 주어를 명시하고 이후 생략하라. '그는/그녀는'은 한 단락 내 최대 2회로 제한하고, 3회 이상 필요하면 이름/별칭으로 대체하거나 주어를 생략하라. 캐릭터 성별(그/그녀)은 글 전체에서 절대 바꾸지 마라.",
+  "[감정 표현 클리셰 반복 금지 - CRITICAL] 같은 감정 반응·신체 표현·붕괴 비유를 글 전체에서 2회 이상 동일하게 반복하지 마라. 한 번 쓴 표현은 반드시 다른 신체 부위·감각·행동으로 변주하라. 특히 다음 4개 계열은 한 편 안에서 각 1회만 허용한다: ① 심장 반응 계열: '심장이 쿵 내려앉다/떨어지다/울리다', '심장이 쿵쾅거리다', '가슴이 쿵 하고' — 반복 금지, 대신 '호흡이 멎었다', '발이 바닥에 붙었다', '손가락이 굳어버렸다' 등 다른 신체 부위로 변주. 특히 '쿵', '쿵 하고', '쿵 하는 소리' 같은 충격음 표현은 글 전체에서 단 1회만 허용. 두 번째부터는 반드시 다른 신체 감각으로 대체하라. 예: '발이 바닥에 붙었다', '숨이 턱 막혔다', '눈앞이 멍해졌다'. ② 전율·열기 계열: '온몸에 전율이 흘렀다', '뜨거운 열기가 온몸을 감쌌다', '온몸의 신경이 집중됐다' — 반복 금지. ③ 붕괴·무너짐 계열: '얼음덩어리가 무너져 내렸다', '뭔가가 와르르 무너졌다', '가슴이 답답해졌다' — 반복 금지. ④ 시야 흐림 계열: '눈앞이 뿌옇게 흐려졌다', '모든 것이 흐릿해졌다' — 반복 금지. 감정의 강도가 올라갈수록 표현을 새롭게 발명하라. 독자는 같은 반응을 두 번 읽으면 감동이 아닌 식상함을 느낀다.",
+  "[캐릭터 신체 버릇 시스템] 주인공과 주요 조연 각각에 1~2개의 고유한 '신체 버릇'을 부여하라(예: 입술 깨물기, 손톱 뜯기, 안경 치켜올리기, 머리카락 비틀기, 모자 챙 누름 등). 이 버릇은 글 전체에서 최소 3회 자연스럽게 등장해야 하며, 감정 상태에 따라 강도/빈도가 변한다. 캐릭터마다 다른 버릇을 부여해 구분하고, 결말에서 버릇의 변화로 캐릭터 성장을 표현하라."
 ].join(" ");
 
 // 시리즈 연속 집필 시 캐릭터·설정 일관성 유지 지침 (시리즈 전용)
@@ -59,36 +64,6 @@ const NOVEL_SERIES_CONTEXT_GUIDE = [
   "앞 화에서 제시된 복선과 미해결 사항을 기억하고 적절히 활용하라."
 ].join(" ");
 
-const NOVEL_GENRE_STYLES = [
-  {
-    matches: ["romance", "로맨스", "멜로"],
-    guide: "설렘 포인트, 감정선 중심, 오해와 갈등, 달달한 결말을 강조하라."
-  },
-  {
-    matches: ["sf", "sci-fi", "science fiction", "과학", "미래", "sf/fantasy"],
-    guide: "독창적인 세계관을 구축하고 시각적 묘사를 화려하게 하라."
-  },
-  {
-    matches: ["fantasy", "판타지"],
-    guide: "마법/전설/모험의 분위기와 장대한 세계관을 생생하게 묘사하라."
-  },
-  {
-    matches: ["무협", "wuxia", "martial", "martial arts"],
-    guide: "의리, 수련, 강호 세계관을 중심으로 박진감 있게 전개하라."
-  },
-  {
-    matches: ["horror", "호러", "공포"],
-    guide: "숨 막히는 긴장감, 청각/촉각적 공포 묘사를 극대화하라."
-  },
-  {
-    matches: ["thriller", "스릴러"],
-    guide: "추적과 반전의 긴장감을 지속적으로 유지하라."
-  },
-  {
-    matches: ["mystery", "미스터리", "추리"],
-    guide: "단서를 배치하고 논리적 추론이 가능한 미스터리를 구성하라."
-  }
-];
 
 const GENRE_SPECIFIC_INSTRUCTIONS = {
   "로맨스": "두 주인공 사이의 감정 변화를 세밀하게 추적하십시오. 첫 만남의 설렘, 오해로 인한 거리감, 질투나 경쟁이 만드는 긴장감, 마침내 마음이 열리는 순간을 각각 뚜렷한 장면으로 보여주십시오. 대화 속 숨겨진 감정(말하지 못한 고백, 눈빛, 손끝의 떨림)을 살려 독자가 두 사람의 설렘을 함께 느끼게 하십시오. '나 지금 심장이 쿵' 같은 직접 서술보다 상대방의 행동 하나에 멈춰버리는 장면으로 감정을 전달하십시오.",
@@ -129,13 +104,33 @@ const NONFICTION_BASE_GUIDE = [
   "교과서 같은 딱딱한 설명이 아닌, 독자에게 말을 거는 듯한 살아있는 문체로 써라.",
   "[구체성] 추상적 조언 대신 구체적 장면·사례·비유를 사용하라. '노력하면 된다' 대신 실제 상황에서의 행동과 변화를 묘사하라. 독자가 '아, 나도 그랬는데'라고 공감할 수 있는 디테일을 넣어라.",
   "[흐름] '첫째', '둘째', '결론적으로' 같은 목차식 나열을 피하라. 하나의 이야기가 흐르듯 자연스럽게 전개하라. 문단과 문단 사이에 논리적 다리를 놓아라.",
-  "공백 포함 약 4,000자 내외로 핵심 메시지를 명확히 전달하라."
+  "공백 포함 3,000~4,000자 내외로 핵심 메시지를 명확히 전달하라.",
+  "[표현 반복 금지] 같은 어구·문장 패턴을 글 전체에서 2회 이상 반복하지 마라. 특히 위로나 공감의 핵심 문구는 1회로 제한하고 이후엔 장면·비유·행동으로 같은 감정을 다른 방식으로 표현하라.",
+  "[문장 도입부 반복 금지] '아마', '혹시', '어쩌면' 같은 추측 어구나 '당신도', '당신만', '당신은' 같은 독자 호명 표현을 문장 도입부에 2회 이상 같은 패턴으로 쓰지 마라. 같은 문장 구조로 시작하는 문단이 2개 이상 연속되어서는 안 된다."
 ].join(" ");
 
 const NONFICTION_CATEGORY_STYLES = {
-  "essay": "개인적 경험에서 출발해 보편적 공감으로 확장하라. 문체는 부드럽고 서정적으로.",
-  "self-help": "독자의 문제를 진단하고 구체적인 해결책(Action Item)을 제시하라.",
-  "humanities": "철학적/인문학적 맥락을 제시하며 개념을 명확히 설명하라."
+  "essay": [
+    "개인적 경험에서 출발해 보편적 공감으로 확장하라. 나의 이야기가 독자의 이야기가 되는 순간을 만들어라.",
+    "감정을 직접 서술하지 마라. 구체적인 장면과 감각(소리, 냄새, 온도, 촉감)으로 독자가 그 순간을 함께 느끼게 하라.",
+    "문단과 문단 사이의 논리적 연결을 유지하라. 글의 중심 주제가 흔들리지 않게 잡아두어라.",
+    "독자에게 말 거는 듯 친밀한 어조를 유지하되, 가볍지 않게. 사적인 고백처럼 쓰되 보편성을 잃지 마라.",
+    "결론은 깔끔한 정리로 끝내지 마라. 새로운 질문을 남기거나 여운이 남는 장면·문장으로 마무리하라."
+  ].join(" "),
+  "self-help": [
+    "추상적 조언을 금지한다. 모든 제안은 반드시 독자가 오늘 당장 실행할 수 있는 구체적 행동으로 제시하라.",
+    "독자의 현실적 어려움과 내면의 저항감을 먼저 인정하라. 공감 없이 해결책을 던지면 독자는 마음을 닫는다.",
+    "사례와 비유로 개념을 쉽게 풀어라. 낯선 개념은 독자가 이미 아는 일상적 경험에 비유해 착지시켜라.",
+    "과도한 긍정과 동기부여 클리셰('당신은 할 수 있습니다', '지금 시작하세요')를 금지한다. 진정성 있는 언어를 써라.",
+    "각 파트(단락 묶음)는 하나의 핵심 메시지만 담아라. 하나의 파트에 여러 주제를 욱여넣으면 독자가 실천하지 않는다."
+  ].join(" "),
+  "humanities": [
+    "어려운 철학적·인문학적 개념을 독자의 일상 언어로 풀어라. 전문 용어는 반드시 즉시 쉬운 말로 부연하라.",
+    "논리적 전개와 함께 감성적 울림을 유지하라. 머리로 이해하는 동시에 가슴으로 느끼게 하라.",
+    "반론과 다른 시각을 인정하고 포용하는 방식으로 서술하라. 하나의 진리를 강요하지 마라.",
+    "독단적 결론을 내리지 마라. 독자가 스스로 생각의 실마리를 잡고 한 발 더 나아갈 수 있도록 열린 마무리를 제공하라.",
+    "고전 사례와 현대적 맥락을 균형 있게 활용하라. 고전만 나열하면 낡고, 현대만 쓰면 깊이가 없다."
+  ].join(" ")
 };
 
 const NONFICTION_TONE_OPTIONS = {
@@ -143,16 +138,6 @@ const NONFICTION_TONE_OPTIONS = {
   'self-help': ['따뜻한 위로/격려', '강한 동기부여/독설', '논리적인/분석적인', '경험담 위주'],
   humanities: ['질문을 던지는/사색적인', '날카로운 비판', '대화 형식/인터뷰', '쉬운 해설/스토리텔링']
 };
-
-function pickGenreGuide(genre) {
-  const normalized = (genre || "").toString().trim().toLowerCase();
-  const matched = NOVEL_GENRE_STYLES.find((style) =>
-    style.matches.some((key) => normalized.includes(key.toLowerCase()))
-  );
-  return matched
-    ? matched.guide
-    : "장르 특성에 맞게 분위기와 문체를 확실히 차별화하라.";
-}
 
 function pickNonfictionGuide(category) {
   return NONFICTION_CATEGORY_STYLES[category] || "논리적 흐름과 근거를 갖춘 깊이 있는 설명을 제공하라.";
@@ -209,6 +194,89 @@ function buildNovelMoodInstruction(category, subCategory, genre, selectedMood) {
   return `[Style Guideline] 선택된 분위기 '${mood}'를 살려 문체와 전개 속도를 조절하라.`;
 }
 
+/** v1.0 PART B: 장르/트랙별 temperature 결정 */
+function getNovelTemperature(category, subCategory, genre) {
+  const track = normalizeNovelTrack(category, subCategory);
+  const g = (genre || "").toString().trim();
+  if (!track) return 0.75;
+  if (g === "힐링") return 0.85;
+  const group = resolveNovelMoodGroup(track, g);
+  if (track === "webnovel") {
+    if (group === "Thriller") return 0.82;
+    if (group === "Romance") return 0.78;
+    return 0.75;
+  }
+  if (track === "novel") {
+    if (group === "Drama") return 0.90;
+    if (group === "Romance") return 0.88;
+    if (group === "Genre") return 0.85;
+    return 0.87;
+  }
+  return 0.75;
+}
+
+// Guard Rail Matrix 1: Genre × Mood compatibility
+const GUARD_RAIL_GENRE_MOOD_BLOCKED = {
+  '로맨스':       ['사이다/먼치킨', '오컬트/기담', '하드보일드'],
+  '로맨스 판타지': ['오컬트/기담', '하드보일드'],
+  '무협':         ['달달/힐링'],
+  '미스터리/공포': ['사이다/먼치킨', '달달/힐링'],
+  '드라마':        ['사이다/먼치킨'],
+  '힐링':         ['사이다/먼치킨', '후회/집착', '오컬트/기담', '하드보일드'],
+  '미스터리/추리': ['사이다/먼치킨', '달달/힐링'],
+  '스릴러':        ['달달/힐링'],
+};
+const GUARD_RAIL_GENRE_MOOD_CAUTION = {
+  '로맨스 판타지': ['철학/사색'],
+  '판타지':        ['달달/힐링', '후회/집착', '하드보일드'],
+  '현대 판타지':   ['달달/힐링', '후회/집착', '하드보일드', '철학/사색'],
+  '무협':          ['오컬트/기담'],
+  '미스터리/공포': ['후회/집착'],
+  'SF':            ['사이다/먼치킨', '달달/힐링', '후회/집착'],
+  '드라마':        ['오컬트/기담'],
+  '힐링':          ['철학/사색'],
+};
+
+function getMoodGuardRailStatus(genreName, moodFull) {
+  if (!genreName || !moodFull) return 'ok';
+  const blocked = GUARD_RAIL_GENRE_MOOD_BLOCKED[genreName] || [];
+  const caution = GUARD_RAIL_GENRE_MOOD_CAUTION[genreName] || [];
+  if (blocked.some(prefix => moodFull.startsWith(prefix))) return 'blocked';
+  if (caution.some(prefix => moodFull.startsWith(prefix))) return 'caution';
+  return 'ok';
+}
+
+// Cliffhanger type selection system
+const CLIFFHANGER_TYPES = ['crisis', 'twist', 'choice', 'timer'];
+const CLIFFHANGER_TYPE_LABELS = {
+  crisis: '위기 직면—주인공이 최악의 상황에 놓인 순간에서 끊기',
+  twist:  '충격 반전—예상 못한 인물 등장이나 진실 폭로 직후 끊기',
+  choice: '선택의 기로—두 갈래 중 하나를 골라야 하는 순간에서 끊기',
+  timer:  '시한폭탄—제한 시간이 다가오는 긴박감 속에서 끊기',
+};
+const CLIFFHANGER_GENRE_WEIGHTS = {
+  '판타지':        { crisis: 3, twist: 2, choice: 2, timer: 1 },
+  '현대 판타지':   { crisis: 3, twist: 2, choice: 2, timer: 1 },
+  '무협':          { crisis: 3, twist: 2, choice: 2, timer: 1 },
+  '로맨스':        { crisis: 1, twist: 2, choice: 3, timer: 1 },
+  '로맨스 판타지': { crisis: 1, twist: 2, choice: 3, timer: 1 },
+  '미스터리/공포': { crisis: 2, twist: 4, choice: 1, timer: 1 },
+  '미스터리/추리': { crisis: 1, twist: 4, choice: 2, timer: 1 },
+  '드라마':        { crisis: 2, twist: 2, choice: 4, timer: 1 },
+  'SF':            { crisis: 2, twist: 2, choice: 2, timer: 4 },
+  '스릴러':        { crisis: 2, twist: 2, choice: 2, timer: 4 },
+  '힐링':          { crisis: 1, twist: 2, choice: 4, timer: 1 },
+};
+
+function selectCliffhangerType(recentTypes = [], genre = '') {
+  const recent2 = (recentTypes || []).slice(-2);
+  const candidates = CLIFFHANGER_TYPES.filter(t => !recent2.includes(t));
+  const pool = candidates.length > 0 ? candidates : CLIFFHANGER_TYPES;
+  const weights = CLIFFHANGER_GENRE_WEIGHTS[genre] || { crisis: 1, twist: 1, choice: 1, timer: 1 };
+  const weighted = pool.flatMap(t => Array(weights[t] || 1).fill(t));
+  return weighted[Math.floor(Math.random() * weighted.length)];
+}
+
 function buildNonfictionToneInstruction(category, selectedTone) {
   const tone = (selectedTone || "").toString().trim();
   if (!tone) {
@@ -226,6 +294,53 @@ function buildNonfictionToneInstruction(category, selectedTone) {
       : "철학";
 
   return `당신은 ${categoryName} 작가입니다. 사용자가 선택한 키워드를 주제로 글을 쓰되, 반드시 '${tone}' 스타일을 유지하여 서술하십시오. 문장의 어미, 단어 선택, 분위기를 이 스타일에 맞춰야 합니다.`;
+}
+
+function buildEssayNarratorInstruction(narrator) {
+  const n = (narrator || "").toString().trim();
+  const instructions = {
+    "고백하는 나": "1인칭 '나'로 서술하되, 독자 앞에서 속마음을 꺼내놓는 고백적 어조를 유지하라. 감춰왔던 감정이나 인정하기 어려운 사실을 솔직하게 풀어내는 톤.",
+    "인생 선배": "1인칭 서술이되 독자보다 인생을 더 살아본 화자의 관점을 유지하라. 단정하지 말고 '내가 겪어보니 그렇더라' 식의 경험 공유 톤.",
+    "츤데레 아저씨": "투박한 말투를 쓰라. '임마', '거 참', '뭐 그렇다는 거지' 같은 추임새를 자연스럽게 섞어라. 겉은 무뚝뚝하지만 속에는 따뜻한 마음이 있는 톤.",
+    "또래 친구": "독자와 같은 눈높이의 1인칭 화자로 서술하라. 격식을 버리고 편한 구어체를 쓰되, 친한 친구에게 털어놓듯 자연스러운 흐름.",
+    "관찰자": "3인칭 관찰자 시점으로 서술하라. 특정 인물이나 장면을 거리를 두고 묘사하되, 판단은 절제하고 독자가 스스로 느끼도록.",
+    "전문가": "지식과 근거를 가진 전문가의 톤으로 서술하라. 개념을 정의하고, 구분하고, 설명하라. 단 권위적이지 않게, 안내하는 자세로."
+  };
+  return instructions[n] ? `[화자 Guideline] ${instructions[n]}` : null;
+}
+
+function buildEssayAngleInstruction(angle) {
+  const a = (angle || "").toString().trim();
+  const instructions = {
+    "회고형": "과거 시제를 기본으로 삼아 지나간 경험이나 사건을 되돌아보는 구조로 써라. 그때는 몰랐지만 지금은 보이는 것들을 풀어내라.",
+    "분석형": "현상의 원인과 구조를 논리적으로 풀어가라. '왜'라는 질문으로 시작해서 '그래서'로 끝나는 인과 사슬을 만들라.",
+    "위로형": "'당신만 그런 게 아니다'라는 메시지를 중심에 두라. 독자의 상처나 불안을 가볍게 다루지 말고 인정한 뒤, 동행자로서 곁에 머무르라. 단, 이 메시지를 동일한 문구로 반복하지 마라. 한 번 직접 말했다면 이후엔 장면·비유·행동으로 같은 감정을 표현하라.",
+    "질문형": "명확한 답을 제시하지 말고 질문으로 밀고 가라. 독자가 스스로 생각하게 만드는 여백이 핵심이다. 단, 질문을 남발하지 말고 핵심 질문에 집중하라.",
+    "수용형": "바꾸려 하거나 해석하려 하지 말고 현상을 그대로 수용하는 태도를 유지하라. 판단을 유보하고 '그럴 수도 있다'는 자세로.",
+    "경고형": "특정 행동이나 태도가 왜 위험한지 구체적으로 보여주라. 과장하지 말고, 실제 결과를 통해 보여주는 방식을 택하라."
+  };
+  return instructions[a] ? `[접근 각도 Guideline] ${instructions[a]}` : null;
+}
+
+function buildSelfHelpAudienceInstruction(audience) {
+  const a = (audience || "").toString().trim();
+  const instructions = {
+    "막 시작하는 사람": "개념부터 차근차근 설명하라. 쉬운 시작 지점을 제시하고, 첫 발을 내딛는 데 필요한 최소한의 것만 다뤄라.",
+    "이미 시도했지만 실패한 사람": "실패를 탓하지 말고 원인을 분석하라. 왜 안 됐는지 짚어주고, 다시 시작할 수 있는 구체적인 방법을 제시하라.",
+    "완전히 지쳐버린 사람": "멈춰도 된다는 허락부터 줘라. 회복을 중심에 두고, 지금 당장 실천보다 마음을 추스르는 것을 우선하라."
+  };
+  return instructions[a] ? `[독자 상황 Guideline] ${instructions[a]}` : null;
+}
+
+function buildHumanitiesStartingPointInstruction(startingPoint) {
+  const s = (startingPoint || "").toString().trim();
+  const instructions = {
+    "일상 장면에서": "평범한 일상의 한 장면이나 경험에서 시작해 개념으로 확장하라. 독자가 공감하는 구체적 순간을 입구로 삼아라.",
+    "개념 정의에서": "핵심 용어를 먼저 해체하고 재정의하라. 우리가 당연하게 쓰는 말의 의미를 다시 묻는 것으로 논리를 전개하라.",
+    "역사적 사례에서": "과거의 사건이나 인물에서 출발해 현재와 연결하라. 역사를 거울로 삼아 지금을 비추는 구조로.",
+    "역설·모순에서": "직관에 반하는 명제나 모순처럼 보이는 주장으로 시작하라. 독자의 예상을 뒤집고 다시 생각하게 만드는 것이 목표."
+  };
+  return instructions[s] ? `[사유의 출발점 Guideline] ${instructions[s]}` : null;
 }
 
 function buildDialogueRatioInstruction(selectedDialogueRatio) {
@@ -250,39 +365,84 @@ function buildSpeechToneInstruction(selectedSpeechTone) {
   const tone = (selectedSpeechTone || "").toString().trim();
   if (!tone) return null;
   const instructions = {
-    friendly: "전체 톤을 친근하고 따뜻한 대화체로 통일하라. 어미는 '-했어', '-였지', '-하네', '-거든' 등 구어체를 일관 사용하라. 서술도 딱딱한 설명이 아닌, 친구에게 이야기하듯 부드럽고 감성적인 표현을 쓰라. 문장 길이는 짧고 리듬감 있게. 절대 '-했다', '-합니다' 같은 다른 말투를 섞지 마라.",
-    formal: "전체 톤을 절제되고 단정한 문학체로 통일하라. 어미는 '-했다', '-였다', '-이었다' 등 과거형 서술어를 일관 사용하라. 군더더기 없는 간결한 문장, 감정을 직접 드러내기보다 행간에 숨기는 절제된 문체를 유지하라. 절대 '-했어', '-합니다' 같은 다른 말투를 섞지 마라.",
-    polite: "전체 톤을 정중하고 격식 있는 존대체로 통일하라. 어미는 '-했습니다', '-입니다', '-세요' 등 존댓말을 일관 사용하라. 독자를 존중하며 안내하는 듯한 품위 있는 어조를 유지하라. 절대 '-했어', '-했다' 같은 다른 말투를 섞지 마라."
+    friendly: "[적용 범위] 서술자의 내레이션에만 적용. [대사 처리] 캐릭터별 자연스러운 말투를 우선(노인 캐릭터는 노년체, 어린아이는 반말 등). [내레이션 어미] '-했어', '-였지', '-하네', '-거든', '-잖아', '-더라' 등 구어체를 일관 사용. 친구에게 이야기하듯 부드럽고 감성적인 표현. 문장 길이는 짧고 리듬감 있게. [금지] '-했다', '-합니다' 같은 다른 문체를 내레이션에 절대 섞지 마라. [친근체 어미 다양성 - CRITICAL] '-했어' 종결을 한 단락 내 3회 이상 연속 사용 금지. 다음 어미를 의식적으로 교차 사용: ~어/~었어(기본), ~지/~었지(회상), ~네/~더라/~더라고(깨달음), ~거든/~잖아(강조), ~을걸/~을지도(추측), 명사 종결(어두운 방.), 도치/생략(걸었어, 천천히.), 부사구 종결(그저 그뿐.). 한 단락(3~6문장)에 최소 3종류 어미 패턴 사용.",
+    formal: "[적용 범위] 서술자의 내레이션에만 적용. [대사 처리] 캐릭터별 자연스러운 말투를 우선. [내레이션 어미] '-했다', '-였다', '-이었다' 등 과거형 서술어 일관 사용. 군더더기 없는 간결한 문장. 감정을 직접 드러내기보다 행간에 숨기는 절제된 문체. [금지] '-했어', '-합니다' 같은 다른 문체를 내레이션에 절대 섞지 마라. '-했었다'는 진짜 대과거(과거의 더 먼 과거) 표현일 때만 허용. [어미 다양성] '-했다'에 갇히지 말고 명사 종결(어두운 방.), 도치(걸었다, 천천히.), 부사구 종결(그저 그뿐.), '-있었다/보였다/느껴졌다' 등 상태 동사를 적극 교차 활용. 단정 어미 연속 3회 절대 금지.",
+    polite: "[적용 범위] 서술자의 내레이션에만 적용. [대사 처리] 캐릭터별 자연스러운 말투를 우선. [내레이션 어미] '-했습니다', '-입니다', '-세요' 등 존댓말 일관 사용. 독자를 존중하며 안내하는 듯한 품위 있는 어조. [금지] '-했어', '-했다' 같은 다른 문체를 내레이션에 절대 섞지 마라."
   };
   return instructions[tone] ? `[말투/문체 Guideline - CRITICAL] ${instructions[tone]}` : null;
+}
+
+function buildTrackGuide(track) {
+  if (track === "webnovel") {
+    return [
+      "[웹소설 스타일 지침]",
+      "문장은 짧고 리드미컬하게 끊어라. 한 문단은 3~5줄 이내로 유지하라.",
+      "빠른 전개를 우선하라. 긴 설명보다 사건과 반응을 먼저 보여줘라.",
+      "대화 비중을 전체의 60% 이상으로 유지하라. 감정은 대사와 행동으로 직접 표현 허용.",
+      "장르 클리셰(먼치킨, 설렘 폭발, 사이다 반전 등)는 독자가 원하는 쾌감 요소다. 적극 활용하라.",
+    ].join(" ");
+  }
+  if (track === "novel") {
+    return [
+      "[문학소설 스타일 지침]",
+      "묘사 중심으로 서술하라. 긴 호흡의 문장과 풍부한 감각 묘사로 장면을 구축하라.",
+      "감정을 직접 서술하지 마라. 인물의 행동·표정·침묵·환경 묘사로 간접적으로 전달하라.",
+      "대화는 꼭 필요한 순간에만 사용하고 서사적 밀도를 높여라.",
+      "진부한 클리셰(운명적 만남, 예측 가능한 반전, 상투적 비유)는 금지. 독창적이고 구체적인 표현을 써라.",
+    ].join(" ");
+  }
+  return null;
 }
 
 function buildPOVInstruction(selectedPOV) {
   const pov = (selectedPOV || "").toString().trim();
   if (!pov) return null;
   const instructions = {
-    first_person: "1인칭 주인공 시점으로 서술하라. 주인공이 '나'로서 자신의 이야기를 생생하게 전달하는 톤을 유지하라. 이 시점에 맞춰서 서술해줘.",
-    third_limited: "3인칭 관찰자 시점으로 서술하라. 주인공의 행동과 말을 옆에서 지켜보는 관찰자처럼 객관적으로 묘사하라. 주인공의 내면은 행동과 대사로만 간접적으로 드러내라. 이 시점에 맞춰서 서술해줘.",
-    omniscient: "전지적 작가 시점으로 서술하라. 모든 등장인물의 생각과 감정, 속마음까지 자유롭게 드러내며 서술하라. 이 시점에 맞춰서 서술해줘."
+    first_person: "1인칭 주인공 시점으로 서술하라. 주인공이 '나'로서 자신의 이야기를 생생하게 전달하는 톤을 유지하라. [1인칭 시점 엄수 - CRITICAL] 허용: 화자 본인의 행동/감정/감각, 화자가 외부에서 관찰한 다른 인물의 행동/외모/표정, 화자가 추측한 다른 인물의 감정('슬퍼 보였어', '~인 것 같았어'). 금지: 다른 인물의 내면 직접 서술('그의 마음은 슬픔으로 가득했다'), 화자가 볼 수 없는 장면의 객관적 묘사('그는 등 뒤로 칼을 쥐었다' — 화자가 안 봤음), 작가 시점의 객관적 사실 서술. 액션 장면에서도 반드시 화자의 시야 안에서만 묘사하라.",
+    third_limited: "3인칭 관찰자 시점으로 서술하라. 주인공의 행동과 말을 옆에서 지켜보는 관찰자처럼 묘사하라. 주인공의 내면은 행동과 대사로만 간접적으로 드러내고, 주인공 외 인물의 내면은 직접 서술하지 마라.",
+    omniscient: "전지적 작가 시점으로 서술하라. 모든 등장인물의 생각과 감정, 속마음까지 자유롭게 드러내며 서술하라. 전지적 시점은 특정 인물 한 명에 고정되지 않는다. 서사적으로 필요한 순간에는 다른 인물의 내면, 감정, 생각도 자연스럽게 서술하라. 단, 한 장면 안에서 여러 인물의 내면을 동시에 서술하면 혼란스러우니 — 장면이 전환될 때 시점 인물을 바꾸는 방식으로 활용하라."
   };
   return instructions[pov] ? `[POV Guideline] ${instructions[pov]}` : null;
 }
 
-function buildSystemPrompt({ isNovel, category, subCategory, genre, isSeries = false, episodeType = null, endingStyle, selectedTone, selectedMood, selectedPOV, selectedSpeechTone, selectedDialogueRatio }) {
+function buildSystemPrompt({ isNovel, category, subCategory, genre, isSeries = false, episodeType = null, endingStyle, selectedTone, selectedMood, selectedPOV, selectedSpeechTone, selectedDialogueRatio, selectedCliffhangerType = null, essayNarrator = null, essayAngle = null, selfHelpAudience = null, humanitiesStartingPoint = null }) {
   if (isNovel) {
     const endingGuide = endingStyle
       ? `결말은 반드시 '${endingStyle}' 형태로 끝내며 그 톤을 유지하라.`
       : "결말은 독자의 여운을 남기는 방식으로 완성하라.";
     const moodGuide = buildNovelMoodInstruction(category, subCategory, genre, selectedMood);
+
+    // Guard Rail: warn AI about conflicting genre×mood combination
+    const guardRailStatus = getMoodGuardRailStatus(genre, selectedMood);
+    const guardRailWarning = guardRailStatus === 'blocked'
+      ? `[Guard Rail 주의] 현재 분위기(${selectedMood})는 ${genre} 장르와 충돌합니다. 장르 정체성을 최대한 유지하면서 사용자 선택 분위기를 부분적으로만 반영하세요.`
+      : guardRailStatus === 'caution'
+      ? `[Guard Rail 참고] 현재 분위기(${selectedMood})는 ${genre} 장르에서 조건부 사용 가능합니다. 장르 특성과 분위기의 균형을 신중히 조율하세요.`
+      : null;
+
+    const track = normalizeNovelTrack(category, subCategory);
+    const trackGuide = buildTrackGuide(track);
+
+    const resolvedSpeechTone = selectedSpeechTone || null;
+    const resolvedDialogueRatio = track === "webnovel" ? "dialogue_heavy"
+      : track === "novel" ? "description_heavy"
+      : selectedDialogueRatio;
+
     const povGuide = buildPOVInstruction(selectedPOV);
-    const speechToneGuide = buildSpeechToneInstruction(selectedSpeechTone);
-    const dialogueRatioGuide = buildDialogueRatioInstruction(selectedDialogueRatio);
+    const speechToneGuide = buildSpeechToneInstruction(resolvedSpeechTone);
+    const dialogueRatioGuide = buildDialogueRatioInstruction(resolvedDialogueRatio);
     // episodeType: null(단편/1화), 'continue'(이어쓰기), 'finalize'(완결)
     let structureGuide;
     if (episodeType === 'finalize') {
       structureGuide = "이번 화는 완결 화다. 지금까지 쌓아온 모든 갈등·복선을 빠짐없이 회수하며, 각 등장인물의 변화와 결말을 충분히 보여주어라. 공백 포함 약 5,000자 이상의 묵직하고 완성도 높은 결말을 작성하라. 단계 구분 없이 하나의 흐름으로 서술하라. 서두르지 말고, 인물들의 감정과 후일담을 충분히 담아라.";
     } else if (episodeType === 'continue') {
-      structureGuide = "이번 화는 연재 중인 에피소드다. 직전 화의 마지막 장면에서 자연스럽게 이어 공백 포함 약 5,000자 이상을 작성하라. 단계 구분 없이 하나의 흐름으로 서술하고, 마지막은 반드시 절단신공(Cliffhanger)으로 끝내라. 절단신공 유형: (1)위기 직면—주인공이 최악의 상황에 놓인 순간에서 끊기, (2)충격 반전—예상 못한 인물 등장이나 진실 폭로 직후 끊기, (3)선택의 기로—두 갈래 중 하나를 골라야 하는 순간에서 끊기, (4)시한폭탄—제한 시간이 다가오는 긴박감 속에서 끊기. 이 중 장면에 맞는 유형을 선택하라.";
+      const cliffLabel = selectedCliffhangerType && CLIFFHANGER_TYPE_LABELS[selectedCliffhangerType]
+        ? CLIFFHANGER_TYPE_LABELS[selectedCliffhangerType]
+        : null;
+      const cliffInstruction = cliffLabel
+        ? `이번 화의 절단신공은 반드시 '${cliffLabel}' 유형으로 끝내라.`
+        : "마지막은 반드시 절단신공(Cliffhanger)으로 끝내라. 절단신공 유형: (1)위기 직면—주인공이 최악의 상황에 놓인 순간에서 끊기, (2)충격 반전—예상 못한 인물 등장이나 진실 폭로 직후 끊기, (3)선택의 기로—두 갈래 중 하나를 골라야 하는 순간에서 끊기, (4)시한폭탄—제한 시간이 다가오는 긴박감 속에서 끊기. 이 중 장면에 맞는 유형을 선택하라.";
+      structureGuide = `이번 화는 연재 중인 에피소드다. 직전 화의 마지막 장면에서 자연스럽게 이어 공백 포함 약 5,000자 이상을 작성하라. 단계 구분 없이 하나의 흐름으로 서술하고, ${cliffInstruction}`;
     } else if (isSeries) {
       structureGuide = "이번 화는 시리즈의 첫 번째 화다. [시작-사건과 훅] 2단계 구조로 공백 포함 약 5,000자 내외로 작성하라. 마지막은 독자가 다음 화를 참을 수 없게 만드는 강렬한 훅(Hook)으로 끝맺어라. 훅 유형: 주인공이 모험/위기에 발을 딛는 순간, 예상 못한 진실이 드러나는 순간, 또는 운명적 선택을 해야 하는 순간에서 끊어라.";
     } else {
@@ -292,6 +452,8 @@ function buildSystemPrompt({ isNovel, category, subCategory, genre, isSeries = f
       `당신은 ${genre || "소설"} 분야의 최고 작가입니다.`,
       `[장르 지침] ${pickGenreGuideline(genre)}`,
       moodGuide,
+      guardRailWarning,
+      trackGuide,
       povGuide,
       speechToneGuide,
       dialogueRatioGuide,
@@ -304,9 +466,20 @@ function buildSystemPrompt({ isNovel, category, subCategory, genre, isSeries = f
   }
 
   const toneInstruction = buildNonfictionToneInstruction(category, selectedTone);
+  const narratorInstruction = buildEssayNarratorInstruction(essayNarrator);
+  const angleInstruction = buildEssayAngleInstruction(essayAngle);
+  const audienceInstruction = buildSelfHelpAudienceInstruction(selfHelpAudience);
+  const startingPointInstruction = buildHumanitiesStartingPointInstruction(humanitiesStartingPoint);
+  const nonfictionCategoryName = category === "essay" ? "에세이"
+    : category === "self-help" ? "자기계발"
+    : "인문/철학";
   return [
-    "당신은 비소설 분야의 최고 저자입니다.",
+    `당신은 ${nonfictionCategoryName} 분야의 최고 저자입니다.`,
     toneInstruction || "독자의 공감을 이끌어내는 흥미롭고 통찰력 있는 글을 쓰세요.",
+    narratorInstruction,
+    angleInstruction,
+    audienceInstruction,
+    startingPointInstruction,
     NONFICTION_BASE_GUIDE,
     pickNonfictionGuide(category),
     "[출력 형식] 본문에는 책 내용과 무관한 특수문자(예: *, #, -, •, **, 마크다운·불릿 기호 등)를 절대 사용하지 마세요. 독자가 읽는 순수한 글만 출력하세요."
@@ -321,9 +494,10 @@ function buildStepPrompt({
   synopsis,
   characterSheet,
   settingSheet,
-  sceneBridge,
   isNovel,
-  title
+  title,
+  stepMeta = null,
+  speechTone = null
 }) {
   const seed = topic || "";
   const titleLine = title ? `책 제목은 "${title}"입니다. 제목의 분위기와 주제에 어울리게 전개하세요.` : "";
@@ -333,14 +507,11 @@ function buildStepPrompt({
   const lastBlock = lastParagraph
     ? `Last Paragraph (직전 내용 3~5문장):\n${lastParagraph}\n`
     : "Last Paragraph (직전 내용 3~5문장): (없음)\n";
-  const bridgeBlock = sceneBridge
-    ? `직전 장면 브릿지 (물리/심리/미해결 정보 - 다음 장면 연결용):\n${sceneBridge}\n`
-    : "";
   const staticContext = isNovel
     ? `[정적 메모리 - 불변, 요약하지 않음]\nSynopsis (전체 시나리오):\n${synopsis || "(없음)"}\n\nCharacter Sheet (이름/성격/버릇·특이한 행동 절대 유지):\n${characterSheet || "(없음)"}\n\nSetting Sheet (시대/장소/세계관 절대 유지):\n${settingSheet || "(없음)"}\n\n`
     : "";
   const dynamicContext = isNovel
-    ? `[동적 메모리 - 누적 갱신]\n${summaryBlock}\n${lastBlock}\n${bridgeBlock}`
+    ? `[동적 메모리 - 누적 갱신]\n${summaryBlock}\n${lastBlock}`
     : summaryBlock + "\n";
   const baseInstruction = [
     `사용자가 준 주제는 "${seed}"입니다. 이 짧은 문장을 씨앗으로 삼아 풍성한 디테일을 상상하여 확장하세요.`,
@@ -359,11 +530,40 @@ function buildStepPrompt({
 
   if (isNovel) {
     baseInstruction.push("[단계 연결] 이 단계는 이전 단계의 마지막 문장에서 자연스럽게 이어져야 합니다. 새로운 챕터를 시작하듯 끊기지 마세요. 시간 흐름, 장소 이동, 감정 변화가 자연스럽게 연결되어야 합니다. 독자가 읽을 때 단계가 나뉜 것을 전혀 눈치채지 못하게 하세요.");
+    baseInstruction.push("[절대 금지] 이 단계의 마지막을 문장 중간에서 끊지 마세요. 반드시 마침표(.), 느낌표(!), 물음표(?), 말줄임표(…) 중 하나로 완성된 문장을 끝으로 마무리하세요.");
+    if (speechTone) {
+      const toneHint = speechTone === 'polite'
+        ? "정중체(-했습니다/-입니다/-세요)로 서술하세요. '-했다/-했어' 등 다른 문체를 내레이션에 절대 섞지 마세요."
+        : speechTone === 'formal'
+        ? "단정체(-했다/-였다)로 서술하세요. '-했습니다/-했어' 등 다른 문체를 내레이션에 절대 섞지 마세요."
+        : speechTone === 'friendly'
+        ? "친근체(-했어/-였지/-더라)로 서술하세요. '-했다/-했습니다' 등 다른 문체를 내레이션에 절대 섞지 마세요."
+        : null;
+      if (toneHint) baseInstruction.push(`[말투 유지 - CRITICAL] 이번 단계도 반드시 ${toneHint}`);
+    }
   } else {
     baseInstruction.push("[단계 연결] 이전 단계의 흐름을 자연스럽게 이어받아 전개하세요. 갑자기 새로운 주제로 넘어가지 말고, 앞선 논의를 발전시키는 형태로 서술하세요.");
   }
 
-  return `주제(Seed): ${seed}\n단계: ${currentStep.name}\n\n${staticContext}${dynamicContext}${baseInstruction.join("\n")}`;
+  let stepRuleBlock = "";
+  if (stepMeta) {
+    const { targetChars, accumulatedChars, totalChars, nextStepName, role } = stepMeta;
+    const pctDone = totalChars > 0 ? Math.round((accumulatedChars / totalChars) * 100) : 0;
+    const lines = [
+      `==========================================`,
+      `[이번 단계 작성 규칙]`,
+      `==========================================`,
+      `- 단계명: ${currentStep.name}`,
+      `- 목표 분량: ${targetChars}자 (±10% 허용, ${Math.round(targetChars * 0.9)}~${Math.round(targetChars * 1.1)}자)`,
+      `- 누적 진행률: ${accumulatedChars}자 / ${totalChars}자 (${pctDone}% 진행 중)`,
+      nextStepName ? `- 다음 단계 예고: ${nextStepName}` : null,
+      role ? `- 이번 단계의 역할: ${role}` : null,
+      `==========================================`,
+    ].filter(Boolean).join("\n");
+    stepRuleBlock = `\n${lines}\n`;
+  }
+
+  return `주제(Seed): ${seed}\n단계: ${currentStep.name}\n\n${staticContext}${dynamicContext}${stepRuleBlock}${baseInstruction.join("\n")}`;
 }
 
 /** 언어 오염 검사: 한글/공백/문장부호/숫자 외 문자(러시아어, 한자 등) 감지 시 false */
@@ -406,6 +606,161 @@ function validateOutput(content, language = "ko") {
   return { valid: true };
 }
 
+/** 문자열 간 2-gram Jaccard 유사도 (한국어 음절 기준) */
+function ngramSimilarity(a, b, n = 2) {
+  if (!a || !b) return 0;
+  const sa = a.replace(/\s+/g, "");
+  const sb = b.replace(/\s+/g, "");
+  if (sa === sb) return 1;
+  if (sa.length < n || sb.length < n) return 0;
+  const getNgrams = (s) => {
+    const set = new Set();
+    for (let i = 0; i <= s.length - n; i++) set.add(s.slice(i, i + n));
+    return set;
+  };
+  const setA = getNgrams(sa);
+  const setB = getNgrams(sb);
+  let intersection = 0;
+  for (const ng of setA) if (setB.has(ng)) intersection++;
+  const union = setA.size + setB.size - intersection;
+  return union > 0 ? intersection / union : 0;
+}
+
+/** 반복 검출 및 제거 (v1.1.1 강화 2 패턴 A·B) */
+function detectAndFixRepetition(content) {
+  if (!content) return content;
+
+  // Pattern A: 1~5글자 단독 라인 + 다음 줄이 같은 글자로 시작하면 제거
+  let text = content.replace(/^(.{1,5})\n(.+)$/gm, (match, line, nextLine) => {
+    const trimmed = line.trim();
+    if (trimmed.length === 0 || trimmed.length > 5) return match;
+    if (/[.!?。…]$/.test(trimmed)) return match;
+    if (nextLine.trim().startsWith(trimmed)) {
+      logger.info(`[repetition] Pattern A removed lone line: "${trimmed}"`);
+      return nextLine;
+    }
+    return match;
+  });
+
+  // Pattern B: 인접 단락 유사도 검사
+  const paragraphs = text.split(/\n\n+/);
+  const result = [];
+  for (let i = 0; i < paragraphs.length; i++) {
+    const para = paragraphs[i].trim();
+    if (!para) continue;
+    if (i === 0) { result.push(para); continue; }
+
+    const prevPara = result[result.length - 1] || "";
+
+    // B-2: 이전 단락 끝 500자 vs 현재 단락 전체 ≥ 70% → 현재 단락 통째 제거
+    const prevTail = prevPara.slice(-500);
+    const sim2 = ngramSimilarity(prevTail, para);
+    if (sim2 >= 0.70) {
+      logger.warn(`[repetition] Pattern B-2 removed paragraph (sim: ${sim2.toFixed(2)})`);
+      continue;
+    }
+
+    // B-1: 이전 단락 마지막 문장 vs 현재 단락 첫 문장 ≥ 80% → 현재 단락 첫 문장만 제거
+    const prevSentences = prevPara.split(/(?<=[.!?…])\s+/).filter(Boolean);
+    const currSentences = para.split(/(?<=[.!?…])\s+/).filter(Boolean);
+    const lastSentPrev = prevSentences[prevSentences.length - 1] || "";
+    const firstSentCurr = currSentences[0] || "";
+    const sim1 = ngramSimilarity(lastSentPrev, firstSentCurr);
+    if (sim1 >= 0.80 && currSentences.length > 1) {
+      logger.warn(`[repetition] Pattern B-1 removed duplicate first sentence (sim: ${sim1.toFixed(2)})`);
+      result.push(currSentences.slice(1).join(" "));
+      continue;
+    }
+    // B-1b: 이전 단락 마지막 문장이 현재 단락 첫 문장을 suffix로 포함하는 경우
+    // (긴 문장의 끝부분 = 다음 단락 시작 문장인 반복 패턴)
+    const normLast  = lastSentPrev.replace(/[\s.!?…]+/g, "");
+    const normFirst = firstSentCurr.replace(/[\s.!?…]+/g, "");
+    if (normFirst.length >= 8 && normLast.endsWith(normFirst) && currSentences.length > 1) {
+      logger.warn(`[repetition] Pattern B-1b removed suffix-duplicated first sentence: "${firstSentCurr.slice(0, 30)}..."`);
+      result.push(currSentences.slice(1).join(" "));
+      continue;
+    }
+
+    // B-3: 꼬리 문장 단위 직접 비교 (tail-to-tail 반복 제거)
+    // - window 기반 pre-check 없이 바로 탐색 (unique 도입부에 의한 희석 방지)
+    // - overlapCount == currSentences.length 이고 단락이 minSentencesForFullDelete 이상이면 전체 삭제
+    //   (미만이면 의도적 강조·수미상관 가능성 → 꼬리 trim만 적용)
+    if (currSentences.length > 1) {
+      const { tailSimilarity, maxTailSentences, minSentencesForFullDelete } = QC_THRESHOLDS.repetition;
+      let overlapCount = 0;
+      const maxK = Math.min(currSentences.length, prevSentences.length, maxTailSentences);
+      for (let k = 1; k <= maxK; k++) {
+        const simK = ngramSimilarity(currSentences.slice(-k).join(" "), prevSentences.slice(-k).join(" "));
+        if (simK >= tailSimilarity) {
+          overlapCount = k;
+        } else {
+          break;
+        }
+      }
+      if (overlapCount === currSentences.length && currSentences.length >= minSentencesForFullDelete) {
+        logger.warn(`[repetition] Pattern B-3 removed entire duplicate paragraph (${currSentences.length}문장)`);
+        continue;
+      } else if (overlapCount > 0) {
+        logger.warn(`[repetition] Pattern B-3 trimmed tail ${overlapCount}개 문장`);
+        result.push(currSentences.slice(0, currSentences.length - overlapCount).join(" "));
+        continue;
+      }
+    }
+
+    // B-4: 현재 단락 머리 vs 이전 단락 꼬리 (head-of-curr = tail-of-prev 패턴)
+    // 이전 단락 끝 k문장이 현재 단락 첫 k문장과 동일하고, 현재 단락에 새 문장이 추가된 경우
+    // k를 maxK→minSentencesForFullDelete 순으로 탐색해 가장 긴 overlap을 찾음
+    if (currSentences.length > 1) {
+      const { tailSimilarity, maxTailSentences, minSentencesForFullDelete } = QC_THRESHOLDS.repetition;
+      let headOverlapCount = 0;
+      const maxK = Math.min(currSentences.length, prevSentences.length, maxTailSentences);
+      for (let k = maxK; k >= minSentencesForFullDelete; k--) {
+        const simK = ngramSimilarity(
+          currSentences.slice(0, k).join(" "),
+          prevSentences.slice(-k).join(" ")
+        );
+        if (simK >= tailSimilarity) {
+          headOverlapCount = k;
+          break;
+        }
+      }
+      if (headOverlapCount === currSentences.length && currSentences.length >= minSentencesForFullDelete) {
+        logger.warn(`[repetition] Pattern B-4 removed entire duplicate paragraph (head=tail, ${currSentences.length}문장)`);
+        continue;
+      } else if (headOverlapCount > 0) {
+        logger.warn(`[repetition] Pattern B-4 trimmed head ${headOverlapCount}개 문장 (head-overlap-extension)`);
+        result.push(currSentences.slice(headOverlapCount).join(" "));
+        continue;
+      }
+    }
+
+    // B-5: 비인접 단락 전체 중복 검사 (직전 단락 이외 최근 단락과의 exact duplicate)
+    // B-2가 커버하지 못하는 cross-step 중복 단락 제거
+    {
+      const { nonAdjacentSimilarity, nonAdjacentLookback, minSentencesForFullDelete } = QC_THRESHOLDS.repetition;
+      if (currSentences.length >= minSentencesForFullDelete && result.length >= 2) {
+        const lookback = Math.min(result.length - 1, nonAdjacentLookback);
+        let removedByB5 = false;
+        for (let back = 2; back <= lookback + 1; back++) {
+          const olderPara = result[result.length - back];
+          if (!olderPara) break;
+          const simOlder = ngramSimilarity(para, olderPara);
+          if (simOlder >= nonAdjacentSimilarity) {
+            logger.warn(`[repetition] Pattern B-5 removed non-adjacent duplicate (sim: ${simOlder.toFixed(2)}, ${back}단락 전)`);
+            removedByB5 = true;
+            break;
+          }
+        }
+        if (removedByB5) continue;
+      }
+    }
+
+    result.push(para);
+  }
+
+  return result.join("\n\n");
+}
+
 /** 후처리: 본문에 혼입된 메타 태그/마크다운 헤더 제거 */
 function stripMetaTags(content) {
   if (!content) return content;
@@ -431,6 +786,12 @@ function stripMetaTags(content) {
   // 장르 지침 / 스타일 지침 라인 제거
   cleaned = cleaned.replace(/(?:^|\n)\s*\[(?:장르|Style|POV|말투|대화)[^\]]*\][^\n]*/gim, "");
 
+  // 반복 검출 및 제거 (단락 통째 반복, 첫 문장 중복, 단어 단독 라인)
+  cleaned = detectAndFixRepetition(cleaned);
+
+  // 감정 '쿵' 표현 직접 치환 (QC 재시도 대신 결정적 후처리)
+  cleaned = replaceKungExpressions(cleaned);
+
   // 연속 빈 줄 정리 (3줄 이상 → 2줄)
   cleaned = cleaned.replace(/\n{3,}/g, "\n\n");
 
@@ -443,6 +804,42 @@ function extractLastSentences(content, maxSentences = 5) {
   const sentences = cleaned.split(/(?<=[.!?…])\s+/).filter(Boolean);
   const take = Math.min(maxSentences, sentences.length);
   return sentences.slice(Math.max(0, sentences.length - take)).join(" ");
+}
+
+/** 스텝 경계 미완성 문장 트림
+ * 가드 1: 마지막 구두점이 전체의 앞 절반에 있으면 트림 생략 (내용 대부분이 날아가는 케이스)
+ * 가드 2: 잘릴 조각이 전체의 20% 이상이면 트림 생략, 경고 로그만 (재생성이 맞는 케이스)
+ */
+function trimToLastSentence(content) {
+  if (!content) return content;
+  const trimmed = content.trimEnd();
+  if (/[.!?…]["'」』]?\s*$/.test(trimmed)) return content; // 이미 완성된 문장으로 끝남
+
+  const lastPunct = Math.max(
+    trimmed.lastIndexOf('.'),
+    trimmed.lastIndexOf('!'),
+    trimmed.lastIndexOf('?'),
+    trimmed.lastIndexOf('…'),
+  );
+
+  // 가드 1: 구두점이 전체의 앞 절반 이하에 있으면 트림 생략
+  if (lastPunct <= trimmed.length * 0.5) return content;
+
+  // 닫는 따옴표가 구두점 바로 뒤에 오는 경우 포함
+  const charAfter = trimmed[lastPunct + 1];
+  const endPos = /["'」』]/.test(charAfter) ? lastPunct + 2 : lastPunct + 1;
+
+  const fragment = trimmed.slice(endPos).trim();
+  const fragmentRatio = fragment.length / trimmed.length;
+
+  // 가드 2: 잘릴 조각이 전체의 20% 이상이면 트림하지 않고 경고만
+  if (fragmentRatio > 0.20) {
+    logger.warn(`[step-boundary] 미완성 조각 ${Math.round(fragmentRatio * 100)}% — 트림 생략 원본 유지: "${fragment.slice(0, 50)}"`);
+    return content;
+  }
+
+  logger.warn(`[step-boundary] 미완성 문장 트림 (${Math.round(fragmentRatio * 100)}%): "${fragment.slice(0, 50)}"`);
+  return trimmed.slice(0, endPos);
 }
 
 // 누적 요약이 너무 길어지면 전체를 재압축 (장기 연재 대응)
@@ -471,48 +868,17 @@ async function summarizeStepContent(content, systemPrompt, isNovel) {
     "본문:",
     content || ""
   ].join("\n");
+  // 요약은 단순 추출 작업 — flash 모델로 충분
+  const FLASH_MODEL_INDEX = 2;
   for (let attempt = 0; attempt < 2; attempt++) {
-    const result = await callGemini(systemPrompt, prompt, 0.2 - attempt * 0.1, isNovel);
+    const result = await callGemini(systemPrompt, prompt, 0.2 - attempt * 0.1, isNovel, FLASH_MODEL_INDEX);
     const text = (result.content || "").trim();
     if (validateOutput(text, "ko").valid) return text;
   }
-  const result = await callGemini(systemPrompt, prompt, 0.1, isNovel);
+  const result = await callGemini(systemPrompt, prompt, 0.1, isNovel, FLASH_MODEL_INDEX);
   return (result.content || "").trim();
 }
 
-/** 장면 브릿지: 직전 장면의 물리/심리/미해결 정보 추출 (다음 장면 연결용) */
-async function extractSceneBridge(content, systemPrompt, isNovel) {
-  if (!content || !content.trim()) return "";
-  const prompt = [
-    "다음 장면(본문)을 읽고, 다음 장면을 이어 쓸 때 필요한 '브릿지' 정보를 추출하라. 한글만 사용하라.",
-    "반드시 아래 3가지를 각각 한 줄 이내로 작성하라. 해당 정보가 없으면 '해당 없음'으로 표기.",
-    "",
-    "1. 물리적 상태: 캐릭터의 현재 위치, 부상 여부, 획득한 아이템 등.",
-    "2. 심리적 상태: 직전 사건으로 인한 감정 변화(예: 분노, 의심, 안도, 불안).",
-    "3. 미해결 정보: 캐릭터가 아직 모르는 사실, 오해하고 있는 것, 떡밥.",
-    "",
-    "출력 형식 (한국어):",
-    "물리적 상태: ...",
-    "심리적 상태: ...",
-    "미해결 정보: ...",
-    "",
-    "본문:",
-    content || ""
-  ].join("\n");
-  for (let attempt = 0; attempt < 2; attempt++) {
-    const result = await callGemini(systemPrompt, prompt, 0.2 - attempt * 0.1, isNovel);
-    const text = (result.content || "").trim();
-    if (validateOutput(text, "ko").valid) return text;
-  }
-  const result = await callGemini(systemPrompt, prompt, 0.1, isNovel);
-  const text = (result.content || "").trim();
-  // fallback: 파싱 실패 시 직전 내용의 마지막 문장들을 브릿지로 사용
-  if (!text || text.length < 10) {
-    logger.warn("[extractSceneBridge] 브릿지 추출 실패 — 마지막 문장 fallback");
-    return extractLastSentences(content, 5);
-  }
-  return text;
-}
 
 async function generateStaticContext(systemPrompt, topic, title, genre, isNovel, isSeries = false) {
   if (!isNovel) {
@@ -611,7 +977,7 @@ function isRetryableWithFallback(error) {
 }
 
 // Gemini API 호출 함수 (폴백 체인 지원)
-async function callGemini(systemPrompt, userPrompt, temperature = 0.75, isNovel = false, modelIndex = 0) {
+async function callGemini(systemPrompt, userPrompt, temperature = 0.75, isNovel = false, modelIndex = 0, maxTokens = null) {
   if (!GEMINI_API_KEY) {
     throw new Error("Gemini API 키가 설정되지 않았습니다.");
   }
@@ -619,21 +985,26 @@ async function callGemini(systemPrompt, userPrompt, temperature = 0.75, isNovel 
   const modelName = MODEL_FALLBACK_CHAIN[modelIndex];
   const hasNext = modelIndex + 1 < MODEL_FALLBACK_CHAIN.length;
 
+  // 동일 모델 재시도(index 1)는 일시적 장애 회복을 위해 1초 대기
+  if (modelIndex > 0 && MODEL_FALLBACK_CHAIN[modelIndex] === MODEL_FALLBACK_CHAIN[modelIndex - 1]) {
+    await new Promise(r => setTimeout(r, 1000));
+  }
+
   try {
     logger.info(`[Gemini API] 모델 사용: ${modelName} (${modelIndex + 1}/${MODEL_FALLBACK_CHAIN.length})`);
     const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
     const model = genAI.getGenerativeModel({ model: modelName });
 
-    const safetySettings = isNovel ? [
+    const safetySettings = [
       { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_ONLY_HIGH" },
       { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_ONLY_HIGH" },
       { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_ONLY_HIGH" },
       { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_ONLY_HIGH" }
-    ] : undefined;
+    ];
 
     const generationConfig = {
       temperature: temperature,
-      maxOutputTokens: isNovel ? 12288 : 10240  // 소설 6000자/비소설 4000자 분량 대응
+      maxOutputTokens: maxTokens || (isNovel ? 12288 : 10240)
     };
 
     if (isNovel) {
@@ -650,6 +1021,22 @@ async function callGemini(systemPrompt, userPrompt, temperature = 0.75, isNovel 
     const response = result.response;
     const text = response.text();
 
+    if (!text || !text.trim()) {
+      const finishReason = response.candidates?.[0]?.finishReason;
+      logger.warn(`[Gemini API] 빈 응답 수신 (모델: ${modelName}, finishReason: ${finishReason})`);
+
+      if (finishReason === 'SAFETY') {
+        throw new Error('입력하신 주제나 키워드가 안전 정책에 의해 제한되었습니다. 표현을 조금 바꿔서 다시 시도해주세요.');
+      }
+
+      if (hasNext) {
+        logger.warn(`[Gemini API] 빈 응답 → 대체 모델로 재시도: ${MODEL_FALLBACK_CHAIN[modelIndex + 1]}`);
+        return callGemini(systemPrompt, userPrompt, temperature, isNovel, modelIndex + 1, maxTokens);
+      }
+
+      throw new Error('생성된 내용이 없습니다. 주제나 키워드를 바꿔서 다시 시도해주세요.');
+    }
+
     logger.info(`[Gemini API] ✅ 성공! 사용 모델: ${modelName} (응답 길이: ${text.length}자)`);
 
     return { content: text };
@@ -660,7 +1047,7 @@ async function callGemini(systemPrompt, userPrompt, temperature = 0.75, isNovel 
     if (hasNext && isRetryableWithFallback(error)) {
       const nextModel = MODEL_FALLBACK_CHAIN[modelIndex + 1];
       logger.warn(`[Gemini API] 대체 모델로 재시도: ${nextModel} (status: ${status})`);
-      return callGemini(systemPrompt, userPrompt, temperature, isNovel, modelIndex + 1);
+      return callGemini(systemPrompt, userPrompt, temperature, isNovel, modelIndex + 1, maxTokens);
     }
 
     throw error;
@@ -670,6 +1057,237 @@ async function callGemini(systemPrompt, userPrompt, temperature = 0.75, isNovel 
 const MAX_LANGUAGE_RETRIES = 3;
 const TEMPERATURE_DECREMENT = 0.1;
 const MIN_TEMPERATURE = 0.2;
+
+// ─────────────────────────────────────────────────────────────
+// QC 임계값 상수 (추후 Firebase Remote Config로 외부화 예정)
+// ─────────────────────────────────────────────────────────────
+const QC_THRESHOLDS = {
+  endingDiversity: {
+    hadEottaLimit:            1,  // '~었었다/았었다' 이 횟수 이상 → violation 1개
+    formalConsecutiveLimit:   3,  // 단정체(기본): 연속 같은 어미 한도
+    friendlyConsecutiveLimit: 4,  // 친근체(friendly): 연속 같은 어미 한도
+    violationRetryThreshold:  3,  // violation 누적 이 수 이상 → 재시도
+  },
+  simile: {
+    windowSize:    5000,  // 기준 글자 수 (이 글자 수당 maxPerWindow회)
+    maxPerWindow:     5,  // windowSize자당 허용 최대 직유 횟수
+    logOverMin:       4,  // 초과 이 수 이상: warn 로그
+    retryOverMin:     8,  // 초과 이 수 이상: 재시도
+  },
+  expressionRepeat: {
+    minPhraseLen:    4,  // 검출 대상 최소 글자 수
+    maxPhraseLen:   10,  // 검출 대상 최대 글자 수
+    minKorChars:     3,  // 구간 내 한글 최소 포함 글자 수
+    repeatThreshold: 3,  // 이 횟수 이상 반복 시 위반
+    minTextLen:    200,  // 텍스트가 이 길이 미만이면 검사 생략
+    // kungRepeatThreshold 제거 — '쿵' 표현은 QC 재시도 대신 replaceKungExpressions 후처리로 전환
+  },
+  repetition: {
+    tailSimilarity:           0.75,  // B-3/B-4: 문장 단위 유사도 임계값
+    maxTailSentences:            8,  // B-3/B-4: 탐색 최대 문장 수 (성능 상한)
+    minSentencesForFullDelete:   3,  // B-3/B-4: 전체 단락 삭제 허용 최소 문장 수
+    nonAdjacentSimilarity:    0.90,  // B-5: 비인접 단락 중복 판정 임계값 (높게 설정)
+    nonAdjacentLookback:         8,  // B-5: 뒤로 탐색할 최대 단락 수
+  },
+};
+
+// 감정 '쿵' 표현 후처리 대체 표현 풀
+// friendly(어/어요) / formal(다) 두 세트 — 원문 어미 감지 후 선택
+const KUNG_ALTERNATIVES = {
+  friendly: [
+    "숨이 턱 막혔어.",
+    "발이 바닥에 붙은 것 같았어.",
+    "눈앞이 하얘지는 것 같았어.",
+    "손끝이 싸늘해지는 걸 느꼈어.",
+    "등줄기가 서늘해졌어.",
+    "입술이 굳어버렸어.",
+    "온몸이 얼어붙는 것 같았어.",
+    "귓가에 아무 소리도 들리지 않았어.",
+    "목구멍이 바짝 마르는 것 같았어.",
+    "두 발이 바닥에 뿌리를 내린 것 같았어.",
+  ],
+  formal: [
+    "숨이 턱 막혔다.",
+    "발이 바닥에 붙은 것 같았다.",
+    "눈앞이 하얘지는 것 같았다.",
+    "손끝이 싸늘해지는 걸 느꼈다.",
+    "등줄기가 서늘해졌다.",
+    "입술이 굳어버렸다.",
+    "온몸이 얼어붙는 것 같았다.",
+    "귓가에 아무 소리도 들리지 않았다.",
+    "목구멍이 바짝 마르는 것 같았다.",
+    "두 발이 바닥에 뿌리를 내린 것 같았다.",
+  ],
+};
+
+// 감정 '쿵' 표현 후처리 직접 치환
+// - QC 재시도 대신 항상 동작하는 결정적 치환 (MAX_LANGUAGE_RETRIES 소진 후 통과 문제 해결)
+// - 원문 어미("다." vs 그 외) 감지 → 말투 맞는 대체 표현 풀 선택
+// - 쿵쿵/쿵쾅/쿵탕(의태어) 제외
+// - 단락 구조(이중 개행) 보존
+function replaceKungExpressions(text) {
+  if (!text) return text;
+
+  const kungRegex = /심장[이가]?\s*쿵|가슴[이가]?\s*쿵|쿵[,\s]*하고|쿵[,\s]*내려|쿵[,\s]*울리|쿵[,\s]*떨어/;
+  let replacedCount = 0;
+
+  // 대체 표현 순서를 전역적으로 순환 (같은 텍스트 내 반복 방지)
+  const counters = { friendly: 0, formal: 0 };
+
+  const processedParas = text.split(/\n\n+/).map(para => {
+    const sentences = para.split(/(?<=[.!?…])\s+/);
+    const resultSents = sentences.map(sentence => {
+      const m = sentence.match(kungRegex);
+      // 문장 전체에 의태어(쿵쿵/쿵쾅/쿵탕)가 있으면 치환 제외 — m[0]만 보면 "심장이 쿵" 매치가 "쿵쿵" 포함 여부를 못 잡음
+      if (!m || /쿵쿵|쿵쾅|쿵탕/.test(sentence)) return sentence;
+
+      // 원문 어미 감지: "다."로 끝나면 formal, 그 외 friendly
+      const tone = /다[.!]?\s*$/.test(sentence.trim()) ? "formal" : "friendly";
+      const pool = KUNG_ALTERNATIVES[tone];
+      const alt = pool[counters[tone] % pool.length];
+      counters[tone]++;
+      replacedCount++;
+
+      logger.info(`[kung-replace] [${tone}] "${sentence.slice(0, 50).trim()}" → "${alt}"`);
+      return alt;
+    });
+    return resultSents.join(" ");
+  });
+
+  if (replacedCount > 0) {
+    logger.warn(`[kung-replace] 감정 '쿵' 표현 ${replacedCount}개 직접 치환 완료`);
+  }
+
+  return processedParas.join("\n\n");
+}
+
+// Step 7: 어미 다양성 검증
+// - 대화문(따옴표·낫표) 제거 후 서술 텍스트만 검사
+// - '~었었다/았었다' 1회 이상, 연속 어미(말투별 한도) 각각 violation 누적
+// - violation이 violationRetryThreshold 이상 → 재시도, 미만 → warn 로그
+function checkEndingDiversity(text, speechTone = null) {
+  if (!text) return { valid: true };
+
+  const {
+    hadEottaLimit,
+    formalConsecutiveLimit,
+    friendlyConsecutiveLimit,
+    violationRetryThreshold,
+  } = QC_THRESHOLDS.endingDiversity;
+
+  // 대화문 제거 (큰따옴표, 작은따옴표, 낫표)
+  const narrative = text.replace(/"[^"]*"|'[^']*'|「[^」]*」|『[^』]*』/g, '');
+
+  const violations = [];
+
+  // 위반 ①: '~었었다/았었다' 오남용
+  const hadEottaCount = (narrative.match(/[았었]었/g) || []).length;
+  if (hadEottaCount >= hadEottaLimit) {
+    violations.push(`'~었었다' 오남용 ${hadEottaCount}회`);
+  }
+
+  // 위반 ②: 연속 같은 어미 (말투별 한도)
+  const limit = speechTone === 'friendly' ? friendlyConsecutiveLimit : formalConsecutiveLimit;
+  const sentences = narrative
+    .split(/(?<=[.!?…])\s+/)
+    .map(s => s.trim())
+    .filter(s => s.length > 4);
+
+  for (let i = 0; i <= sentences.length - limit; i++) {
+    const endings = Array.from({ length: limit }, (_, k) => {
+      const s = sentences[i + k].replace(/[.!?…"'\s]+$/, '');
+      return s.slice(-3);
+    });
+    if (endings[0].length > 1 && endings.every(e => e === endings[0])) {
+      violations.push(`어미 ${limit}회 연속: '${endings[0]}'`);
+      i += limit - 1; // 겹침 방지
+    }
+  }
+
+  if (violations.length >= violationRetryThreshold) {
+    return { valid: false, reason: violations.join(' / ') };
+  }
+  if (violations.length > 0) {
+    logger.warn(`[QC-ending] 어미 경고 (${violations.join(' / ')}) → 로그만`);
+  }
+  return { valid: true };
+}
+
+// Step 8: 한국어 자연스러움 검증 (경고 로그만, 재시도 없음)
+function warnKoreanNaturalness(text, tag = '') {
+  if (!text) return;
+  // '~의' 연속 과용: 짧은 범위 내 3회 이상
+  if (/의[^.!?…\n]{0,18}의[^.!?…\n]{0,18}의/.test(text)) {
+    logger.warn(`[KO-QC${tag}] '~의' 연속 과용 감지`);
+  }
+  // 이중 피동: 되어지/아지다 계열
+  if (/되어지|되어졌|아지다|어지다/.test(text)) {
+    logger.warn(`[KO-QC${tag}] 이중 피동 패턴 감지`);
+  }
+}
+
+// Step 9: 직유법 빈도 검증
+// - windowSize자당 maxPerWindow회 초과 시 로그/재시도
+// - 초과 logOverMin 이상 → warn 로그, retryOverMin 이상 → { valid: false }
+function checkSimileFrequency(text) {
+  if (!text || text.length < QC_THRESHOLDS.simile.windowSize / 10) return { valid: true };
+
+  const { windowSize, maxPerWindow, logOverMin, retryOverMin } = QC_THRESHOLDS.simile;
+
+  const simileCount = (text.match(/듯[이나도]?(?=\s|[.,!?…]|$)|듯했|듯한|듯하|처럼|같[은이아](?=\s|[.,!?…]|$)|같았|같더|것\s*같|마치\s/g) || []).length;
+  const normalizedCount = Math.round((simileCount / text.length) * windowSize);
+  const overCount = Math.max(0, normalizedCount - maxPerWindow);
+
+  if (overCount >= retryOverMin) {
+    return { valid: false, reason: `직유법 과다 (약 ${normalizedCount}회/${windowSize}자, ${overCount}회 초과)` };
+  }
+  if (overCount >= logOverMin) {
+    logger.warn(`[QC-simile] 직유법 다소 과다 약 ${normalizedCount}회/${windowSize}자 (${overCount}회 초과) → 로그만`);
+  }
+  return { valid: true };
+}
+
+// Step 10: 표현 레벨 반복 검출
+// - minPhraseLen~maxPhraseLen 글자 구간 중 한글 minKorChars자 이상 포함된 구간이
+//   repeatThreshold회 이상 반복되면 위반 (하위 문자열 포함 관계는 긴 것으로 대표)
+function checkExpressionRepeat(text, overrideThreshold = null) {
+  if (!text || text.length < QC_THRESHOLDS.expressionRepeat.minTextLen) return { valid: true };
+
+  const { minPhraseLen, maxPhraseLen, minKorChars } = QC_THRESHOLDS.expressionRepeat;
+  const repeatThreshold = overrideThreshold !== null ? overrideThreshold : QC_THRESHOLDS.expressionRepeat.repeatThreshold;
+  const puncEdge = /^[\s\n.,!?…"'『』「」()[\]]+|[\s\n.,!?…"'『』「」()[\]]+$/;
+
+  const phraseCounts = new Map();
+  for (let len = minPhraseLen; len <= maxPhraseLen; len++) {
+    for (let i = 0; i <= text.length - len; i++) {
+      const phrase = text.slice(i, i + len);
+      if ((phrase.match(/[가-힣]/g) || []).length < minKorChars) continue;
+      if (puncEdge.test(phrase)) continue;
+      phraseCounts.set(phrase, (phraseCounts.get(phrase) || 0) + 1);
+    }
+  }
+
+  // 반복 횟수 초과 구간 추출, 긴 것 우선 — 하위 포함 관계 제거
+  const candidates = [...phraseCounts.entries()]
+    .filter(([, c]) => c >= repeatThreshold)
+    .sort((a, b) => b[0].length - a[0].length || b[1] - a[1]);
+
+  const result = [];
+  for (const [phrase, count] of candidates) {
+    if (!result.some(([p]) => p.includes(phrase))) {
+      result.push([phrase, count]);
+    }
+  }
+
+  if (result.length > 0) {
+    const examples = result.slice(0, 3).map(([p, c]) => `'${p}'(${c}회)`).join(', ');
+    return { valid: false, reason: `표현 반복: ${examples}` };
+  }
+
+  // '쿵' 표현은 replaceKungExpressions 후처리로 전환 — 여기서는 검사하지 않음
+
+  return { valid: true };
+}
 
 // 단계별 생성 함수 (언어 오염 시 temperature 낮춰 재시도)
 async function generateStep({
@@ -681,11 +1299,13 @@ async function generateStep({
   synopsis,
   characterSheet,
   settingSheet,
-  sceneBridge,
   temperature,
   isNovel,
   title,
-  language = "ko"
+  stepMeta = null,
+  maxTokens = null,
+  language = "ko",
+  speechTone = null
 }) {
   const userPrompt = buildStepPrompt({
     topic,
@@ -695,16 +1315,17 @@ async function generateStep({
     synopsis,
     characterSheet,
     settingSheet,
-    sceneBridge,
     isNovel,
-    title
+    title,
+    stepMeta,
+    speechTone
   });
 
   let currentTemp = temperature;
   let lastContent = "";
 
   for (let attempt = 0; attempt < MAX_LANGUAGE_RETRIES; attempt++) {
-    const result = await callGemini(systemPrompt, userPrompt, currentTemp, isNovel);
+    const result = await callGemini(systemPrompt, userPrompt, currentTemp, isNovel, 0, maxTokens);
     lastContent = (result.content || "").trim();
 
     // 빈 응답 재시도 (1회)
@@ -716,7 +1337,19 @@ async function generateStep({
 
     const validation = validateOutput(lastContent, language);
     if (validation.valid) {
-      return stripMetaTags(lastContent);
+      const cleaned = stripMetaTags(lastContent);
+      if (isNovel) {
+        // 소설 전용 QC (어미·직유·표현반복) → 로그만, 재시도 없음 (후처리에서 처리)
+        const endingCheck = checkEndingDiversity(cleaned, speechTone);
+        const simileCheck = checkSimileFrequency(cleaned);
+        const exprCheck   = checkExpressionRepeat(cleaned);
+        const qcWarnings = [endingCheck.reason, simileCheck.reason, exprCheck.reason].filter(Boolean);
+        if (qcWarnings.length > 0) {
+          logger.warn(`[generateStep] QC 경고 (재시도 없음): ${qcWarnings.join(' | ')}`);
+        }
+      }
+      warnKoreanNaturalness(cleaned, `[${currentStep?.name || ''}]`);
+      return trimToLastSentence(cleaned);
     }
 
     logger.warn(`[generateStep] 언어 오염 감지 (${validation.reason}), 재시도 ${attempt + 1}/${MAX_LANGUAGE_RETRIES} (temp: ${currentTemp} → ${Math.max(MIN_TEMPERATURE, currentTemp - TEMPERATURE_DECREMENT)})`);
@@ -724,7 +1357,7 @@ async function generateStep({
   }
 
   logger.warn(`[generateStep] ${MAX_LANGUAGE_RETRIES}회 재시도 후에도 언어 오염. 마지막 출력 반환`);
-  return stripMetaTags(lastContent);
+  return trimToLastSentence(stripMetaTags(lastContent));
 }
 
 // 책 생성 함수
@@ -732,9 +1365,10 @@ exports.generateBookAI = onCall(
   {
     region: REGION,
     maxInstances: 10,
-    timeoutSeconds: 540
+    timeoutSeconds: 900
   },
   async (request) => {
+    let progressRef = null;
     try {
       if (!request.auth) {
         throw new HttpsError("unauthenticated", "로그인이 필요합니다.");
@@ -744,11 +1378,16 @@ exports.generateBookAI = onCall(
         throw new HttpsError("failed-precondition", "Gemini API 키가 설정되지 않았습니다.");
       }
 
-      const { category, subCategory, genre, keywords, isSeries, previousContext, endingStyle, title, selectedTone, selectedMood, selectedPOV, selectedSpeechTone, selectedDialogueRatio } = request.data;
+      const { category, subCategory, genre, keywords, isSeries, previousContext, endingStyle, title, selectedTone, selectedMood, selectedPOV, selectedSpeechTone, selectedDialogueRatio, appId, essayNarrator, essayAngle, selfHelpAudience, humanitiesStartingPoint } = request.data;
+
+      const uid = request.auth.uid;
+      progressRef = (appId && uid)
+        ? adminDb.doc(`artifacts/${appId}/users/${uid}/generationProgress/current`)
+        : null;
 
       // 소설류 여부 확인
       const isNovel = category === "webnovel" || category === "novel" || category === "series";
-      const temperature = isNovel ? 0.72 : 0.5;
+      const temperature = isNovel ? getNovelTemperature(category, subCategory, genre) : 0.5;
 
       // 시스템 프롬프트
       const systemPrompt = buildSystemPrompt({
@@ -762,29 +1401,37 @@ exports.generateBookAI = onCall(
         selectedMood,
         selectedPOV,
         selectedSpeechTone,
-        selectedDialogueRatio
+        selectedDialogueRatio,
+        essayNarrator: essayNarrator || null,
+        essayAngle: essayAngle || null,
+        selfHelpAudience: selfHelpAudience || null,
+        humanitiesStartingPoint: humanitiesStartingPoint || null
       });
 
       // 단계 정의 (시리즈 1화는 훅으로 끝나게, 단편/비시리즈는 5단계)
       const steps = isNovel
         ? (isSeries
           ? [
-            { name: "시작", instruction: "주인공과 배경을 매력적으로 묘사하세요. 독자가 이야기 세계에 빠져들 수 있도록 오감을 동원해 생생하게 그려내세요. 주인공의 일상, 성격, 주변 인물을 자연스럽게 보여주세요. [분량: 전체의 약 40%, 공백 포함 약 2,000자]" },
-            { name: "사건과 훅", instruction: "평온하던 일상을 깨뜨리는 '사건(Inciting Incident)'을 발생시키세요. 주인공에게 모험이나 문제가 다가오는 장면을 보여주세요. [중요] 사건을 해결하지 말고, 주인공이 모험을 떠나거나 문제에 직면하는 순간에서 멈추세요. 마지막 문장은 다음 화가 궁금해서 미치게 만드는 절단신공으로 끝내세요. [분량: 전체의 약 60%, 공백 포함 약 3,000자]" }
+            { name: "시작",     instruction: "주인공과 배경을 매력적으로 묘사하세요. 독자가 이야기 세계에 빠져들 수 있도록 오감을 동원해 생생하게 그려내세요. 주인공의 일상, 성격, 주변 인물을 자연스럽게 보여주세요.", maxTokens: 6000, targetChars: 2000, accumulatedAfter: 2000, totalChars: 5000, role: "세계와 주인공 소개. 사건은 아직 발생하지 않음. 독자가 세계에 발을 딛는 단계.", nextStepName: "사건과 훅" },
+            { name: "사건과 훅", instruction: "평온하던 일상을 깨뜨리는 '사건(Inciting Incident)'을 발생시키세요. 주인공에게 모험이나 문제가 다가오는 장면을 보여주세요. [중요] 사건을 해결하지 말고, 주인공이 모험을 떠나거나 문제에 직면하는 순간에서 멈추세요. 마지막 문장은 다음 화가 궁금해서 미치게 만드는 절단신공으로 끝내세요.", maxTokens: 8192, targetChars: 3000, accumulatedAfter: 5000, totalChars: 5000, role: "갈등 발화. 절단신공으로 마무리. 해결하지 말 것.", nextStepName: null }
           ]
           : [
-            { name: "발단", instruction: "스토리의 시작. 배경과 분위기를 감각적으로 묘사하고, 주인공을 자연스럽게 등장시키세요. 독자가 이 세계에 발을 딛는 느낌을 주세요. [분량: 전체의 약 10%, 공백 포함 약 600자]" },
-            { name: "전개", instruction: "사건을 본격적으로 전개하고 갈등의 씨앗을 심으세요. 인물 간 관계와 긴장감을 구축하세요. 독자가 '이 다음엔 어떻게 되지?'라고 궁금해하게 만드세요. [분량: 전체의 약 20%, 공백 포함 약 1,200자]" },
-            { name: "위기", instruction: "갈등을 심화시키고 긴장감을 최대로 높이세요. 주인공의 내면 갈등과 외부 압박을 동시에 보여주세요. 독자가 손에 땀을 쥐게 하세요. [분량: 전체의 약 25%, 공백 포함 약 1,500자]" },
-            { name: "절정", instruction: "갈등을 최고조로 끌어올리고 결정적 전환점을 만드세요. 가장 핵심적이고 감동적인 장면입니다. 행동, 대화, 감정을 모두 쏟아부으세요. [분량: 전체의 약 30%, 공백 포함 약 1,800자]" },
-            { name: "결말", instruction: "갈등을 해소하고 여운을 남기세요. 서두르지 말고, 인물의 변화와 감정의 착지를 충분히 보여주세요. 독자가 책을 덮은 뒤에도 생각나는 마지막을 만드세요. [분량: 전체의 약 15%, 공백 포함 약 900자]" }
+            { name: "발단", instruction: "스토리의 시작. 배경과 분위기를 감각적으로 묘사하고, 주인공을 자연스럽게 등장시키세요. 독자가 이 세계에 발을 딛는 느낌을 주세요.", maxTokens: 2000, targetChars: 600,  accumulatedAfter: 600,  totalChars: 6000, role: "배경·분위기 설정, 주인공 등장. 사건은 아직 시작 안 함.", nextStepName: "전개" },
+            { name: "전개", instruction: "사건을 본격적으로 전개하고 갈등의 씨앗을 심으세요. 인물 간 관계와 긴장감을 구축하세요. 독자가 '이 다음엔 어떻게 되지?'라고 궁금해하게 만드세요.", maxTokens: 3000, targetChars: 1200, accumulatedAfter: 1800, totalChars: 6000, role: "갈등 씨앗만 심을 것. 폭발은 다음 단계에 양보.", nextStepName: "위기" },
+            { name: "위기", instruction: "갈등을 심화시키고 긴장감을 최대로 높이세요. 주인공의 내면 갈등과 외부 압박을 동시에 보여주세요. 독자가 손에 땀을 쥐게 하세요.", maxTokens: 3500, targetChars: 1500, accumulatedAfter: 3300, totalChars: 6000, role: "갈등 심화. 절정 직전까지 끌어올리되 결정적 폭발은 절정에 양보.", nextStepName: "절정" },
+            { name: "절정", instruction: "갈등을 최고조로 끌어올리고 결정적 전환점을 만드세요. 가장 핵심적이고 감동적인 장면입니다. 행동, 대화, 감정을 모두 쏟아부으세요.", maxTokens: 4000, targetChars: 1800, accumulatedAfter: 5100, totalChars: 6000, role: "결정적 전환점. 가장 길고 가장 중요한 단계. 모든 걸 쏟아부을 것.", nextStepName: "결말" },
+            { name: "결말", instruction: "갈등을 해소하고 여운을 남기세요. 서두르지 말고, 인물의 변화와 감정의 착지를 충분히 보여주세요. 독자가 책을 덮은 뒤에도 생각나는 마지막을 만드세요.", maxTokens: 6000, targetChars: 1500, accumulatedAfter: 6600, totalChars: 6600, role: "갈등 해소 착지. 새 사건 도입 금지. 여운 남는 마지막 문장.", nextStepName: null }
           ])
         : [
-          { name: "서론", instruction: "독자의 호기심을 자극하는 질문이나 장면으로 시작하세요. 주제를 자연스럽게 끌어내되, '이 글은 ~에 대한 것입니다' 같은 직접 선언은 피하세요. [분량: 전체의 약 25%, 공백 포함 약 1,000자]" },
-          { name: "본론 1", instruction: "주제에 대한 깊이 있는 통찰을 구체적 사례·경험·비유와 함께 전개하세요. 추상적 설명 대신 독자가 눈앞에 그릴 수 있는 장면을 제시하세요. [분량: 전체의 약 25%, 공백 포함 약 1,000자]" },
-          { name: "본론 2", instruction: "새로운 관점, 반전된 시각, 또는 구체적 해결책을 제시하세요. 본론 1과 다른 각도에서 주제를 조명하되, 논리적으로 연결되게 하세요. [분량: 전체의 약 30%, 공백 포함 약 1,200자]" },
-          { name: "결론", instruction: "핵심 메시지를 독자의 가슴에 남기세요. '결론적으로' 같은 형식적 표현 없이, 여운이 남는 문장으로 자연스럽게 마무리하세요. [분량: 전체의 약 20%, 공백 포함 약 800자]" }
+          { name: "서론",  instruction: "독자의 호기심을 자극하는 질문이나 장면으로 시작하세요. 주제를 자연스럽게 끌어내되, '이 글은 ~에 대한 것입니다' 같은 직접 선언은 피하세요.", maxTokens: 2400, targetChars: 800,  accumulatedAfter: 800,  totalChars: 3500, role: "독자 호기심 유발. 주제 자연스럽게 도입.", nextStepName: "본론 1" },
+          { name: "본론 1", instruction: "주제에 대한 깊이 있는 통찰을 구체적 사례·경험·비유와 함께 전개하세요. 추상적 설명 대신 독자가 눈앞에 그릴 수 있는 장면을 제시하세요.", maxTokens: 2700, targetChars: 900,  accumulatedAfter: 1700, totalChars: 3500, role: "핵심 통찰 + 구체적 사례. 추상 설명 금지.", nextStepName: "본론 2" },
+          { name: "본론 2", instruction: "새로운 관점, 반전된 시각, 또는 구체적 해결책을 제시하세요. 본론 1과 다른 각도에서 주제를 조명하되, 논리적으로 연결되게 하세요.", maxTokens: 3200, targetChars: 1050, accumulatedAfter: 2750, totalChars: 3500, role: "새 관점 또는 해결책. 본론 1과 다른 각도.", nextStepName: "결론" },
+          { name: "결론",  instruction: "핵심 메시지를 독자의 가슴에 남기세요. '결론적으로' 같은 형식적 표현 없이, 여운이 남는 문장으로 자연스럽게 마무리하세요.", maxTokens: 2100, targetChars: 700,  accumulatedAfter: 3450, totalChars: 3500, role: "핵심 메시지 착지. 형식적 결론 표현 금지.", nextStepName: null }
         ];
+
+      if (progressRef) {
+        progressRef.set({ status: "preparing", stepName: null, stepIndex: 0, totalSteps: 0, updatedAt: admin.firestore.FieldValue.serverTimestamp() }).catch(() => {});
+      }
 
       let fullContent = "";
       const topic = `${keywords || ""} ${genre || ""}`.trim();
@@ -800,7 +1447,6 @@ exports.generateBookAI = onCall(
       );
       let storySummary = (previousContext || "").toString().trim();
       let lastParagraph = "";
-      let sceneBridge = "";
       const stepResults = [];
 
       // 단계별 생성
@@ -818,14 +1464,26 @@ exports.generateBookAI = onCall(
             synopsis: staticContext.synopsis,
             characterSheet: staticContext.characterSheet,
             settingSheet: staticContext.settingSheet,
-            sceneBridge: isNovel ? sceneBridge : "",
             temperature,
             isNovel,
-            title: requestedTitle
+            title: requestedTitle,
+            stepMeta: step.targetChars ? {
+              targetChars: step.targetChars,
+              accumulatedChars: (step.accumulatedAfter || 0) - (step.targetChars || 0),
+              totalChars: step.totalChars || 6600,
+              nextStepName: step.nextStepName || null,
+              role: step.role || null
+            } : null,
+            maxTokens: step.maxTokens || null,
+            speechTone: selectedSpeechTone || null
           });
 
           if (!stepContent || !stepContent.trim()) {
             throw new Error("빈 응답이 반환되었습니다.");
+          }
+
+          if (progressRef) {
+            progressRef.set({ status: "writing", stepName: step.name, stepIndex: i + 1, totalSteps: steps.length, updatedAt: admin.firestore.FieldValue.serverTimestamp() }).catch(() => {});
           }
 
           const stepSummary = await summarizeStepContent(stepContent, systemPrompt, isNovel);
@@ -833,10 +1491,6 @@ exports.generateBookAI = onCall(
             storySummary = storySummary ? `${storySummary}\n${stepSummary}` : stepSummary;
           }
           lastParagraph = extractLastSentences(stepContent, 5);
-          // 마지막 단계는 다음 장면이 없으므로 씬 브릿지 추출 생략
-          if (isNovel && i < steps.length - 1) {
-            sceneBridge = await extractSceneBridge(stepContent, systemPrompt, isNovel);
-          }
 
           stepResults.push({
             name: step.name,
@@ -854,6 +1508,29 @@ exports.generateBookAI = onCall(
         }
       }
 
+      if (isNovel) {
+        // 소설 전용 전체 후처리
+        fullContent = detectAndFixRepetition(fullContent.trim());
+        fullContent = replaceKungExpressions(fullContent);
+
+        const fullSimileCheck = checkSimileFrequency(fullContent);
+        if (!fullSimileCheck.valid) {
+          logger.warn(`[generateBookAI] 전체 직유법 과다 — 재생성 불가, 로그만 기록 (${fullSimileCheck.reason})`);
+        }
+
+        const fullExprCheck = checkExpressionRepeat(fullContent);
+        if (!fullExprCheck.valid) {
+          logger.warn(`[generateBookAI] 전체 표현 반복 과다 — 재생성 불가, 로그만 기록 (${fullExprCheck.reason})`);
+        }
+      } else {
+        fullContent = fullContent.trim();
+        // 에세이 전용 표현 반복 경고 (threshold=2 — 소설보다 엄격)
+        const essayExprCheck = checkExpressionRepeat(fullContent, 2);
+        if (!essayExprCheck.valid) {
+          logger.warn(`[generateBookAI] 에세이 표현 반복 감지 — 로그만 기록 (${essayExprCheck.reason})`);
+        }
+      }
+
       // 제목 결정: 사용자 입력 > AI 생성 > 키워드 기반 fallback
       const finalTitle = requestedTitle || staticContext.title || `${keywords || "작품"} - ${genre || category}`;
 
@@ -862,7 +1539,7 @@ exports.generateBookAI = onCall(
 
       return {
         title: finalTitle,
-        content: fullContent.trim(),
+        content: fullContent,
         summary: summary,
         steps: stepResults,
         storySummary: storySummary,
@@ -881,6 +1558,8 @@ exports.generateBookAI = onCall(
       }
 
       throw new HttpsError("internal", `책 생성 중 오류가 발생했습니다: ${error.message}`);
+    } finally {
+      if (progressRef) progressRef.delete().catch(() => {});
     }
   }
 );
@@ -890,7 +1569,7 @@ exports.generateSeriesEpisode = onCall(
   {
     region: REGION,
     maxInstances: 10,
-    timeoutSeconds: 540
+    timeoutSeconds: 900
   },
   async (request) => {
     try {
@@ -919,7 +1598,9 @@ exports.generateSeriesEpisode = onCall(
         selectedPOV,
         selectedSpeechTone,
         selectedDialogueRatio,
-        endingStyle
+        endingStyle,
+        recentCliffhangerTypes,
+        episodeNum
       } = request.data;
 
       if (!seriesId || !continuationType) {
@@ -927,8 +1608,13 @@ exports.generateSeriesEpisode = onCall(
       }
 
       const isNovel = true;
-      const temperature = 0.72;
+      const temperature = getNovelTemperature(category, subCategory, genre);
       const isFinalize = continuationType === 'finalize';
+
+      // Cliffhanger 유형 자동 선택 (이어쓰기 화에만 적용)
+      const chosenCliffhangerType = (!isFinalize)
+        ? selectCliffhangerType(recentCliffhangerTypes || [], genre || '')
+        : null;
 
       // 시스템 프롬프트
       const systemPrompt = buildSystemPrompt({
@@ -943,7 +1629,8 @@ exports.generateSeriesEpisode = onCall(
         selectedMood,
         selectedPOV: selectedPOV || null,
         selectedSpeechTone: selectedSpeechTone || null,
-        selectedDialogueRatio: selectedDialogueRatio || null
+        selectedDialogueRatio: selectedDialogueRatio || null,
+        selectedCliffhangerType: chosenCliffhangerType
       });
 
       const topic = `${keywords || ""} ${genre || ""}`.trim();
@@ -952,11 +1639,6 @@ exports.generateSeriesEpisode = onCall(
       const lastParagraph = extractLastSentences(lastEpisodeContent || "", 10);
       // 장기 연재 시 누적 요약이 너무 길면 압축
       const previousStorySummary = await compressCumulativeSummary(cumulativeSummary || "", systemPrompt, true);
-      // 완결은 다음 장면이 없으므로 scene bridge 추출 불필요
-      const sceneBridge = (!isFinalize && lastEpisodeContent)
-        ? await extractSceneBridge(lastEpisodeContent, systemPrompt, true)
-        : "";
-
       // 시리즈 집필 단계별 지침 (Narrative Arc)
       const step = isFinalize
         ? {
@@ -990,10 +1672,10 @@ exports.generateSeriesEpisode = onCall(
         synopsis: synopsis || "",
         characterSheet: characterSheet || "",
         settingSheet: settingSheet || "",
-        sceneBridge,
         temperature,
         isNovel: true,
-        title: requestedTitle
+        title: requestedTitle,
+        speechTone: selectedSpeechTone || null
       });
 
       if (!stepContent || !stepContent.trim()) {
@@ -1009,7 +1691,8 @@ exports.generateSeriesEpisode = onCall(
         content: stepContent.trim(),
         summary: stepSummary,
         cumulativeSummary: updatedSummary,
-        isFinale: isFinalize
+        isFinale: isFinalize,
+        cliffhangerType: chosenCliffhangerType
       };
     } catch (error) {
       logger.error("[generateSeriesEpisode] 에러:", {
@@ -1325,6 +2008,7 @@ const STORE_ITEMS_SERVER = {
   magic_eraser: { price: 10, name: '마법 지우개' },
   paint_brush:  { price: 50, name: '페인트붓' },
   sharp:        { price: 10, name: '샤프' },
+  drawing_paper:{ price: 50, name: '도화지' },
 };
 
 // ── 페인트붓: AI 표지 재생성 (미리보기용 — Firestore 업데이트 없음) ──
@@ -1914,7 +2598,7 @@ exports.generateStoryAI = onCall(
   {
     region: REGION,
     maxInstances: 10,
-    timeoutSeconds: 540
+    timeoutSeconds: 900
   },
   async (request) => {
     return exports.generateBookAI(request);

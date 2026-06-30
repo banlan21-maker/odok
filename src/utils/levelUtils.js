@@ -5,12 +5,13 @@
  *
  * 7단계 칭호 시스템:
  * 1단계 (Lv.1~10)  새싹       🌱  기본 혜택
- * 2단계 (Lv.11~20) 작가       ✏️  출석 잉크+1, 후원 기능 오픈
- * 3단계 (Lv.21~40) 숙련 작가  🪶  출석 잉크+2
+ * 2단계 (Lv.11~20) 작가       ✏️  후원 기능 오픈
+ * 3단계 (Lv.21~40) 숙련 작가  🪶  비소설 키워드 새로고침 무료
  * 4단계 (Lv.41~60) 베스트 작가 🖊️  독서 비용 할인 (2→1)
  * 5단계 (Lv.61~80) 스타 작가  ✒️  집필 비용 1차 할인 (5→4)
- * 6단계 (Lv.81~98) 거장       🖋️  출석 잉크+3
+ * 6단계 (Lv.81~98) 거장       🖋️  기본 혜택
  * 7단계 (Lv.99)    마스터     🌈  집필 비용 최종 할인 (5→3), 프로필 전용 테두리
+ * (출석 잉크는 레벨과 무관하게 하루 1개)
  */
 
 const XP_PER_INK = 10;  // 잉크 1개 소모 = 10 XP
@@ -84,20 +85,10 @@ export const getLevelProgressPercent = (xp = 0) => {
 export const canDonate = (level = 1) => (level || 1) >= 11;
 
 /**
- * 출석 보상 잉크:
- * 새싹(1~10): 2
- * 작가(11~20): 3 (+1)
- * 숙련작가(21~40): 4 (+2)
- * 베스트~스타(41~80): 4
- * 거장~마스터(81+): 5 (+3)
+ * 출석 보상 잉크: 레벨과 무관하게 하루 1개 (2026-06 밸런스 조정)
+ * (인자는 호출부 호환을 위해 유지하되 사용하지 않음)
  */
-export const getAttendanceInk = (level = 1) => {
-  const lv = level || 1;
-  if (lv >= 81) return 5;
-  if (lv >= 21) return 4;
-  if (lv >= 11) return 3;
-  return 2;
-};
+export const getAttendanceInk = () => 1;
 
 /**
  * 2회차 집필 비용:
@@ -110,11 +101,6 @@ export const getExtraWriteInkCost = (level = 1) => {
   if (lv >= 99) return 3;
   if (lv >= 61) return 4;
   return 5;
-};
-
-/** 1회 무료 집필 보상 (기존 유지) */
-export const getFreeWriteRewardInk = (level = 1) => {
-  return 5 + Math.floor((level || 1) / 3);
 };
 
 /**
