@@ -17,8 +17,8 @@ const ContinueReadingBar = ({ book, ratio, onContinue, onDismiss, t = {} }) => {
     <>
       <style>{`
         @keyframes cr-slide-up {
-          from { transform: translateY(100%); opacity: 0; }
-          to   { transform: translateY(0);   opacity: 1; }
+          from { transform: translate(-50%, 100%); opacity: 0; }
+          to   { transform: translate(-50%, 0);    opacity: 1; }
         }
         .cr-bar { animation: cr-slide-up 0.4s cubic-bezier(0.32,0.72,0,1) both; }
       `}</style>
