@@ -184,17 +184,20 @@ export const generateSeriesEpisode = async ({
 };
 
 /**
- * 동화공방: 아이가 주인공인 짧은 동화 생성
+ * 동화공방: 아이가 주인공인 동화 생성 (연령별 다단계)
  * @param {Object} options
- * @param {string} options.childName - 자녀 이름
- * @param {string} options.theme - 주제 ID (courage/friendship/dream/adventure/family/animal/habit/royal)
- * @param {string|null} options.appId
+ * @param {string} options.childName - 자녀 이름 (주인공)
+ * @param {string} options.age - 'toddler'(유아3~5) | 'lower'(저학년6~8)
+ * @param {string} options.gender - 'boy' | 'girl' | 'neutral'
+ * @param {string} [options.theme] - 교훈·테마 (선택, 빈값 허용)
+ * @param {string} options.interaction - 'questions' | 'none'
+ * @param {string|null} [options.appId]
  * @returns {Promise<{title: string, content: string}>}
  */
-export const generateFairytale = async ({ childName, theme, appId = null }) => {
+export const generateFairytale = async ({ childName, age, gender, theme, interaction, appId = null }) => {
   try {
-    const fn = httpsCallable(functions, 'generateFairytale', { timeout: 300000 });
-    const result = await fn({ childName, theme, appId: appId || null });
+    const fn = httpsCallable(functions, 'generateFairytale', { timeout: 540000 });
+    const result = await fn({ childName, age, gender, theme: theme || '', interaction, appId: appId || null });
     const data = result.data;
     if (!data || !data.title || !data.content) {
       throw new Error('AI가 올바른 형식의 동화를 반환하지 않았습니다.');

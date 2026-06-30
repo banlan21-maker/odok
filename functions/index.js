@@ -3156,63 +3156,135 @@ exports.migrateAnonymousBooks = onCall(
   }
 );
 
-// ── 동화공방: 아이가 주인공인 짧은 동화 생성 (단일 호출, ~1,200자) ──────
-const FAIRY_THEMES = {
-  courage:    "용기",
-  friendship: "우정",
-  dream:      "꿈과 상상",
-  adventure:  "모험",
-  family:     "가족 사랑",
-  animal:     "동물 친구와 자연",
-  habit:      "좋은 습관",
-  royal:      "공주와 왕자",
+// ── 동화공방: 아이가 주인공인 동화 생성 (연령별 다단계 + 진행표시) ──────
+// 안전: callGemini 기본 BLOCK_ONLY_HIGH 사용. 소설 QC 미적용(isNovel=false).
+//       언어오염 검증(validateOutput) + 메타태그 제거(stripMetaTags)만 적용.
+const FAIRY_STEPS = {
+  // 유아(3~5세): 800~1,200자, 도입→사건→해결 (3단계)
+  toddler: [
+    { name: "도입", instruction: "주인공 ${name}을(를) 따뜻하고 사랑스럽게 소개하세요. 어디서 무엇을 하며 지내는지 짧은 문장으로 그려주세요. 의성어·의태어를 넣어 소리내어 읽기 즐겁게.", targetChars: 280, maxTokens: 900 },
+    { name: "사건", instruction: "${name}에게 작고 귀여운 사건이 생깁니다(예: 무언가를 잃어버리거나, 새 친구를 만나거나). 아주 약한 갈등이면 충분합니다. 반복되는 리듬으로 아이가 다음을 예측하게 하세요.", targetChars: 400, maxTokens: 1100 },
+    { name: "따뜻한 해결", instruction: "${name}이(가) 사건을 따뜻하게 해결하고 포근하게 마무리합니다. 마지막에 아주 단순하고 명확한 교훈 한 줄을 남기세요. 잠들기 전에 읽어도 안심되는 결말로.", targetChars: 400, maxTokens: 1100 },
+  ],
+  // 저학년(6~8세): 1,500~2,500자, 도입→문제→시도→해결 (4단계)
+  lower: [
+    { name: "도입", instruction: "주인공 ${name}과(와) 배경을 생생하게 소개하세요. ${name}이(가) 어떤 아이이고 무엇을 좋아하는지 보여주세요.", targetChars: 420, maxTokens: 1200 },
+    { name: "문제 발생", instruction: "${name}에게 해결하고 싶은 문제나 도전이 생깁니다. 인과관계가 분명한 문장('~해서 ~했어요')으로 상황을 전개하세요.", targetChars: 560, maxTokens: 1500 },
+    { name: "시도", instruction: "${name}이(가) 문제를 해결하려 여러 번 노력합니다. 친구의 도움이나 작은 모험, 약간의 놀라움을 넣어도 좋아요.", targetChars: 560, maxTokens: 1500 },
+    { name: "해결", instruction: "${name}이(가) 마침내 문제를 해결하고 한 뼘 성장합니다. 따뜻하고 포근하게 마무리하고 자연스러운 교훈을 남기세요.", targetChars: 520, maxTokens: 1400 },
+  ],
 };
 
+function buildFairySystemPrompt({ age, gender, theme, wantQuestions, name }) {
+  const ageGuide = age === "lower"
+    ? "대상은 초등 저학년(6~8세)입니다. 인과관계가 분명한 문장('~해서 ~했어요')을 쓰고, 단순한 갈등과 해결 구조, 모험·우정 같은 테마, 약간의 놀라움이나 반전을 넣어도 좋습니다."
+    : "대상은 유아(3~5세)입니다. 한 문장은 아주 짧게, 한 장면에 한두 문장만 씁니다. 의성어·의태어(폴짝폴짝, 데굴데굴, 살금살금)를 풍부하게 써서 소리내어 읽을 때 재미있게. 갈등은 아주 약하게(잃어버린 인형 찾기 수준), 반복되는 리듬으로 아이가 다음을 예측하며 참여하게. 교훈은 단순하고 명확하게.";
+  const genderGuide = gender === "boy"
+    ? `${name}은(는) 남자아이입니다.`
+    : gender === "girl"
+      ? `${name}은(는) 여자아이입니다.`
+      : `${name}의 성별은 드러내지 말고, '소년/소녀' 같은 표현 대신 이름 위주로 중립적으로 서술하세요.`;
+  const themeGuide = theme
+    ? `이 동화의 교훈·테마는 "${theme}"입니다. 설교하듯 말하지 말고 이야기 속에 자연스럽게 녹여내세요.`
+    : "특정 교훈을 강요하지 말고, 따뜻하고 포근한 일상 이야기로 만드세요.";
+  const questionGuide = wantQuestions
+    ? `이야기의 장면 전환 지점에 아이에게 묻는 질문을 전체에서 2~3회만 자연스럽게 넣으세요(예: "${name}는 어떻게 했을까요?", "다음엔 무슨 일이 일어날까요?"). 너무 자주 넣어 몰입을 깨지 마세요.`
+    : "독자에게 묻는 질문은 넣지 말고, 매끄럽게 흐르는 이야기로 만드세요.";
+  return [
+    "당신은 부모가 아이에게 읽어주는 한국어 동화를 쓰는 따뜻한 동화 작가입니다.",
+    ageGuide,
+    genderGuide,
+    themeGuide,
+    questionGuide,
+    "공통 규칙: 소리내어 읽기 좋은 리듬과 운율을 살립니다. 너무 긴 문장은 금지(읽어주다 숨차지 않게). 무섭거나 자극적인 내용은 금지(잠들기 전에도 안전하게). 안심되는 따뜻하고 포근한 결말로 끝냅니다.",
+    `주인공의 이름은 "${name}"이며, 이야기 내내 이 이름을 자연스럽게 사용합니다.`,
+    "한글, 공백, 기본 문장부호만 사용하고 다른 언어(한자·영어·일본어 등)는 쓰지 마세요.",
+    "장면 제목·단계 이름·별표·머리표는 출력하지 말고 동화 본문만 쓰세요.",
+  ].join("\n");
+}
+
+function buildFairyStepPrompt({ name, step, storySoFar, isLast }) {
+  const inst = step.instruction.replace(/\$\{name\}/g, name);
+  return [
+    storySoFar ? `[지금까지의 이야기]\n${storySoFar}\n` : "",
+    `이번 장면을 이어서 쓰세요.`,
+    inst,
+    `분량: 한국어 약 ${step.targetChars}자.`,
+    isLast ? "이 장면에서 이야기를 따뜻하게 완결하세요." : "다음 장면으로 자연스럽게 이어지도록 쓰세요.",
+    "장면 제목 없이 본문만 출력하세요.",
+  ].filter(Boolean).join("\n");
+}
+
 exports.generateFairytale = onCall(
-  { region: REGION, maxInstances: 10, timeoutSeconds: 300 },
+  { region: REGION, maxInstances: 10, timeoutSeconds: 540 },
   async (request) => {
-    if (!request.auth) throw new HttpsError("unauthenticated", "로그인이 필요합니다.");
-    if (!GEMINI_API_KEY) throw new HttpsError("failed-precondition", "Gemini API 키가 설정되지 않았습니다.");
+    let progressRef = null;
+    try {
+      if (!request.auth) throw new HttpsError("unauthenticated", "로그인이 필요합니다.");
+      if (!GEMINI_API_KEY) throw new HttpsError("failed-precondition", "Gemini API 키가 설정되지 않았습니다.");
 
-    const { childName, theme } = request.data || {};
-    const safeName = String(childName || "").trim().replace(/[<>]/g, "").slice(0, 20);
-    if (!safeName) throw new HttpsError("invalid-argument", "자녀 이름이 필요합니다.");
-    const themeLabel = FAIRY_THEMES[theme] || "용기";
+      const { childName, age, gender, theme, interaction, appId } = request.data || {};
+      const name = String(childName || "").trim().replace(/[<>]/g, "").slice(0, 12);
+      if (!name) throw new HttpsError("invalid-argument", "자녀 이름이 필요합니다.");
+      const ageKey = age === "lower" ? "lower" : "toddler";
+      const genderKey = gender === "boy" ? "boy" : gender === "girl" ? "girl" : "neutral";
+      const cleanTheme = String(theme || "").trim().slice(0, 30);
+      const wantQuestions = interaction === "questions";
+      const uid = request.auth.uid;
 
-    const systemPrompt = [
-      "당신은 따뜻하고 다정한 한국어 동화 작가입니다.",
-      "유아~초등 저학년 아이가 듣기 좋은, 밝고 안전하며 교훈이 담긴 동화를 씁니다.",
-      "폭력·공포·잔인함·무서운 장면은 절대 넣지 않습니다.",
-      "쉬운 단어와 짧고 리듬감 있는 문장을 사용합니다.",
-      "한글, 공백, 기본 문장부호만 사용하고 다른 언어(한자·영어·일본어 등)는 쓰지 않습니다.",
-    ].join("\n");
+      progressRef = (appId && uid)
+        ? adminDb.doc(`artifacts/${appId}/users/${uid}/generationProgress/current`)
+        : null;
 
-    const userPrompt = [
-      `주인공의 이름은 "${safeName}" 입니다. 이 아이가 동화의 주인공이며, 이름을 자연스럽게 여러 번 불러주세요.`,
-      `동화의 주제는 "${themeLabel}" 입니다.`,
-      "분량: 한국어 1,000~1,400자.",
-      "구성: 6~8개의 짧은 장면으로 나누고, 각 장면은 2~4문장으로 씁니다. 장면과 장면 사이는 빈 줄로 구분합니다.",
-      "이야기 구조: 평범한 시작 → 작은 사건이나 모험 → 살짝의 어려움 → 따뜻한 해결 → 마지막에 부드러운 한 줄 교훈.",
-      "",
-      "아래 형식을 반드시 지켜 출력하세요(머리표·장면번호·별표 금지):",
-      "제목: (15자 이내의 동화 제목, 아이 이름을 넣어도 좋음)",
-      "본문:",
-      "(여기에 동화 본문을 장면별 빈 줄 구분으로)",
-    ].join("\n");
+      const systemPrompt = buildFairySystemPrompt({ age: ageKey, gender: genderKey, theme: cleanTheme, wantQuestions, name });
+      const steps = FAIRY_STEPS[ageKey];
 
-    const result = await callGemini(systemPrompt, userPrompt, 0.7, false);
-    const text = stripMetaTags((result.content || "").trim());
+      if (progressRef) progressRef.set({ status: "preparing", stepName: null, stepIndex: 0, totalSteps: steps.length, updatedAt: admin.firestore.FieldValue.serverTimestamp() }).catch(() => {});
 
-    const titleMatch = text.match(/제목\s*[:：]\s*(.+)/);
-    let title = (titleMatch ? titleMatch[1] : "").trim().replace(/^["'“”]|["'“”]$/g, "").slice(0, 20);
-    let content = text
-      .replace(/^제목\s*[:：].*$/m, "")
-      .replace(/^본문\s*[:：]?\s*$/m, "")
-      .trim();
-    if (!title) title = `${safeName}의 ${themeLabel} 동화`;
-    if (!content) content = text;
+      let storySoFar = "";
+      const parts = [];
+      for (let i = 0; i < steps.length; i++) {
+        const step = steps[i];
+        if (progressRef) progressRef.set({ status: "writing", stepName: step.name, stepIndex: i + 1, totalSteps: steps.length, updatedAt: admin.firestore.FieldValue.serverTimestamp() }).catch(() => {});
 
-    logger.info(`[Fairytale] "${title}" (${content.length}자)`);
-    return { title, content };
+        const userPrompt = buildFairyStepPrompt({ name, step, storySoFar, isLast: i === steps.length - 1 });
+
+        // 언어 오염 시 temperature 낮춰 재시도 (메타태그 제거 + 검증). 소설 QC는 적용하지 않음.
+        let content = "";
+        for (let attempt = 0; attempt < 3; attempt++) {
+          const temp = 0.8 - attempt * 0.15;
+          const result = await callGemini(systemPrompt, userPrompt, temp, false, 0, step.maxTokens);
+          content = stripMetaTags((result.content || "").trim());
+          if (content && validateOutput(content, "ko").valid) break;
+        }
+        content = trimToLastSentence(content);
+        if (content) {
+          parts.push(content);
+          storySoFar = storySoFar ? `${storySoFar}\n\n${content}` : content;
+        }
+      }
+
+      const fullContent = parts.join("\n\n").trim();
+      if (!fullContent) throw new HttpsError("internal", "동화 생성 결과가 비어 있습니다.");
+
+      // 제목 생성 (가벼운 1회, flash). 실패 시 폴백.
+      let title = cleanTheme ? `${name}와 ${cleanTheme}` : `${name}의 동화`;
+      try {
+        const titlePrompt = `다음 동화에 어울리는 한국어 제목을 15자 이내로 하나만 지어줘. 설명·따옴표 없이 제목만.\n\n${fullContent.slice(0, 800)}`;
+        const tr = await callGemini("너는 동화 제목을 짓는 작가다. 한글만 사용한다.", titlePrompt, 0.7, false, 2, 100);
+        const tt = stripMetaTags((tr.content || "").trim()).split("\n")[0].replace(/^["'“”]|["'“”]$/g, "").trim().slice(0, 20);
+        if (tt) title = tt;
+      } catch (e) { logger.warn("[Fairytale] 제목 생성 실패, 폴백 사용"); }
+
+      if (progressRef) progressRef.set({ status: "done", updatedAt: admin.firestore.FieldValue.serverTimestamp() }).catch(() => {});
+
+      logger.info(`[Fairytale] "${title}" (${fullContent.length}자, age=${ageKey}, ${steps.length}단계, q=${wantQuestions})`);
+      return { title, content: fullContent };
+    } catch (err) {
+      if (progressRef) progressRef.set({ status: "error", updatedAt: admin.firestore.FieldValue.serverTimestamp() }).catch(() => {});
+      logger.error("[Fairytale] 오류:", err?.message || err);
+      if (err instanceof HttpsError) throw err;
+      throw new HttpsError("internal", "동화 생성에 실패했습니다.");
+    }
   }
 );
