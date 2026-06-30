@@ -66,7 +66,8 @@ import { doc, getDoc, setDoc } from 'firebase/firestore';
 const rawAppId = typeof __app_id !== 'undefined' ? __app_id : 'odok-app-default';
 const appId = rawAppId.replace(/\//g, '_');
 
-const APP_VERSION = "2.2.3";
+// package.json 버전을 vite define으로 주입 → 실제 릴리스 버전과 자동 일치 (수동 관리 불필요)
+const APP_VERSION = typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : '2.2.4';
 
 const STORE_URL = 'https://play.google.com/store/apps/details?id=com.banlan21.odok';
 const DEFAULT_UPDATE_MSG = '새로운 버전이 출시되었습니다. 원활한 사용을 위해 업데이트를 진행해주세요.';
@@ -109,7 +110,8 @@ const App = () => {
         }
         const settings = snap.data();
         const latestVer = settings.latest_version || settings.min_version || APP_VERSION;
-        if (compareVersions(APP_VERSION, latestVer) < 0) {
+        // 업데이트 모달은 네이티브(스토어 설치본)에서만 — 웹은 호스팅으로 자동 갱신됨
+        if (compareVersions(APP_VERSION, latestVer) < 0 && Capacitor.isNativePlatform()) {
           setForceUpdate({
             storeUrl: settings.store_url || STORE_URL,
             updateMsg: settings.update_msg || DEFAULT_UPDATE_MSG,
@@ -1054,7 +1056,14 @@ const App = () => {
                   <p className="text-xs text-orange-500 font-bold">{(t.force_update_version || '').replace('{version}', APP_VERSION)}</p>
                 </div>
                 <button
-                  onClick={() => window.open(forceUpdate.storeUrl, '_blank')}
+                  onClick={() => {
+                    if (Capacitor.isNativePlatform()) {
+                      // Android: market:// 가 Play 스토어 앱을 직접 연다 (in-app webview로 열리던 문제 해결)
+                      window.location.href = 'market://details?id=com.banlan21.odok';
+                    } else {
+                      window.open(forceUpdate.storeUrl || STORE_URL, '_blank');
+                    }
+                  }}
                   className="w-full py-4 bg-orange-500 hover:bg-orange-600 active:scale-95 text-white font-black text-base rounded-2xl transition-all shadow-lg shadow-orange-200"
                 >
                   {t.force_update_btn}

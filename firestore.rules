@@ -163,5 +163,12 @@ service cloud.firestore {
       allow read: if true;
       allow write: if isAdmin();
     }
+
+    // App Settings (버전 정보 등) — 모두 읽기 가능, 관리자만 쓰기
+    // (이 규칙이 없으면 기본 거부되어 버전 체크가 항상 실패함)
+    match /app_settings/{docId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
   }
 }
