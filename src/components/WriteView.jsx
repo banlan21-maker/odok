@@ -3,7 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Capacitor } from '@capacitor/core';
 import { KeepAwake } from '@capacitor-community/keep-awake';
 import { LocalNotifications } from '@capacitor/local-notifications';
-import { PenTool, RefreshCw, Book, Edit2, Lock, Droplets, Video, Check, X } from 'lucide-react';
+import { PenTool, RefreshCw, Book, Edit2, Lock, Droplets, Video, Check, X, ChevronDown } from 'lucide-react';
 import { generateBook, generateFairytale } from '../utils/aiService';
 import { db } from '../firebase';
 import { doc, onSnapshot, deleteDoc } from 'firebase/firestore';
@@ -303,8 +303,17 @@ const seriesSubTypes = [
   { id: 'novel', name: '일반소설형', description: '전통 소설 스타일' }
 ];
 
-// 동화공방 교훈·테마 예시 (선택 입력 — 직접 타이핑하거나 칩을 탭)
-const FAIRY_THEME_EXAMPLES = ['용기', '나눔', '정직', '양치질', '정리정돈', '우정', '감사', '인내'];
+// 동화공방 교훈·테마 (선택 입력 — 직접 타이핑하거나 카테고리에서 탭). 자유 입력이라 무엇이든 가능.
+const FAIRY_THEME_GROUPS = [
+  { cat: '🌱 인성·도덕', items: ['용기', '정직', '나눔', '배려', '감사', '인내', '책임감', '약속 지키기', '양보', '친절', '겸손', '예의', '존중'] },
+  { cat: '🪥 생활 습관', items: ['양치질', '정리정돈', '손 씻기', '일찍 자기', '편식 안 하기', '스스로 옷 입기', '장난감 정리', '시간 지키기', '책 읽는 습관'] },
+  { cat: '💛 감정·마음', items: ['화 다스리기', '두려움 이겨내기', '슬픔 위로', '질투 다루기', '자신감', '실패해도 괜찮아', '부끄러움 극복'] },
+  { cat: '👨‍👩‍👧 관계', items: ['우정', '형제·자매 사랑', '가족 사랑', '친구 사귀기', '함께 놀기', '다름 인정하기', '화해하기', '협동'] },
+  { cat: '🚸 안전·건강', items: ['교통안전', '낯선 사람 조심', '위험한 것 조심', '운동·건강', '불조심', '길 잃었을 때'] },
+  { cat: '🚀 도전·성장', items: ['도전', '끈기', '새로운 것 시도', '실수에서 배우기', '꿈', '호기심', '노력의 가치', '포기하지 않기'] },
+  { cat: '🌍 환경·자연', items: ['환경 보호', '동물 사랑', '자연 아끼기', '분리수거', '물·전기 아끼기', '식물 키우기'] },
+  { cat: '✨ 모험·상상', items: ['모험', '상상력', '우주 탐험', '바다 여행', '마법', '시간 여행'] },
+];
 
 const WriteView = ({ user, userProfile, t, onBookGenerated, slotStatus, setView, setSelectedBook, error, setError, deductInk, addInk, onGeneratingChange, onGenerationComplete, authorProfiles = {}, appId, onSaveFairytale }) => {
   // 메인 카테고리 목록 (6개)
@@ -355,6 +364,7 @@ const WriteView = ({ user, userProfile, t, onBookGenerated, slotStatus, setView,
   const [fairyGender, setFairyGender] = useState(null);       // 'boy' | 'girl' | 'neutral'
   const [fairyTheme, setFairyTheme] = useState('');           // 교훈·테마 (선택)
   const [fairyInteraction, setFairyInteraction] = useState(null); // 'questions' | 'none'
+  const [openThemeCat, setOpenThemeCat] = useState(null); // 교훈·테마 펼친 카테고리
   const [isFairyGenerating, setIsFairyGenerating] = useState(false);
 
   const handleGenerateFairytale = async () => {
@@ -1236,12 +1246,35 @@ const WriteView = ({ user, userProfile, t, onBookGenerated, slotStatus, setView,
               maxLength={20} placeholder="예: 용기, 양치질, 정리정돈" disabled={isFairyGenerating}
               className="w-full bg-white dark:bg-slate-700 dark:text-slate-100 border-2 border-slate-200 dark:border-slate-600 rounded-xl py-3 px-4 text-sm focus:border-purple-500 focus:outline-none transition-colors disabled:opacity-60"
             />
-            <div className="flex flex-wrap gap-1.5">
-              {FAIRY_THEME_EXAMPLES.map((ex) => (
-                <button key={ex} onClick={() => setFairyTheme(ex)} disabled={isFairyGenerating}
-                  className={`px-2.5 py-1 rounded-full text-xs font-bold border transition-colors disabled:opacity-60 ${fairyTheme === ex ? 'border-purple-400 bg-purple-50 dark:bg-purple-900/20 text-purple-600' : 'border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400'}`}>
-                  {ex}
-                </button>
+            {/* 카테고리별 예시 (접기식) */}
+            <div className="space-y-1.5">
+              {FAIRY_THEME_GROUPS.map((grp, gi) => (
+                <div key={grp.cat} className="border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden">
+                  <button
+                    type="button"
+                    onClick={() => setOpenThemeCat(openThemeCat === gi ? null : gi)}
+                    disabled={isFairyGenerating}
+                    className="w-full flex items-center justify-between px-3 py-2 text-xs font-bold text-slate-600 dark:text-slate-300 bg-slate-50 dark:bg-slate-800/60 disabled:opacity-60"
+                  >
+                    <span>{grp.cat}</span>
+                    <ChevronDown className={`w-4 h-4 transition-transform ${openThemeCat === gi ? 'rotate-180' : ''}`} />
+                  </button>
+                  {openThemeCat === gi && (
+                    <div className="flex flex-wrap gap-1.5 p-2.5 bg-white dark:bg-slate-800">
+                      {grp.items.map((ex) => (
+                        <button
+                          key={ex}
+                          type="button"
+                          onClick={() => setFairyTheme(ex)}
+                          disabled={isFairyGenerating}
+                          className={`px-2.5 py-1 rounded-full text-xs font-bold border transition-colors disabled:opacity-60 ${fairyTheme === ex ? 'border-purple-400 bg-purple-50 dark:bg-purple-900/20 text-purple-600' : 'border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400'}`}
+                        >
+                          {ex}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
               ))}
             </div>
           </div>
