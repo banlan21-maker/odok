@@ -580,7 +580,7 @@ export const useBooks = ({ user, userProfile, setError, deductInk, addInk, setSh
     };
 
     // 동화공방: 생성된 동화를 책으로 저장 (공개 — 서재/보관함에 노출). 일일 제한·슬롯 경쟁 없음.
-    const saveFairytale = async ({ title, content, childName, age, gender, theme, setting, interaction }) => {
+    const saveFairytale = async ({ title, content, childName, age, gender, storyType, theme, setting, interaction }) => {
         if (!user) throw new Error('LOGIN_REQUIRED');
         const todayKey = getTodayDateKey();
         const bookDoc = {
@@ -593,6 +593,7 @@ export const useBooks = ({ user, userProfile, setError, deductInk, addInk, setSh
             childName: childName || null,
             fairyAge: age || null,
             fairyGender: gender || null,
+            fairyStoryType: storyType || null,
             fairySetting: setting || null,
             fairyInteraction: interaction || null,
             authorId: user.uid,

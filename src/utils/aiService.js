@@ -194,10 +194,10 @@ export const generateSeriesEpisode = async ({
  * @param {string|null} [options.appId]
  * @returns {Promise<{title: string, content: string}>}
  */
-export const generateFairytale = async ({ childName, age, gender, theme, setting, interaction, appId = null }) => {
+export const generateFairytale = async ({ childName, age, gender, storyType, theme, setting, interaction, appId = null }) => {
   try {
     const fn = httpsCallable(functions, 'generateFairytale', { timeout: 540000 });
-    const result = await fn({ childName, age, gender, theme: theme || '', setting: setting || '', interaction, appId: appId || null });
+    const result = await fn({ childName, age, gender, storyType: storyType || '', theme: theme || '', setting: setting || '', interaction, appId: appId || null });
     const data = result.data;
     if (!data || !data.title || !data.content) {
       throw new Error('AI가 올바른 형식의 동화를 반환하지 않았습니다.');

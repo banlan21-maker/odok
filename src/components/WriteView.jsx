@@ -325,6 +325,22 @@ const FAIRY_SETTING_GROUPS = [
   { cat: '🎨 색다른 상상', items: ['계절 나라', '무지개·색깔 나라', '음악 나라', '그림 속 세상', '시간 여행'] },
 ];
 
+// 동화공방 이야기 유형 (선택 — 미선택 시 AI 자동). 서버엔 'label (sub)'로 전송.
+const FAIRY_STORY_TYPES = [
+  { label: '모험 이야기', sub: '떠나고 돌아오는' },
+  { label: '우정 이야기', sub: '친구를 사귀고 도와주는' },
+  { label: '문제 해결', sub: '어려움을 이겨내는' },
+  { label: '따뜻한 일상', sub: '소소한 하루' },
+  { label: '성장 이야기', sub: '처음 해내는' },
+  { label: '도움·나눔', sub: '남을 돕는' },
+  { label: '용기·극복', sub: '무서움을 이겨내는' },
+  { label: '발견·호기심', sub: '신기한 걸 찾는' },
+  { label: '화해 이야기', sub: '다투고 화해하는' },
+  { label: '마법·판타지', sub: '신기한 일이 일어나는' },
+  { label: '잃어버린 것 찾기', sub: '되찾는 이야기' },
+  { label: '웃음·유머', sub: '깔깔 웃긴' },
+];
+
 const WriteView = ({ user, userProfile, t, onBookGenerated, slotStatus, setView, setSelectedBook, error, setError, deductInk, addInk, onGeneratingChange, onGenerationComplete, authorProfiles = {}, appId, onSaveFairytale }) => {
   // 메인 카테고리 목록 (6개)
   const categories = [
@@ -375,6 +391,7 @@ const WriteView = ({ user, userProfile, t, onBookGenerated, slotStatus, setView,
   const [fairyTheme, setFairyTheme] = useState('');           // 교훈·테마 (선택)
   const [fairyInteraction, setFairyInteraction] = useState(null); // 'questions' | 'none'
   const [fairySetting, setFairySetting] = useState('');           // 배경·무대 (선택)
+  const [fairyStoryType, setFairyStoryType] = useState('');       // 이야기 유형 (선택)
   const [openThemeCat, setOpenThemeCat] = useState(null);   // 교훈·테마 펼친 카테고리
   const [openSettingCat, setOpenSettingCat] = useState(null); // 배경 펼친 카테고리
   const [isFairyGenerating, setIsFairyGenerating] = useState(false);
@@ -395,13 +412,15 @@ const WriteView = ({ user, userProfile, t, onBookGenerated, slotStatus, setView,
       const ok = await deductInk(50);
       if (!ok) { setLocalError('잉크 차감에 실패했어요. 다시 시도해주세요.'); setIsFairyGenerating(false); return; }
       deducted = true;
+      const stObj = FAIRY_STORY_TYPES.find((s) => s.label === fairyStoryType);
+      const storyTypePayload = stObj ? `${stObj.label} (${stObj.sub})` : '';
       const result = await generateFairytale({
         childName: childName.trim(), age: fairyAge, gender: fairyGender,
-        theme: fairyTheme.trim(), setting: fairySetting.trim(), interaction: fairyInteraction, appId,
+        storyType: storyTypePayload, theme: fairyTheme.trim(), setting: fairySetting.trim(), interaction: fairyInteraction, appId,
       });
       const saved = await onSaveFairytale({
         title: result.title, content: result.content, childName: childName.trim(),
-        age: fairyAge, gender: fairyGender, theme: fairyTheme.trim(), setting: fairySetting.trim(), interaction: fairyInteraction,
+        age: fairyAge, gender: fairyGender, storyType: fairyStoryType, theme: fairyTheme.trim(), setting: fairySetting.trim(), interaction: fairyInteraction,
       });
       if (setSelectedBook) setSelectedBook(saved);
       if (setView) setView('book_detail');
@@ -1245,6 +1264,25 @@ const WriteView = ({ user, userProfile, t, onBookGenerated, slotStatus, setView,
                 <button key={g.id} onClick={() => setFairyGender(g.id)} disabled={isFairyGenerating}
                   className={`py-3 rounded-xl border-2 text-xs font-bold transition-all disabled:opacity-60 ${fairyGender === g.id ? 'border-purple-500 bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-300' : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300'}`}>
                   {g.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* 이야기 유형 (선택) */}
+          <div className="space-y-2">
+            <label className="text-sm font-bold text-slate-600 dark:text-slate-300 px-1">이야기 유형 <span className="text-[11px] text-slate-400 font-normal">(선택, 없으면 AI가 정함)</span></label>
+            <div className="grid grid-cols-2 gap-2">
+              {FAIRY_STORY_TYPES.map((st) => (
+                <button
+                  key={st.label}
+                  type="button"
+                  onClick={() => setFairyStoryType(fairyStoryType === st.label ? '' : st.label)}
+                  disabled={isFairyGenerating}
+                  className={`px-2.5 py-2 rounded-xl border-2 text-left transition-all disabled:opacity-60 ${fairyStoryType === st.label ? 'border-purple-500 bg-purple-50 dark:bg-purple-900/20' : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700'}`}
+                >
+                  <span className={`block text-xs font-bold ${fairyStoryType === st.label ? 'text-purple-600 dark:text-purple-300' : 'text-slate-600 dark:text-slate-300'}`}>{st.label}</span>
+                  <span className="block text-[10px] text-slate-400 dark:text-slate-500 font-medium">{st.sub}</span>
                 </button>
               ))}
             </div>
