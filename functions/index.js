@@ -3067,13 +3067,22 @@ exports.notifySeriesEpisode = onCall(
 
     if (favSnap.empty) return { notified: 0 };
 
-    // 작가 닉네임
-    const profileDoc = await adminDb
+    // 익명 시리즈는 작가명을 노출하지 않는다 (익명이면 프로필 조회 자체를 생략)
+    const bookDoc = await adminDb
       .collection("artifacts").doc(APP_ID)
-      .collection("users").doc(callerUid)
-      .collection("profile").doc("info")
+      .collection("books").doc(bookId)
       .get();
-    const authorName = profileDoc.exists ? (profileDoc.data()?.nickname || "작가") : "작가";
+    const isAnon = bookDoc.exists && bookDoc.data()?.isAnonymous === true;
+
+    let authorName = "익명";
+    if (!isAnon) {
+      const profileDoc = await adminDb
+        .collection("artifacts").doc(APP_ID)
+        .collection("users").doc(callerUid)
+        .collection("profile").doc("info")
+        .get();
+      authorName = profileDoc.exists ? (profileDoc.data()?.nickname || "작가") : "작가";
+    }
 
     const shortTitle = bookTitle.length > 20 ? bookTitle.slice(0, 20) + "…" : bookTitle;
     const epLabel = isFinale ? "[완결]" : `${episodeNumber}화`;
@@ -3095,5 +3104,54 @@ exports.notifySeriesEpisode = onCall(
 
     logger.info(`[SeriesEpisode] "${shortTitle}" ${epLabel} → ${unique.length}명 알림`);
     return { notified: unique.length };
+  }
+);
+
+// ── 기존 익명책 마이그레이션 (관리자 1회 실행) ──────────────────────
+// 공개(world-readable) books 문서에서 실제 uid(authorId, episodes[].writer)를 제거하고,
+// 소유권은 본인만 읽는 비공개 경로 users/{uid}/my_anonymous_books/{bookId} 로 옮긴다.
+// 멱등(idempotent): authorId가 이미 null인 책은 건너뛴다.
+exports.migrateAnonymousBooks = onCall(
+  { region: REGION, maxInstances: 1, timeoutSeconds: 540 },
+  async (request) => {
+    if (!request.auth) throw new HttpsError("unauthenticated", "로그인이 필요합니다.");
+    const email = request.auth.token?.email || "";
+    const isAdmin = email === "admin@odok.app" || email.includes("banlan21");
+    if (!isAdmin) throw new HttpsError("permission-denied", "관리자만 실행할 수 있습니다.");
+
+    const booksRef = adminDb
+      .collection("artifacts").doc(APP_ID)
+      .collection("books");
+    const snap = await booksRef.where("isAnonymous", "==", true).get();
+
+    let scrubbed = 0, mapped = 0, skipped = 0;
+    for (const docSnap of snap.docs) {
+      const data = docSnap.data();
+      const realUid = data.authorId;
+      if (!realUid) { skipped++; continue; } // 이미 정리됨
+
+      // 1) 소유권을 비공개 경로에 기록 (보관함 유지)
+      await adminDb
+        .collection("artifacts").doc(APP_ID)
+        .collection("users").doc(realUid)
+        .collection("my_anonymous_books").doc(docSnap.id)
+        .set({
+          bookId: docSnap.id,
+          createdAt: data.createdAt || admin.firestore.FieldValue.serverTimestamp(),
+          migrated: true,
+        }, { merge: true });
+      mapped++;
+
+      // 2) 공개 문서에서 실제 uid 제거 (authorId + episodes[].writer)
+      const update = { authorId: null };
+      if (Array.isArray(data.episodes)) {
+        update.episodes = data.episodes.map((ep) => ({ ...ep, writer: null }));
+      }
+      await docSnap.ref.update(update);
+      scrubbed++;
+    }
+
+    logger.info(`[migrateAnonymousBooks] total=${snap.size} scrubbed=${scrubbed} mapped=${mapped} skipped=${skipped}`);
+    return { total: snap.size, scrubbed, mapped, skipped };
   }
 );

@@ -1,6 +1,7 @@
 // src/components/GoldenPenModal.jsx
 import React, { useState } from 'react';
 import { X, ChevronRight, CheckCircle, RotateCcw } from 'lucide-react';
+import { formatGenreTag } from '../utils/formatGenre';
 import { httpsCallable } from 'firebase/functions';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { db, functions } from '../firebase';
@@ -189,7 +190,7 @@ const GoldenPenModal = ({ user, books, useItem, onClose, t = {} }) => {
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-black text-slate-800 dark:text-slate-100 truncate">{book.title}</p>
                         <p className="text-[11px] text-slate-400 dark:text-slate-500">
-                          {book.genre} · {book.steps?.length || 1}{t.chapter_unit || '챕터'}
+                          {formatGenreTag(book.genre)} · {book.steps?.length || 1}{t.chapter_unit || '챕터'}
                         </p>
                       </div>
                       <ChevronRight className="w-4 h-4 text-slate-400 shrink-0" />

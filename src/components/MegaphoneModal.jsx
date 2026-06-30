@@ -1,6 +1,7 @@
 // src/components/MegaphoneModal.jsx
 import React, { useState, useEffect } from 'react';
 import { X, ChevronLeft, Loader } from 'lucide-react';
+import { formatGenreTag } from '../utils/formatGenre';
 import { httpsCallable } from 'firebase/functions';
 import { functions } from '../firebase';
 import { getCoverImageFromBook } from '../utils/bookCovers';
@@ -144,7 +145,7 @@ const MegaphoneModal = ({
                       <img src={cover} alt={book.title} className="w-12 h-16 rounded-lg object-cover shrink-0 shadow-sm" />
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-black text-slate-800 dark:text-slate-100 truncate">{book.title}</p>
-                        <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">{book.category}</p>
+                        <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">{formatGenreTag(book.category)}</p>
                         {book.book_summary && (
                           <p className="text-[10px] text-emerald-500 font-bold mt-0.5">✏️ 소개글 있음</p>
                         )}
@@ -168,7 +169,7 @@ const MegaphoneModal = ({
                   {coverImage && <img src={coverImage} className="w-14 h-18 rounded-lg object-cover shrink-0 shadow-md" style={{ height: '72px' }} />}
                   <div>
                     <p className="text-white font-black text-sm">{selectedBook?.title}</p>
-                    <p className="text-white/60 text-xs mt-0.5">{selectedBook?.category}</p>
+                    <p className="text-white/60 text-xs mt-0.5">{formatGenreTag(selectedBook?.category)}</p>
                   </div>
                 </div>
               </div>

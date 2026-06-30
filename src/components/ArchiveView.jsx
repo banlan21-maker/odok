@@ -205,15 +205,17 @@ const SORT_OPTIONS = [
   { key: 'popular', labelKey: 'sort_popular', fallback: '인기순' },
 ];
 
-const ArchiveView = ({ books, user, onBookClick, favoriteBookIds = [], t, authorProfiles = {} }) => {
+const ArchiveView = ({ books, user, onBookClick, favoriteBookIds = [], t, authorProfiles = {}, myAnonymousBookIds = [] }) => {
   const [activeTab, setActiveTab] = useState('mine');
   const [searchQuery, setSearchQuery] = useState('');
   const [viewMode, setViewMode] = useState(() => loadPref(PREF_KEY_VIEW, 'grid')); // 'grid' | 'list'
   const [sortBy, setSortBy] = useState(() => loadPref(PREF_KEY_SORT, 'latest'));    // 'latest' | 'name' | 'popular'
 
+  // 내 익명책: 공개 문서엔 authorId가 없으므로 비공개 매핑(myAnonymousBookIds)으로 식별
+  const anonOwnedSet = useMemo(() => new Set(myAnonymousBookIds), [myAnonymousBookIds]);
   const myBooks = useMemo(
-    () => books.filter(book => book.authorId === user?.uid),
-    [books, user]
+    () => books.filter(book => book.authorId === user?.uid || anonOwnedSet.has(book.id)),
+    [books, user, anonOwnedSet]
   );
   const favoriteBooks = useMemo(
     () => books.filter(book => favoriteBookIds.includes(book.id)),

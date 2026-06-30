@@ -779,7 +779,7 @@ const WriteView = ({ user, userProfile, t, onBookGenerated, slotStatus, setView,
     // 슬롯 확인
     if (!isSlotAvailable(selectedCategory.id)) {
       const slotInfo = getSlotStatus(selectedCategory.id);
-      const slotAuthor = slotInfo?.authorId ? (authorProfiles[slotInfo.authorId]?.nickname || '익명') : '익명';
+      const slotAuthor = slotInfo?.book?.isAnonymous ? '익명' : (slotInfo?.authorId ? (authorProfiles[slotInfo.authorId]?.nickname || '익명') : '익명');
       const errorMsg = `이미 오늘의 책이 발행되었습니다! (By. ${slotAuthor}) 서재에서 읽어보세요.`;
       setLocalError(errorMsg);
       if (setError) setError(errorMsg);
@@ -895,7 +895,7 @@ const WriteView = ({ user, userProfile, t, onBookGenerated, slotStatus, setView,
 
     if (!isSlotAvailable(slotCheckCategoryId, slotCheckSubCategoryId)) {
       const slotInfo = getSlotStatus(slotCheckCategoryId, slotCheckSubCategoryId);
-      const slotAuthor = slotInfo?.authorId ? (authorProfiles[slotInfo.authorId]?.nickname || '익명') : '익명';
+      const slotAuthor = slotInfo?.book?.isAnonymous ? '익명' : (slotInfo?.authorId ? (authorProfiles[slotInfo.authorId]?.nickname || '익명') : '익명');
       const errorMsg = `이미 오늘의 책이 발행되었습니다! (By. ${slotAuthor}) 서재에서 읽어보세요.`;
       setLocalError(errorMsg);
       if (setError) setError(errorMsg);

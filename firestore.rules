@@ -57,9 +57,17 @@ service cloud.firestore {
       // 2. Books Collection (User Generated Content)
       match /books/{bookId} {
         allow read: if true;
-        allow create: if isAuth() && request.resource.data.authorId == request.auth.uid;
+        // 익명책은 authorId=null(공개 문서에 실제 uid 미저장). 소유권은 비공개 my_anonymous_books로 관리.
+        allow create: if isAuth() && (
+          request.resource.data.authorId == request.auth.uid ||
+          (request.resource.data.isAnonymous == true && request.resource.data.authorId == null)
+        );
         allow update: if isAuth();
-        allow delete: if isAuth() && (resource.data.authorId == request.auth.uid || isAdmin());
+        allow delete: if isAuth() && (
+          resource.data.authorId == request.auth.uid ||
+          isAdmin() ||
+          exists(/databases/$(database)/documents/artifacts/$(appId)/users/$(request.auth.uid)/my_anonymous_books/$(bookId))
+        );
       }
 
       // 3. Public Data Collection

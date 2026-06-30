@@ -59,6 +59,15 @@ export const useBooks = ({ user, userProfile, setError, deductInk, addInk, setSh
     const [showWritingCompleteModal, setShowWritingCompleteModal] = useState(null);
     const [authorProfiles, setAuthorProfiles] = useState({});
     const [promotions, setPromotions] = useState([]);
+    const [myAnonymousBookIds, setMyAnonymousBookIds] = useState([]);
+
+    // 내가 쓴 익명책 ID 목록 (본인만 읽는 비공개 경로). 보관함·소유권 판별에 사용.
+    useEffect(() => {
+        if (!user?.uid) { setMyAnonymousBookIds([]); return; }
+        const ref = collection(db, 'artifacts', appId, 'users', user.uid, 'my_anonymous_books');
+        const unsub = onSnapshot(ref, (snap) => setMyAnonymousBookIds(snap.docs.map(d => d.id)), () => {});
+        return () => unsub();
+    }, [user?.uid]);
 
     const latestBooksRef = useRef([]);
     const authorProfilesCacheRef = useRef({});
@@ -204,7 +213,7 @@ export const useBooks = ({ user, userProfile, setError, deductInk, addInk, setSh
     // 작가 프로필 캐시: authorId → { nickname, profileImageUrl }
     useEffect(() => {
         if (!books.length) return;
-        const authorIds = [...new Set(books.map(b => b.authorId).filter(Boolean))];
+        const authorIds = [...new Set(books.filter(b => !b.isAnonymous).map(b => b.authorId).filter(Boolean))];
         const toFetch = authorIds.filter(id => !authorProfilesCacheRef.current[id]);
         if (toFetch.length === 0) return;
 
@@ -270,7 +279,7 @@ export const useBooks = ({ user, userProfile, setError, deductInk, addInk, setSh
 
                 const counts = weeklyBooks.reduce((acc, book) => {
                     const authorId = book.authorId;
-                    if (!authorId) return acc;
+                    if (!authorId || book.isAnonymous) return acc;
                     if (!acc[authorId]) {
                         acc[authorId] = { id: authorId, weeklyCount: 0 };
                     }
@@ -281,7 +290,7 @@ export const useBooks = ({ user, userProfile, setError, deductInk, addInk, setSh
                 // 누적 집필수 계산 (전체 books에서)
                 const totalCounts = books.reduce((acc, book) => {
                     const authorId = book.authorId;
-                    if (!authorId) return acc;
+                    if (!authorId || book.isAnonymous) return acc;
                     acc[authorId] = (acc[authorId] || 0) + 1;
                     return acc;
                 }, {});
@@ -408,6 +417,8 @@ export const useBooks = ({ user, userProfile, setError, deductInk, addInk, setSh
 
             const isAnonymousMode = !!bookData.isAnonymous;
             const authorName = isAnonymousMode ? '익명' : (userProfile?.nickname || '익명');
+            // 익명책은 공개(world-readable) 문서에 실제 uid를 저장하지 않는다. 소유권은 비공개 my_anonymous_books로 관리.
+            const publicAuthorId = isAnonymousMode ? null : user.uid;
             const isSeries = bookData.isSeries || false;
 
             const bookDocumentData = {
@@ -423,7 +434,7 @@ export const useBooks = ({ user, userProfile, setError, deductInk, addInk, setSh
                 selectedSpeechTone: bookData.selectedSpeechTone || null,
                 selectedDialogueRatio: bookData.selectedDialogueRatio || null,
                 endingStyle: bookData.endingStyle || null,
-                authorId: user.uid,
+                authorId: publicAuthorId,
                 authorName: authorName,
                 isAnonymous: isAnonymousMode,
                 createdAt: serverTimestamp(),
@@ -450,7 +461,7 @@ export const useBooks = ({ user, userProfile, setError, deductInk, addInk, setSh
                     ep_number: 1,
                     title: bookData.title,
                     content: bookData.content,
-                    writer: user.uid,
+                    writer: publicAuthorId,
                     writerName: authorName,
                     createdAt: new Date().toISOString(),
                     summary: bookData.storySummary || bookData.summary || bookData.content.substring(0, 300) + '...'
@@ -465,6 +476,16 @@ export const useBooks = ({ user, userProfile, setError, deductInk, addInk, setSh
 
             const bookRef = await addDoc(collection(db, 'artifacts', appId, 'books'), cleanBookData);
             const savedBook = { id: bookRef.id, ...bookDocumentData };
+
+            // 익명책: 소유권을 본인만 읽는 비공개 경로에 기록 (공개 문서엔 작성자 흔적이 전혀 없음 → 진짜 익명)
+            if (isAnonymousMode) {
+                try {
+                    await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'my_anonymous_books', bookRef.id), {
+                        bookId: bookRef.id,
+                        createdAt: serverTimestamp(),
+                    });
+                } catch (e) { console.warn('익명책 소유권 기록 실패', e); }
+            }
 
             const profileRef = doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'info');
             try {
@@ -516,6 +537,9 @@ export const useBooks = ({ user, userProfile, setError, deductInk, addInk, setSh
 
     const createPromotion = async (bookId, promoText, { authorNickname = '', authorBio = '', bookSummary = '' } = {}) => {
         if (!user) throw new Error('LOGIN_REQUIRED');
+        // 익명책은 홍보 불가 (홍보 문서가 공개라 authorId가 노출되면 익명성이 깨짐)
+        const promoBook = books.find(b => b.id === bookId);
+        if (promoBook?.isAnonymous) throw new Error('익명으로 집필한 책은 홍보할 수 없어요.');
 
         const now = new Date();
         const promosRef = collection(db, 'artifacts', appId, 'public', 'data', 'promotions');
@@ -571,6 +595,7 @@ export const useBooks = ({ user, userProfile, setError, deductInk, addInk, setSh
         authorProfiles,
         promotions,
         createPromotion,
-        handleBookGenerated
+        handleBookGenerated,
+        myAnonymousBookIds
     };
 };

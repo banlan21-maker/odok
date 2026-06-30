@@ -59,7 +59,8 @@ import { useNotificationHistory } from './hooks/useNotificationHistory';
 import { useReadingStats } from './hooks/useReadingStats';
 const NotificationModal = lazy(() => import('./components/NotificationModal'));
 import ContinueReadingBar from './components/ContinueReadingBar';
-import { db } from './firebase';
+import { db, functions } from './firebase';
+import { httpsCallable } from 'firebase/functions';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 
 const rawAppId = typeof __app_id !== 'undefined' ? __app_id : 'odok-app-default';
@@ -207,7 +208,8 @@ const App = () => {
     authorProfiles,
     promotions,
     createPromotion,
-    handleBookGenerated
+    handleBookGenerated,
+    myAnonymousBookIds
   } = useBooks({
     user,
     userProfile,
@@ -711,6 +713,20 @@ const App = () => {
                     <div className="fixed bottom-24 right-5 flex flex-col gap-2">
                       <button onClick={handleDevReset} className="w-14 h-14 rounded-full bg-slate-800 text-white shadow-lg flex items-center justify-center font-black text-xs">{t.reset_btn}</button>
                       <button onClick={openNoticeEditor} className="w-14 h-14 rounded-full bg-orange-500 text-white shadow-lg flex items-center justify-center font-black">{t.notice_write_title}</button>
+                      <button
+                        onClick={async () => {
+                          if (!confirm('기존 익명책의 공개 작성자 정보(authorId/writer)를 일괄 제거하고 비공개 소유권으로 이전할까요? (1회 실행)')) return;
+                          try {
+                            const res = await httpsCallable(functions, 'migrateAnonymousBooks')();
+                            const d = res.data || {};
+                            alert(`익명책 정리 완료\n총 ${d.total} · 정리 ${d.scrubbed} · 매핑 ${d.mapped} · 건너뜀 ${d.skipped}`);
+                          } catch (e) {
+                            alert('마이그레이션 실패: ' + (e?.message || e));
+                          }
+                        }}
+                        className="w-14 h-14 rounded-full bg-rose-600 text-white shadow-lg flex flex-col items-center justify-center font-black text-[9px] leading-tight"
+                        title="기존 익명책 작성자 정보 정리 (1회)"
+                      >익명<br/>정리</button>
                     </div>
                   )}
                 </div>
@@ -766,7 +782,7 @@ const App = () => {
 
               {view === 'library' && <LibraryView t={t} books={books} onBookClick={handleBookClickWithPreview} filter={libraryFilter} onFilterChange={setLibraryFilter} authorProfiles={authorProfiles} />}
 
-              {view === 'archive' && <ArchiveView t={t} books={books} user={user} favoriteBookIds={storyReaderHook.bookFavorites.map(f => f.bookId)} onBookClick={handleBookClickWithPreview} authorProfiles={authorProfiles} />}
+              {view === 'archive' && <ArchiveView t={t} books={books} user={user} favoriteBookIds={storyReaderHook.bookFavorites.map(f => f.bookId)} onBookClick={handleBookClickWithPreview} authorProfiles={authorProfiles} myAnonymousBookIds={myAnonymousBookIds} />}
 
               {view === 'store' && (
                 <StoreView
@@ -790,6 +806,7 @@ const App = () => {
                   onAuthorClick={(uid) => setAuthorProfileUserId(uid)}
                   addHighlight={addHighlight}
                   useItem={useItem}
+                  myAnonymousBookIds={myAnonymousBookIds}
                   onClose={() => {
                     const isMyBook = selectedBook.authorId === user?.uid;
                     setSelectedBook(null);

@@ -1,6 +1,7 @@
 // src/components/AuthorProfileModal.jsx
 import React, { useState, useEffect } from 'react';
 import { X, User, BookOpen } from 'lucide-react';
+import { formatGenreTag } from '../utils/formatGenre';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { db } from '../firebase';
 import { getCoverImageFromBook } from '../utils/bookCovers';
@@ -168,7 +169,7 @@ const AuthorProfileModal = ({
                     <p className="text-white font-black text-base leading-tight line-clamp-2">
                       {representativeBook.title}
                     </p>
-                    <p className="text-white/60 text-xs">{representativeBook.category}</p>
+                    <p className="text-white/60 text-xs">{formatGenreTag(representativeBook.category)}</p>
                     {/* 통계 */}
                     <div className="flex items-center gap-2 text-[11px] text-white/70">
                       <span>👁 {representativeBook.views || 0}</span>
@@ -208,7 +209,7 @@ const AuthorProfileModal = ({
                   />
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-black text-slate-800 dark:text-slate-100 truncate">{book.title}</p>
-                    <p className="text-[11px] text-slate-400 mt-0.5">{book.category}</p>
+                    <p className="text-[11px] text-slate-400 mt-0.5">{formatGenreTag(book.category)}</p>
                     <div className="flex items-center gap-2 text-[10px] text-slate-400 mt-0.5">
                       <span>👁 {book.views || 0}</span>
                       <span>❤️ {book.likes || 0}</span>

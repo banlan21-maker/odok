@@ -25,14 +25,16 @@ import { downloadBookPdf } from '../utils/pdfService';
 const DAILY_WRITE_LIMIT = 2;
 const DAILY_FREE_WRITES = 1;
 
-const BookDetail = ({ book, onClose, onBookUpdate, fontSize = 'text-base', user, userProfile, appId, slotStatus, deductInk, t, isAdmin, authorProfiles = {}, promotions = [], createPromotion, followAuthor, unfollowAuthor, isFollowing, onAuthorClick, addHighlight, useItem }) => {
+const BookDetail = ({ book, onClose, onBookUpdate, fontSize = 'text-base', user, userProfile, appId, slotStatus, deductInk, t, isAdmin, authorProfiles = {}, promotions = [], createPromotion, followAuthor, unfollowAuthor, isFollowing, onAuthorClick, addHighlight, useItem, myAnonymousBookIds = [] }) => {
   if (!book) return null;
 
+  // 본인 책 판별: 비익명은 authorId, 익명책은 공개 authorId가 없으므로 비공개 매핑(myAnonymousBookIds)으로 식별
+  const isOwnBook = book.authorId === user?.uid || myAnonymousBookIds.includes(book.id);
+
   // 관리자: 모든 책 수정/삭제 가능. 일반 사용자: 본인 책만 수정/삭제 가능
-  const canEditOrDelete = isAdmin || book.authorId === user?.uid;
+  const canEditOrDelete = isAdmin || isOwnBook;
 
   // 도화지(PDF 저장) — 본인이 집필한 책만
-  const isOwnBook = book.authorId === user?.uid;
   const drawingPaperCount = userProfile?.inventory?.drawing_paper ?? 0;
   const [isPdfGenerating, setIsPdfGenerating] = useState(false);
 
@@ -673,7 +675,7 @@ const BookDetail = ({ book, onClose, onBookUpdate, fontSize = 'text-base', user,
         if (snap.exists()) throw new Error('SLOT_TAKEN');
         tx.set(dssRef, {
           bookId: book.id,
-          authorId: user.uid,
+          authorId: book?.isAnonymous ? null : user.uid,
           authorName: book?.isAnonymous ? '익명' : (userProfile?.nickname || '익명'),
           isAnonymous: !!book?.isAnonymous,
           type: 'episode',
@@ -710,7 +712,7 @@ const BookDetail = ({ book, onClose, onBookUpdate, fontSize = 'text-base', user,
         ep_number: episodes.length + 1,
         title: result.isFinale ? `${book.title} [완결]` : `${book.title} ${episodes.length + 1}화`,
         content: result.content,
-        writer: user.uid,
+        writer: book?.isAnonymous ? null : user.uid,
         writerName: book?.isAnonymous ? '익명' : (userProfile?.nickname || '익명'),
         isAnonymous: !!book?.isAnonymous,
         createdAt: new Date().toISOString(),
