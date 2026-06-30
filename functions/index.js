@@ -3155,3 +3155,64 @@ exports.migrateAnonymousBooks = onCall(
     return { total: snap.size, scrubbed, mapped, skipped };
   }
 );
+
+// ── 동화공방: 아이가 주인공인 짧은 동화 생성 (단일 호출, ~1,200자) ──────
+const FAIRY_THEMES = {
+  courage:    "용기",
+  friendship: "우정",
+  dream:      "꿈과 상상",
+  adventure:  "모험",
+  family:     "가족 사랑",
+  animal:     "동물 친구와 자연",
+  habit:      "좋은 습관",
+  royal:      "공주와 왕자",
+};
+
+exports.generateFairytale = onCall(
+  { region: REGION, maxInstances: 10, timeoutSeconds: 300 },
+  async (request) => {
+    if (!request.auth) throw new HttpsError("unauthenticated", "로그인이 필요합니다.");
+    if (!GEMINI_API_KEY) throw new HttpsError("failed-precondition", "Gemini API 키가 설정되지 않았습니다.");
+
+    const { childName, theme } = request.data || {};
+    const safeName = String(childName || "").trim().replace(/[<>]/g, "").slice(0, 20);
+    if (!safeName) throw new HttpsError("invalid-argument", "자녀 이름이 필요합니다.");
+    const themeLabel = FAIRY_THEMES[theme] || "용기";
+
+    const systemPrompt = [
+      "당신은 따뜻하고 다정한 한국어 동화 작가입니다.",
+      "유아~초등 저학년 아이가 듣기 좋은, 밝고 안전하며 교훈이 담긴 동화를 씁니다.",
+      "폭력·공포·잔인함·무서운 장면은 절대 넣지 않습니다.",
+      "쉬운 단어와 짧고 리듬감 있는 문장을 사용합니다.",
+      "한글, 공백, 기본 문장부호만 사용하고 다른 언어(한자·영어·일본어 등)는 쓰지 않습니다.",
+    ].join("\n");
+
+    const userPrompt = [
+      `주인공의 이름은 "${safeName}" 입니다. 이 아이가 동화의 주인공이며, 이름을 자연스럽게 여러 번 불러주세요.`,
+      `동화의 주제는 "${themeLabel}" 입니다.`,
+      "분량: 한국어 1,000~1,400자.",
+      "구성: 6~8개의 짧은 장면으로 나누고, 각 장면은 2~4문장으로 씁니다. 장면과 장면 사이는 빈 줄로 구분합니다.",
+      "이야기 구조: 평범한 시작 → 작은 사건이나 모험 → 살짝의 어려움 → 따뜻한 해결 → 마지막에 부드러운 한 줄 교훈.",
+      "",
+      "아래 형식을 반드시 지켜 출력하세요(머리표·장면번호·별표 금지):",
+      "제목: (15자 이내의 동화 제목, 아이 이름을 넣어도 좋음)",
+      "본문:",
+      "(여기에 동화 본문을 장면별 빈 줄 구분으로)",
+    ].join("\n");
+
+    const result = await callGemini(systemPrompt, userPrompt, 0.7, false);
+    const text = stripMetaTags((result.content || "").trim());
+
+    const titleMatch = text.match(/제목\s*[:：]\s*(.+)/);
+    let title = (titleMatch ? titleMatch[1] : "").trim().replace(/^["'“”]|["'“”]$/g, "").slice(0, 20);
+    let content = text
+      .replace(/^제목\s*[:：].*$/m, "")
+      .replace(/^본문\s*[:：]?\s*$/m, "")
+      .trim();
+    if (!title) title = `${safeName}의 ${themeLabel} 동화`;
+    if (!content) content = text;
+
+    logger.info(`[Fairytale] "${title}" (${content.length}자)`);
+    return { title, content };
+  }
+);

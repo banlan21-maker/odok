@@ -42,7 +42,17 @@ const GENRE_ID_TO_KOREAN = {
   psychology: '생활형심리',
   philosophy: '이야기철학',
   human: '인간이해',
-  thinking: '생각훈련'
+  thinking: '생각훈련',
+  // 동화공방
+  fairytale: '동화',
+  courage: '용기',
+  friendship: '우정',
+  dream: '꿈과 상상',
+  adventure: '모험',
+  family: '가족 사랑',
+  animal: '동물·자연',
+  habit: '좋은 습관',
+  royal: '공주와 왕자'
 };
 
 /**

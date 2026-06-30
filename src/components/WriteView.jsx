@@ -4,7 +4,7 @@ import { Capacitor } from '@capacitor/core';
 import { KeepAwake } from '@capacitor-community/keep-awake';
 import { LocalNotifications } from '@capacitor/local-notifications';
 import { PenTool, RefreshCw, Book, Edit2, Lock, Droplets, Video, Check, X } from 'lucide-react';
-import { generateBook } from '../utils/aiService';
+import { generateBook, generateFairytale } from '../utils/aiService';
 import { db } from '../firebase';
 import { doc, onSnapshot, deleteDoc } from 'firebase/firestore';
 import { isKeywordRefreshFree, getLevelFromXp } from '../utils/levelUtils';
@@ -303,7 +303,19 @@ const seriesSubTypes = [
   { id: 'novel', name: '일반소설형', description: '전통 소설 스타일' }
 ];
 
-const WriteView = ({ user, userProfile, t, onBookGenerated, slotStatus, setView, setSelectedBook, error, setError, deductInk, addInk, onGeneratingChange, onGenerationComplete, authorProfiles = {}, appId }) => {
+// 동화공방 주제 (id는 서버 FAIRY_THEMES와 일치해야 함)
+const FAIRY_THEMES = [
+  { id: 'courage', emoji: '🦁', label: '용기' },
+  { id: 'friendship', emoji: '🤝', label: '우정' },
+  { id: 'dream', emoji: '🌙', label: '꿈과 상상' },
+  { id: 'adventure', emoji: '🚀', label: '모험' },
+  { id: 'family', emoji: '👨‍👩‍👧', label: '가족 사랑' },
+  { id: 'animal', emoji: '🐢', label: '동물·자연' },
+  { id: 'habit', emoji: '🧹', label: '좋은 습관' },
+  { id: 'royal', emoji: '👑', label: '공주와 왕자' },
+];
+
+const WriteView = ({ user, userProfile, t, onBookGenerated, slotStatus, setView, setSelectedBook, error, setError, deductInk, addInk, onGeneratingChange, onGenerationComplete, authorProfiles = {}, appId, onSaveFairytale }) => {
   // 메인 카테고리 목록 (6개)
   const categories = [
     { id: 'webnovel', name: t?.cat_webnovel || '웹소설', icon: '📱', isNovel: true, isSingle: true },
@@ -345,6 +357,39 @@ const WriteView = ({ user, userProfile, t, onBookGenerated, slotStatus, setView,
   const [localError, setLocalError] = useState(null);
   const [isGeneratingHidden, setIsGeneratingHidden] = useState(false);
   const [loadingMessageIndex, setLoadingMessageIndex] = useState(0);
+
+  // 동화공방
+  const [childName, setChildName] = useState('');
+  const [fairyTheme, setFairyTheme] = useState(null);
+  const [isFairyGenerating, setIsFairyGenerating] = useState(false);
+
+  const handleGenerateFairytale = async () => {
+    if (isFairyGenerating) return;
+    if (!childName.trim()) { setLocalError('아이 이름을 입력해주세요.'); return; }
+    if (!fairyTheme) { setLocalError('동화 주제를 선택해주세요.'); return; }
+    if ((userProfile?.ink || 0) < 50) { setLocalError('잉크가 부족해요! 동화책은 잉크 50개가 필요해요.'); return; }
+    if (typeof onSaveFairytale !== 'function') { setLocalError('동화 저장 기능을 사용할 수 없어요.'); return; }
+    if (!confirm(`잉크 50개를 사용해 '${childName.trim()}' 동화책을 만들까요?`)) return;
+    setLocalError(null); if (setError) setError(null);
+    setIsFairyGenerating(true);
+    let deducted = false;
+    try {
+      const ok = await deductInk(50);
+      if (!ok) { setLocalError('잉크 차감에 실패했어요. 다시 시도해주세요.'); setIsFairyGenerating(false); return; }
+      deducted = true;
+      const result = await generateFairytale({ childName: childName.trim(), theme: fairyTheme, appId });
+      const saved = await onSaveFairytale({ title: result.title, content: result.content, childName: childName.trim(), theme: fairyTheme });
+      setChildName(''); setFairyTheme(null);
+      if (setSelectedBook) setSelectedBook(saved);
+      if (setView) setView('book_detail');
+    } catch (e) {
+      if (deducted && typeof addInk === 'function') { try { await addInk(50); } catch { /* 환불 실패 무시 */ } }
+      setLocalError('동화 생성에 실패했어요. 다시 시도해주세요.');
+      console.error('[동화공방] 생성 오류:', e);
+    } finally {
+      setIsFairyGenerating(false);
+    }
+  };
   const [currentLoadingMessage, setCurrentLoadingMessage] = useState('');
   const [currentLoadingMessages, setCurrentLoadingMessages] = useState([]);
   const [isAdWatched, setIsAdWatched] = useState(false);
@@ -1138,44 +1183,64 @@ const WriteView = ({ user, userProfile, t, onBookGenerated, slotStatus, setView,
       </div>
 
       {activeWriteTab === 'fairy' ? (
-        <div className="flex flex-col items-center justify-center py-10 px-4 text-center space-y-6">
-          {/* 애니메이션 아이콘 */}
-          <div className="relative w-28 h-28 flex items-center justify-center">
-            <div className="absolute inset-0 bg-purple-100 dark:bg-purple-900/30 rounded-full animate-pulse" />
-            <span className="text-6xl relative z-10">📖</span>
-            <span className="absolute top-0 right-0 text-2xl animate-bounce" style={{ animationDuration: '1.5s' }}>✨</span>
-            <span className="absolute bottom-0 left-1 text-xl animate-bounce" style={{ animationDuration: '2s', animationDelay: '0.3s' }}>🧚</span>
-            <span className="absolute top-2 left-0 text-lg animate-bounce" style={{ animationDuration: '1.8s', animationDelay: '0.6s' }}>⭐</span>
+        <div className="space-y-5 py-2">
+          {/* 헤더 */}
+          <div className="text-center space-y-1">
+            <div className="text-4xl">🧚</div>
+            <p className="text-lg font-black text-slate-800 dark:text-slate-100">동화공방</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400">우리 아이가 주인공인 나만의 동화 (잉크 50개)</p>
           </div>
 
-          {/* COMING SOON 뱃지 */}
-          <div className="space-y-3">
-            <span className="inline-block bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 text-xs font-black px-4 py-1.5 rounded-full tracking-widest">
-              COMING SOON
-            </span>
-            <p className="text-lg font-black text-slate-800 dark:text-slate-100 leading-snug">
-              우리 아이가 주인공이 되는<br />마법 같은 시간
-            </p>
-            <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
-              오독오독 동화공방이 곧 찾아옵니다! 🧚✨
-            </p>
+          {/* 아이 이름 */}
+          <div className="space-y-2">
+            <label className="text-sm font-bold text-slate-600 dark:text-slate-300 px-1">아이 이름</label>
+            <input
+              type="text"
+              value={childName}
+              onChange={(e) => setChildName(e.target.value)}
+              maxLength={12}
+              placeholder="예: 서연, 도윤"
+              disabled={isFairyGenerating}
+              className="w-full bg-white dark:bg-slate-700 dark:text-slate-100 border-2 border-slate-200 dark:border-slate-600 rounded-xl py-3 px-4 text-sm focus:border-purple-500 focus:outline-none transition-colors disabled:opacity-60"
+            />
           </div>
 
-          {/* 예정 기능 미리보기 */}
-          <div className="w-full bg-slate-50 dark:bg-slate-800/60 border border-dashed border-purple-200 dark:border-purple-800 rounded-2xl p-5 space-y-3 text-left">
-            <p className="text-xs font-black text-purple-400 dark:text-purple-500 text-center">✦ 준비 중인 기능 ✦</p>
-            {[
-              { icon: '🎨', text: '아이 이름으로 만드는 나만의 동화' },
-              { icon: '🌈', text: '삽화와 함께하는 동화책 뷰어' },
-              { icon: '📚', text: '소중한 동화 모아두는 보관함' },
-              { icon: '🎁', text: 'PDF로 저장해 선물하기' },
-            ].map(({ icon, text }) => (
-              <div key={text} className="flex items-center gap-3">
-                <span className="text-xl">{icon}</span>
-                <span className="text-sm text-slate-600 dark:text-slate-300 font-bold">{text}</span>
-              </div>
-            ))}
+          {/* 주제 선택 */}
+          <div className="space-y-2">
+            <label className="text-sm font-bold text-slate-600 dark:text-slate-300 px-1">주제 선택</label>
+            <div className="grid grid-cols-2 gap-2">
+              {FAIRY_THEMES.map((th) => (
+                <button
+                  key={th.id}
+                  onClick={() => setFairyTheme(th.id)}
+                  disabled={isFairyGenerating}
+                  className={`p-3 rounded-xl border-2 text-sm font-bold flex items-center gap-2 transition-all disabled:opacity-60 ${
+                    fairyTheme === th.id
+                      ? 'border-purple-500 bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-300'
+                      : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300'
+                  }`}
+                >
+                  <span className="text-lg">{th.emoji}</span>{th.label}
+                </button>
+              ))}
+            </div>
           </div>
+
+          {localError && <p className="text-xs text-red-500 font-bold text-center">{localError}</p>}
+
+          {/* 생성 버튼 */}
+          <button
+            onClick={handleGenerateFairytale}
+            disabled={isFairyGenerating}
+            className="w-full py-4 rounded-2xl font-black text-white text-base bg-gradient-to-r from-purple-500 to-pink-500 active:scale-95 transition-all disabled:opacity-60 flex items-center justify-center gap-2 shadow-lg shadow-purple-200 dark:shadow-purple-900/30"
+          >
+            {isFairyGenerating
+              ? <><RefreshCw className="w-5 h-5 animate-spin" /> 동화를 만드는 중...</>
+              : <>🪄 동화책 만들기 (잉크 50)</>}
+          </button>
+          <p className="text-[11px] text-center text-slate-400 dark:text-slate-500">
+            보유 잉크 {userProfile?.ink ?? 0}개 · 약 1,200자 분량 · 만든 동화는 보관함에서 볼 수 있어요
+          </p>
         </div>
       ) : (
         <>

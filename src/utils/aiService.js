@@ -22,11 +22,11 @@ import { functions } from '../firebase';
  * @param {string|null} options.selectedDialogueRatio - 대화 비중 (dialogue_heavy|description_heavy)
  * @returns {Promise<{title: string, content: string, summary: string}>}
  */
-export const generateBook = async ({ 
-  category, 
-  subCategory, 
-  genre, 
-  keywords, 
+export const generateBook = async ({
+  category,
+  subCategory,
+  genre,
+  keywords,
   isSeries,
   previousContext = null,
   endingStyle = null,
@@ -35,13 +35,18 @@ export const generateBook = async ({
   selectedMood = null,
   selectedPOV = null,
   selectedSpeechTone = null,
-  selectedDialogueRatio = null
+  selectedDialogueRatio = null,
+  appId = null,
+  essayNarrator = null,
+  essayAngle = null,
+  selfHelpAudience = null,
+  humanitiesStartingPoint = null
 }) => {
   try {
     const generateBookAI = httpsCallable(functions, 'generateBookAI', {
-      timeout: 540000
+      timeout: 900000
     });
-    
+
     const result = await generateBookAI({
       category: category,
       subCategory: subCategory,
@@ -55,7 +60,12 @@ export const generateBook = async ({
       selectedMood: selectedMood || null,
       selectedPOV: selectedPOV || null,
       selectedSpeechTone: selectedSpeechTone || null,
-      selectedDialogueRatio: selectedDialogueRatio || null
+      selectedDialogueRatio: selectedDialogueRatio || null,
+      appId: appId || null,
+      essayNarrator: essayNarrator || null,
+      essayAngle: essayAngle || null,
+      selfHelpAudience: selfHelpAudience || null,
+      humanitiesStartingPoint: humanitiesStartingPoint || null
     });
     
     const bookData = result.data;
@@ -120,11 +130,13 @@ export const generateSeriesEpisode = async ({
   selectedPOV,
   selectedSpeechTone,
   selectedDialogueRatio,
-  endingStyle
+  endingStyle,
+  recentCliffhangerTypes,
+  episodeNum
 }) => {
   try {
     const generateSeriesEpisodeFn = httpsCallable(functions, 'generateSeriesEpisode', {
-      timeout: 540000
+      timeout: 900000
     });
 
     const result = await generateSeriesEpisodeFn({
@@ -144,9 +156,11 @@ export const generateSeriesEpisode = async ({
       selectedPOV: selectedPOV || null,
       selectedSpeechTone: selectedSpeechTone || null,
       selectedDialogueRatio: selectedDialogueRatio || null,
-      endingStyle
+      endingStyle,
+      recentCliffhangerTypes: recentCliffhangerTypes || [],
+      episodeNum: episodeNum || null
     });
-    
+
     const episodeData = result.data;
 
     if (!episodeData || !episodeData.content) {
@@ -157,13 +171,38 @@ export const generateSeriesEpisode = async ({
       content: episodeData.content,
       summary: episodeData.summary || '',
       cumulativeSummary: episodeData.cumulativeSummary || cumulativeSummary,
-      isFinale: episodeData.isFinale || false
+      isFinale: episodeData.isFinale || false,
+      cliffhangerType: episodeData.cliffhangerType || null
     };
   } catch (error) {
     console.error('[AI Service] 시리즈 이어쓰기 오류:', error);
     
     const errorMessage = error?.message || error?.details?.message || '시리즈 집필에 실패했습니다. 다시 시도해주세요.';
-    
+
+    throw new Error(errorMessage);
+  }
+};
+
+/**
+ * 동화공방: 아이가 주인공인 짧은 동화 생성
+ * @param {Object} options
+ * @param {string} options.childName - 자녀 이름
+ * @param {string} options.theme - 주제 ID (courage/friendship/dream/adventure/family/animal/habit/royal)
+ * @param {string|null} options.appId
+ * @returns {Promise<{title: string, content: string}>}
+ */
+export const generateFairytale = async ({ childName, theme, appId = null }) => {
+  try {
+    const fn = httpsCallable(functions, 'generateFairytale', { timeout: 300000 });
+    const result = await fn({ childName, theme, appId: appId || null });
+    const data = result.data;
+    if (!data || !data.title || !data.content) {
+      throw new Error('AI가 올바른 형식의 동화를 반환하지 않았습니다.');
+    }
+    return { title: data.title, content: data.content };
+  } catch (error) {
+    console.error('[AI Service] 동화 생성 오류:', error);
+    const errorMessage = error?.message || error?.details?.message || '동화 생성에 실패했습니다. 다시 시도해주세요.';
     throw new Error(errorMessage);
   }
 };

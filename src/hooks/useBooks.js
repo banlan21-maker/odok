@@ -579,6 +579,31 @@ export const useBooks = ({ user, userProfile, setError, deductInk, addInk, setSh
         });
     };
 
+    // 동화공방: 생성된 동화를 책으로 저장 (공개 — 서재/보관함에 노출). 일일 제한·슬롯 경쟁 없음.
+    const saveFairytale = async ({ title, content, childName, theme }) => {
+        if (!user) throw new Error('LOGIN_REQUIRED');
+        const todayKey = getTodayDateKey();
+        const bookDoc = {
+            title: (title || `${childName}의 동화`).slice(0, 30),
+            content: content || '',
+            summary: (content || '').replace(/\s+/g, ' ').trim().slice(0, 100) + '...',
+            category: 'fairytale',
+            subCategory: theme || null,
+            genre: theme || null,
+            childName: childName || null,
+            authorId: user.uid,
+            authorName: userProfile?.nickname || '익명',
+            isAnonymous: false,
+            createdAt: serverTimestamp(),
+            dateKey: todayKey,
+            views: 0, likes: 0, favorites: 0, completions: 0,
+            isSeries: false,
+            fontFamily: 'default',
+        };
+        const ref = await addDoc(collection(db, 'artifacts', appId, 'books'), bookDoc);
+        return { id: ref.id, ...bookDoc, createdAt: new Date() };
+    };
+
     return {
         books, setBooks,
         currentBook, setCurrentBook,
@@ -596,6 +621,7 @@ export const useBooks = ({ user, userProfile, setError, deductInk, addInk, setSh
         promotions,
         createPromotion,
         handleBookGenerated,
-        myAnonymousBookIds
+        myAnonymousBookIds,
+        saveFairytale
     };
 };

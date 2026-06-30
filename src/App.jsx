@@ -211,7 +211,8 @@ const App = () => {
     promotions,
     createPromotion,
     handleBookGenerated,
-    myAnonymousBookIds
+    myAnonymousBookIds,
+    saveFairytale
   } = useBooks({
     user,
     userProfile,
@@ -778,6 +779,7 @@ const App = () => {
                     error={error} setError={setError} deductInk={deductInk} addInk={addInk}
                     onGeneratingChange={setIsWritingInProgress} onGenerationComplete={() => { }}
                     authorProfiles={authorProfiles} appId={appId}
+                    onSaveFairytale={saveFairytale}
                   />
                 </div>
               )}
