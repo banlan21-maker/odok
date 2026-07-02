@@ -50,8 +50,8 @@ const NOVEL_BASE_GUIDE = [
   "[CRITICAL RULE - 어미 다양성 강제] 한국어 어미 사용 시 다음 규칙을 절대 준수하라: (1) 한 단락 내에서 같은 어미를 연속 3회 이상 사용 금지. (2) '~했었다'는 대과거(과거의 더 먼 과거) 표현일 때만 허용. 단순 과거엔 '~했다' 사용. (3) 다음 9가지 어미 패턴을 의식적으로 교차 사용: E1 기본 단정(-했다/였다) · E2 상태/지각(-있었다/보였다/느껴졌다) · E3 진행(-하고 있었다) · E4 명사 종결(어두운 방./낯선 침묵.) · E5 도치/생략(걸었다, 천천히.) · E6 의문/감탄(왜였을까.) · E7 현재형 삽입(지금도 생각난다.) · E8 대사/인용 마무리 · E9 부사구/조사 종결(그저 그뿐.). (4) 한 단락(3~6문장)에 최소 3종류 어미 패턴 사용.",
   "[직유법 빈도 제한] '~듯/~듯한/~듯이/~듯해', '~처럼', '~같다/~같은/~같이', '~것 같다', '마치 ~' 같은 직유법 표현을 5,000자 기준 최대 5회 이내로 제한하라. 한 단락에 2회 이상 사용 금지. 대신 단정적 표현을 사용하라('~인 듯하다' → '~이다', '~처럼 보였다' → '~보였다').",
   "[주어 생략 & 대명사 규칙] 한국어는 주어를 자주 생략하는 언어다. 같은 인물이 연속 행동 시 첫 문장만 주어를 명시하고 이후 생략하라. '그는/그녀는'은 한 단락 내 최대 2회로 제한하고, 3회 이상 필요하면 이름/별칭으로 대체하거나 주어를 생략하라. 캐릭터 성별(그/그녀)은 글 전체에서 절대 바꾸지 마라.",
-  "[감정 표현 클리셰 반복 금지 - CRITICAL] 같은 감정 반응·신체 표현·붕괴 비유를 글 전체에서 2회 이상 동일하게 반복하지 마라. 한 번 쓴 표현은 반드시 다른 신체 부위·감각·행동으로 변주하라. 특히 다음 4개 계열은 한 편 안에서 각 1회만 허용한다: ① 심장 반응 계열: '심장이 쿵 내려앉다/떨어지다/울리다', '심장이 쿵쾅거리다', '가슴이 쿵 하고' — 반복 금지, 대신 '호흡이 멎었다', '발이 바닥에 붙었다', '손가락이 굳어버렸다' 등 다른 신체 부위로 변주. 특히 '쿵', '쿵 하고', '쿵 하는 소리' 같은 충격음 표현은 글 전체에서 단 1회만 허용. 두 번째부터는 반드시 다른 신체 감각으로 대체하라. 예: '발이 바닥에 붙었다', '숨이 턱 막혔다', '눈앞이 멍해졌다'. ② 전율·열기 계열: '온몸에 전율이 흘렀다', '뜨거운 열기가 온몸을 감쌌다', '온몸의 신경이 집중됐다' — 반복 금지. ③ 붕괴·무너짐 계열: '얼음덩어리가 무너져 내렸다', '뭔가가 와르르 무너졌다', '가슴이 답답해졌다' — 반복 금지. ④ 시야 흐림 계열: '눈앞이 뿌옇게 흐려졌다', '모든 것이 흐릿해졌다' — 반복 금지. 감정의 강도가 올라갈수록 표현을 새롭게 발명하라. 독자는 같은 반응을 두 번 읽으면 감동이 아닌 식상함을 느낀다.",
-  "[캐릭터 신체 버릇 시스템] 주인공과 주요 조연 각각에 1~2개의 고유한 '신체 버릇'을 부여하라(예: 입술 깨물기, 손톱 뜯기, 안경 치켜올리기, 머리카락 비틀기, 모자 챙 누름 등). 이 버릇은 글 전체에서 최소 3회 자연스럽게 등장해야 하며, 감정 상태에 따라 강도/빈도가 변한다. 캐릭터마다 다른 버릇을 부여해 구분하고, 결말에서 버릇의 변화로 캐릭터 성장을 표현하라."
+  "[감정 표현 클리셰 반복 금지 - CRITICAL] 같은 감정 반응·신체 표현·붕괴 비유를 글 전체에서 2회 이상 동일하게 반복하지 마라. 한 번 쓴 표현은 반드시 다른 신체 부위·감각·행동으로 변주하라. 특히 다음 4개 계열은 한 편 안에서 각 1회만 허용한다: ① 심장 반응 계열: '심장이 쿵 내려앉다/떨어지다/울리다', '심장이 쿵쾅거리다', '가슴이 쿵 하고' — 반복 금지, 대신 '호흡이 멎었다', '발이 바닥에 붙었다', '손가락이 굳어버렸다' 등 다른 신체 부위로 변주. 특히 '쿵', '쿵 하고', '쿵 하는 소리' 같은 충격음 표현은 글 전체에서 단 1회만 허용. 두 번째부터는 반드시 다른 신체 감각으로 대체하라. 예: '발이 바닥에 붙었다', '숨이 턱 막혔다', '눈앞이 멍해졌다'. ② 전율·열기 계열: '온몸에 전율이 흘렀다', '뜨거운 열기가 온몸을 감쌌다', '온몸의 신경이 집중됐다' — 반복 금지. ③ 붕괴·무너짐 계열: '얼음덩어리가 무너져 내렸다', '뭔가가 와르르 무너졌다', '가슴이 답답해졌다' — 반복 금지. ④ 시야 흐림 계열: '눈앞이 뿌옇게 흐려졌다', '모든 것이 흐릿해졌다' — 반복 금지. 감정의 강도가 올라갈수록 표현을 새롭게 발명하라. 독자는 같은 반응을 두 번 읽으면 감동이 아닌 식상함을 느낀다. 단, 위에 예시로 든 대체 표현들('발이 바닥에 붙었다', '숨이 턱 막혔다' 등)도 예시일 뿐이니 그대로 답습하지 말고 매번 새롭게 창작하라.",
+  "[캐릭터 신체 버릇 시스템] 주인공과 주요 조연 각각에 1~2개의 고유한 '신체 버릇'을 부여하라(예: 입술 깨물기, 손톱 뜯기, 안경 치켜올리기, 머리카락 비틀기, 모자 챙 누름 등). 이 버릇은 글 전체에서 1~2회 정도만 자연스럽게 등장시키되 절대 과하게 반복하지 마라. 나올 때마다 반드시 다른 표현·다른 상황·다른 신체 동작으로 변주하고, 똑같은 문장을 되풀이하지 마라. 특히 '~하는 것이 그의 버릇이었다', '~할 때마다 나오는 오랜 습관' 같은 설명(telling)을 붙이지 마라 — 버릇은 오직 행동으로만 보여줘라(showing). 캐릭터마다 다른 버릇을 부여해 구분하고, 결말에서 그 버릇의 변화로 캐릭터 성장을 한 번 정도 암시하면 좋다."
 ].join(" ");
 
 // 시리즈 연속 집필 시 캐릭터·설정 일관성 유지 지침 (시리즈 전용)
@@ -761,6 +761,25 @@ function detectAndFixRepetition(content) {
   return result.join("\n\n");
 }
 
+// 문단 통째 중복 제거 (이음새/비인접 반복 안전망). 정규화 후 앞에 나온 문단과 같으면 뒤엣것 삭제.
+// detectAndFixRepetition(인접 문단 n-gram)이 놓치는 '멀리 떨어진 verbatim 반복'을 잡는다.
+function removeDuplicateParagraphs(text) {
+  const norm = (s) => (s || "").replace(/\s+/g, "").replace(/["'“”.,!?…·~\-]/g, "");
+  const paras = (text || "").split(/\n{2,}/);
+  const seen = new Set();
+  const out = [];
+  for (const p of paras) {
+    const key = norm(p);
+    if (key.length >= 12 && seen.has(key)) {
+      logger.warn(`[dedup] 중복 문단 제거: "${p.slice(0, 30)}..."`);
+      continue;
+    }
+    if (key.length >= 12) seen.add(key);
+    out.push(p);
+  }
+  return out.join("\n\n");
+}
+
 /** 후처리: 본문에 혼입된 메타 태그/마크다운 헤더 제거 */
 function stripMetaTags(content) {
   if (!content) return content;
@@ -1339,13 +1358,19 @@ async function generateStep({
     if (validation.valid) {
       const cleaned = stripMetaTags(lastContent);
       if (isNovel) {
-        // 소설 전용 QC (어미·직유·표현반복) → 로그만, 재시도 없음 (후처리에서 처리)
+        // 소설 전용 QC (어미·직유·표현반복)
         const endingCheck = checkEndingDiversity(cleaned, speechTone);
         const simileCheck = checkSimileFrequency(cleaned);
         const exprCheck   = checkExpressionRepeat(cleaned);
+        // 표현 반복이 심하면 해당 단계를 1회 재생성 (마지막 시도는 제외 — 무한/과비용 방지)
+        if (!exprCheck.valid && attempt < MAX_LANGUAGE_RETRIES - 1) {
+          logger.warn(`[generateStep] 표현 반복 감지 → 재생성 ${attempt + 1}회 (${exprCheck.reason})`);
+          currentTemp = Math.max(MIN_TEMPERATURE, currentTemp - TEMPERATURE_DECREMENT);
+          continue;
+        }
         const qcWarnings = [endingCheck.reason, simileCheck.reason, exprCheck.reason].filter(Boolean);
         if (qcWarnings.length > 0) {
-          logger.warn(`[generateStep] QC 경고 (재시도 없음): ${qcWarnings.join(' | ')}`);
+          logger.warn(`[generateStep] QC 경고: ${qcWarnings.join(' | ')}`);
         }
       }
       warnKoreanNaturalness(cleaned, `[${currentStep?.name || ''}]`);
@@ -1511,6 +1536,7 @@ exports.generateBookAI = onCall(
       if (isNovel) {
         // 소설 전용 전체 후처리
         fullContent = detectAndFixRepetition(fullContent.trim());
+        fullContent = removeDuplicateParagraphs(fullContent);
         fullContent = replaceKungExpressions(fullContent);
 
         const fullSimileCheck = checkSimileFrequency(fullContent);
@@ -1663,7 +1689,7 @@ exports.generateSeriesEpisode = onCall(
           ].join(" ")
         };
 
-      const stepContent = await generateStep({
+      let stepContent = await generateStep({
         systemPrompt,
         topic,
         currentStep: step,
@@ -1681,6 +1707,9 @@ exports.generateSeriesEpisode = onCall(
       if (!stepContent || !stepContent.trim()) {
         throw new Error("빈 응답이 반환되었습니다.");
       }
+
+      // 시리즈도 소설과 동일하게 반복/중복 후처리 적용 (기존엔 누락돼 있었음)
+      stepContent = removeDuplicateParagraphs(detectAndFixRepetition(stepContent.trim()));
 
       const stepSummary = await summarizeStepContent(stepContent, systemPrompt, true);
       const updatedSummary = previousStorySummary
