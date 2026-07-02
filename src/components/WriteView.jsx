@@ -341,6 +341,22 @@ const FAIRY_STORY_TYPES = [
   { label: '웃음·유머', sub: '깔깔 웃긴' },
 ];
 
+// 로맨스 전개 유형 (오해→화해 수렴 방지). id는 서버 ROMANCE_PLOT_ARCHETYPES와 일치. ''는 랜덤(자동).
+const ROMANCE_PLOT_TYPES = [
+  { id: 'contract',    emoji: '📝', name: '계약·정략연애' },
+  { id: 'childhood',   emoji: '👫', name: '소꿉친구' },
+  { id: 'enemies',     emoji: '⚔️', name: '원수에서 연인' },
+  { id: 'class_gap',   emoji: '👑', name: '신분·격차' },
+  { id: 'cohabit',     emoji: '🏠', name: '한 지붕 동거' },
+  { id: 'regression',  emoji: '⏳', name: '회귀·시간루프' },
+  { id: 'fake_dating', emoji: '🎭', name: '위장연애' },
+  { id: 'office',      emoji: '💼', name: '사내·직장연애' },
+  { id: 'healing',     emoji: '🩹', name: '상처 치유' },
+  { id: 'reunion',     emoji: '💔', name: '재회물' },
+  { id: 'destiny',     emoji: '🌙', name: '운명·시한부' },
+  { id: 'second_lead', emoji: '💫', name: '짝사랑에서 메인' },
+];
+
 const WriteView = ({ user, userProfile, t, onBookGenerated, slotStatus, setView, setSelectedBook, error, setError, deductInk, addInk, onGeneratingChange, onGenerationComplete, authorProfiles = {}, appId, onSaveFairytale }) => {
   // 메인 카테고리 목록 (6개)
   const categories = [
@@ -368,6 +384,7 @@ const WriteView = ({ user, userProfile, t, onBookGenerated, slotStatus, setView,
   const [selfHelpAudience, setSelfHelpAudience] = useState(''); // 자기개발 독자 상황
   const [humanitiesStartingPoint, setHumanitiesStartingPoint] = useState(''); // 철학/인문 사유 출발점
   const [selectedMood, setSelectedMood] = useState(''); // 소설 분위기
+  const [selectedPlotType, setSelectedPlotType] = useState(''); // 로맨스 전개 유형 ('' = 랜덤/자동)
   const [selectedPOV, setSelectedPOV] = useState(''); // 소설 시점 (누가 이야기하나요)
   const [selectedSpeechTone, setSelectedSpeechTone] = useState(''); // 소설 말투/문체
   const [selectedDialogueRatio, setSelectedDialogueRatio] = useState(''); // 대화 비중
@@ -1012,6 +1029,7 @@ const WriteView = ({ user, userProfile, t, onBookGenerated, slotStatus, setView,
         selectedPOV: selectedPOV,
         selectedSpeechTone: selectedSpeechTone,
         selectedDialogueRatio: selectedDialogueRatio,
+        plotType: ['romance', 'romance-fantasy'].includes(selectedGenre?.id) ? selectedPlotType : null,
         appId: appId || null
       });
 
@@ -1750,6 +1768,7 @@ const WriteView = ({ user, userProfile, t, onBookGenerated, slotStatus, setView,
                           onClick={() => {
                             setSelectedGenre(genre);
                             setSelectedMood('');
+                            setSelectedPlotType('');
                           }}
                           className={`py-2 px-3 rounded-xl font-bold text-sm transition-all ${selectedGenre?.id === genre.id
                             ? 'bg-orange-500 text-white'
@@ -1889,6 +1908,25 @@ const WriteView = ({ user, userProfile, t, onBookGenerated, slotStatus, setView,
                       })}
                     </div>
                   </div>
+                  {/* 전개 유형 (로맨스 계열 전용, 선택) */}
+                  {['romance', 'romance-fantasy'].includes(selectedGenre?.id) && (
+                    <div className="space-y-1.5">
+                      <p className="text-xs font-bold text-slate-500 dark:text-slate-400">전개 유형 <span className="font-normal text-slate-400">(선택 · 안 고르면 매번 랜덤)</span></p>
+                      <div className="flex flex-wrap gap-1.5">
+                        <button onClick={() => setSelectedPlotType('')}
+                          className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all ${selectedPlotType === '' ? 'bg-orange-500 text-white' : 'bg-white dark:bg-slate-700 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-600'}`}>
+                          🎲 랜덤(AI가 알아서)
+                        </button>
+                        {ROMANCE_PLOT_TYPES.map((pt) => (
+                          <button key={pt.id} onClick={() => setSelectedPlotType(pt.id)}
+                            className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all ${selectedPlotType === pt.id ? 'bg-orange-500 text-white' : 'bg-white dark:bg-slate-700 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-600'}`}>
+                            {pt.emoji} {pt.name}
+                          </button>
+                        ))}
+                      </div>
+                      <p className="text-[10px] text-slate-400 dark:text-slate-500">'오해했다가 다시 사랑' 같은 뻔한 흐름을 피하고 매번 다른 전개로 써줘요.</p>
+                    </div>
+                  )}
                 </div>
               )}
 

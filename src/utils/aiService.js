@@ -40,7 +40,8 @@ export const generateBook = async ({
   essayNarrator = null,
   essayAngle = null,
   selfHelpAudience = null,
-  humanitiesStartingPoint = null
+  humanitiesStartingPoint = null,
+  plotType = null
 }) => {
   try {
     const generateBookAI = httpsCallable(functions, 'generateBookAI', {
@@ -65,9 +66,10 @@ export const generateBook = async ({
       essayNarrator: essayNarrator || null,
       essayAngle: essayAngle || null,
       selfHelpAudience: selfHelpAudience || null,
-      humanitiesStartingPoint: humanitiesStartingPoint || null
+      humanitiesStartingPoint: humanitiesStartingPoint || null,
+      plotType: plotType || null
     });
-    
+
     const bookData = result.data;
 
     // 결과 검증

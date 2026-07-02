@@ -66,8 +66,8 @@ const NOVEL_SERIES_CONTEXT_GUIDE = [
 
 
 const GENRE_SPECIFIC_INSTRUCTIONS = {
-  "로맨스": "두 주인공 사이의 감정 변화를 세밀하게 추적하십시오. 첫 만남의 설렘, 오해로 인한 거리감, 질투나 경쟁이 만드는 긴장감, 마침내 마음이 열리는 순간을 각각 뚜렷한 장면으로 보여주십시오. 대화 속 숨겨진 감정(말하지 못한 고백, 눈빛, 손끝의 떨림)을 살려 독자가 두 사람의 설렘을 함께 느끼게 하십시오. '나 지금 심장이 쿵' 같은 직접 서술보다 상대방의 행동 하나에 멈춰버리는 장면으로 감정을 전달하십시오.",
-  "로맨스 판타지": "서양풍 귀족 세계의 화려함과 냉혹한 권력 다툼을 동시에 그리십시오. 남주인공은 차갑고 위압적이지만 여주인공 앞에서만 균열이 생기는 순간을 포착하십시오. 회귀·빙의·환생 요소가 있다면 전생의 기억이 현재 선택에 미치는 긴장감을 극대화하십시오. 무도회 드레스, 촛불이 흔들리는 성관 홀, 마차 안의 침묵 등 시각·촉각적 배경 묘사로 몰입감을 높이십시오. 여주인공은 수동적 피해자가 아닌 자신의 운명을 개척하는 능동적 인물로 그리십시오.",
+  "로맨스": "두 주인공 사이의 감정 변화를 세밀하게 추적하십시오. 대화 속 숨겨진 감정(말하지 못한 고백, 눈빛, 손끝의 떨림)을 살려 독자가 두 사람의 설렘을 함께 느끼게 하십시오. '나 지금 심장이 쿵' 같은 직접 서술보다 상대방의 행동 하나에 멈춰버리는 장면으로 감정을 전달하십시오. [매우 중요 - 갈등 다양성] 두 사람 사이의 갈등을 '단순한 오해나 소통 실패'로 만들지 마십시오. 5분만 솔직히 대화하면 풀릴 문제를 핵심 장애물로 삼는 것을 금지합니다. 특히 '주인공이 상대에게 다른 연인이 있는 줄 오해했다가, 알고 보니 아니어서 다시 사랑하게 된다'는 진부한 골격을 절대 기본값으로 사용하지 마십시오. 갈등은 두 인물의 실재하는 목표·가치관·처지·구조(신분 차이, 시간·운명, 경쟁하는 목표, 과거의 상처, 계약·이해관계, 외부의 압력 등)에서 비롯되어야 하며, 대화만으로는 쉽게 해소되지 않아야 합니다.",
+  "로맨스 판타지": "서양풍 귀족 세계의 화려함과 냉혹한 권력 다툼을 동시에 그리십시오. 남주인공은 차갑고 위압적이지만 여주인공 앞에서만 균열이 생기는 순간을 포착하십시오. 회귀·빙의·환생 요소가 있다면 전생의 기억이 현재 선택에 미치는 긴장감을 극대화하십시오. 무도회 드레스, 촛불이 흔들리는 성관 홀, 마차 안의 침묵 등 시각·촉각적 배경 묘사로 몰입감을 높이십시오. 여주인공은 수동적 피해자가 아닌 자신의 운명을 개척하는 능동적 인물로 그리십시오. [갈등 다양성] 두 사람 사이의 갈등을 '단순한 오해나 소통 실패'로 만들지 말고, 신분·권력 다툼, 회귀·운명, 경쟁하는 목표, 가치관 충돌 등 실재하는 축에서 긴장을 뽑아내십시오.",
   "판타지": "세계관의 규칙(마법 체계, 종족 갈등, 지리)을 초반부터 자연스럽게 독자에게 보여주되 설명 덩어리가 되지 않게 하십시오. 전투 장면은 마법의 시각적 이펙트와 인물의 신체 감각(호흡, 땀, 근육의 긴장)을 함께 묘사해 박진감을 살리십시오. 주인공의 성장은 단순한 능력 상승이 아닌 내면의 갈등과 선택을 통해 보여주십시오. 동료와의 관계에 균열과 신뢰 회복의 감동을 담아 이야기에 깊이를 더하십시오.",
   "현대 판타지": "현실의 평범한 일상과 초자연적 요소의 충돌을 생생하게 그리십시오. '각성' 후 주인공이 시스템 창(UI)을 처음 인식하는 장면을 독자가 함께 낯설고 경이롭게 느끼도록 묘사하십시오. '사이다' 전개를 위해 기존 강자들이 주인공을 무시하다 충격을 받는 장면을 명확하고 통쾌하게 연출하십시오. 던전·몬스터의 위협은 구체적인 감각(냄새, 공기 압박, 소리)으로 현실감 있게 묘사하십시오. 답답한 전개를 피하고 주인공이 문제를 능동적으로 해결하게 하십시오.",
   "무협": "중원 강호의 정사(正邪) 대립과 문파 간 세력 다툼을 배경으로 삼으십시오. 무공 대결은 초식의 이름과 기세, 대지를 울리는 내공의 충돌을 고풍스러운 어조와 긴장감 있는 문장으로 묘사하십시오. '협(俠)'의 정신—의리, 약자 보호, 불의에 대한 분노—이 주인공의 행동 동기로 드러나게 하십시오. 복수의 서사라면 원한이 쌓이게 된 과거 장면과 현재의 침묵을 교차하며 비장감을 높이십시오. 대화에는 무림인 특유의 격식체와 자존심을 녹이십시오.",
@@ -79,6 +79,41 @@ const GENRE_SPECIFIC_INSTRUCTIONS = {
   "역사": "역사적 사실을 배경으로 삼되 인물의 내면과 선택에 집중하십시오. 당시 언어·복식·생활상을 과도하지 않게 녹여 현장감을 살리십시오. 역사의 거대한 흐름(전쟁, 왕조 교체) 앞에 놓인 평범한 개인의 선택이 갖는 무게를 비장미 있게 그리십시오. 고증 오류가 될 수 있는 현대적 표현이나 개념은 피하십시오. 독자가 이미 아는 역사적 결말을 향해 달려가는 인물의 운명에 비극적 아름다움을 부여하십시오.",
   "힐링": "사건보다 감각과 분위기로 이야기를 이끄십시오. 장소의 냄새, 음식의 온도, 창밖의 빗소리처럼 구체적인 감각 묘사가 독자를 그 공간으로 데려가야 합니다. 갈등은 있되 극단적이지 않게, 상처는 있되 지나치게 무겁지 않게 다루십시오. 주인공이 작은 것에서 위로를 발견하는 순간—낯선 사람의 친절, 오랜 취미의 재발견—을 섬세하게 포착하십시오. 마지막 장면은 모든 것이 해결되지 않아도 독자가 숨을 내쉬며 미소 지을 수 있게 마무리하십시오."
 };
+
+// ── 로맨스 전개 아키타입 (오해→화해 수렴 방지: 갈등축이 서로 다른 12종 플롯 골격) ──
+const ROMANCE_PLOT_ARCHETYPES = [
+  { id: "contract",    name: "계약·정략연애", axis: "이해관계로 맺어진 '거래' 같은 관계가 진심으로 번져가는 이야기. 핵심 갈등축은 계약이 규정한 선과 그 선을 넘어버린 실제 감정 사이의 자기기만이다." },
+  { id: "childhood",   name: "소꿉친구",       axis: "오래 곁을 지킨 친구를 이성으로 재발견하는 이야기. 핵심 갈등축은 잃으면 안 되는 '안전한 우정'과 위험을 감수하는 '연인으로의 도약' 사이, 익숙함이라는 장벽이다." },
+  { id: "enemies",     name: "원수에서 연인",  axis: "서로를 진짜로 적대하던 둘이 끌림으로 전환되는 이야기. 핵심 갈등축은 실재하는 대립 목표·이해충돌과, 인정할 수 없는 매혹의 공존이다. 단순 오해가 아니라 둘은 정말로 반대편에 서 있다." },
+  { id: "class_gap",   name: "신분·격차",      axis: "계급·재력·사회적 위치가 다른 둘의 결합. 핵심 갈등축은 개인의 감정과, 두 세계를 가르는 구조적 위계·주변의 압력이다. 사랑이 아니라 '세계 자체'가 장애물이다." },
+  { id: "cohabit",     name: "한 지붕 동거",   axis: "상황상 한 공간을 공유하게 된 둘이 거리를 좁히는 이야기. 핵심 갈등축은 물리적 근접이 강제하는 친밀함과, 지키고 싶은 사적 경계·자존 사이의 마찰이다." },
+  { id: "regression",  name: "회귀·시간루프",  axis: "시간을 되돌리거나 같은 구간을 반복하며 관계를 다시 쓰는 이야기. 핵심 갈등축은 이미 알아버린 (비극적) 미래·정해진 운명과, 그것을 바꾸려는 개입이다. 아는 것이 축복이자 저주가 된다." },
+  { id: "fake_dating", name: "위장연애",       axis: "제3의 목적 때문에 연인 행세를 하다 진짜가 되는 이야기. 핵심 갈등축은 연기해야 하는 '가짜 역할'과 새어 나오는 진짜 감정이다. 어디까지가 연기인지 서로도, 자신도 모른다." },
+  { id: "office",      name: "사내·직장연애",  axis: "같은 조직·업무 공간에서 피어나는 관계. 핵심 갈등축은 프로페셔널리즘·권력관계·규정과, 사적인 감정 사이의 이해충돌이다. 커리어와 사랑을 저울질한다." },
+  { id: "healing",     name: "상처 치유",      axis: "과거의 트라우마·상실을 지닌 이가 관계를 통해 회복하는 이야기. 핵심 갈등축은 다시 상처받을 두려움(방어기제)과, 마음을 여는 위험 감수다. 적은 상대가 아니라 자기 안의 상처다." },
+  { id: "reunion",     name: "재회물",         axis: "헤어졌던 둘이 시간이 흐른 뒤 다시 마주치는 이야기. 핵심 갈등축은 이미 실패했던 관계의 역사·상처와, 달라진 지금의 두 사람이다. 재결합의 조건은 '오해 해소'가 아니라 각자 실제로 변화·성장했음을 증명하는 것이다." },
+  { id: "destiny",     name: "운명·시한부",    axis: "정해진 이별·죽음·기한이 관계 위에 드리운 이야기. 핵심 갈등축은 유한한 시간이라는 절대 제약과, 그럼에도 지금을 살아내려는 의지다. 외부의 오해가 아니라 시간 그 자체가 장애물이다." },
+  { id: "second_lead", name: "짝사랑에서 메인", axis: "곁을 지키던 조력자·짝사랑하던 이가 마침내 주인공의 자리로 올라서는 이야기. 핵심 갈등축은 스스로 정한 '나는 안 될 사람'이라는 체념·자기검열과, 마침내 발화하는 욕망이다." }
+];
+
+const ROMANCE_GENRES = new Set(["로맨스", "로맨스 판타지"]);
+
+// 로맨스 전개 유형 결정: 사용자 선택값(id/name) 우선, 미선택 시 무작위(자동 다양화)
+function resolveRomancePlotArchetype(genre, plotType) {
+  const g = (genre || "").toString().trim();
+  if (!ROMANCE_GENRES.has(g)) return null; // 로맨스 계열에만 적용
+  const requested = (plotType || "").toString().trim();
+  if (requested && requested !== "random" && requested !== "auto") {
+    const found = ROMANCE_PLOT_ARCHETYPES.find((a) => a.id === requested || a.name === requested);
+    if (found) return found;
+  }
+  return ROMANCE_PLOT_ARCHETYPES[Math.floor(Math.random() * ROMANCE_PLOT_ARCHETYPES.length)];
+}
+
+function buildRomancePlotGuide(archetype) {
+  if (!archetype) return null;
+  return `이 이야기의 전개 유형은 '${archetype.name}'다. ${archetype.axis} 이 갈등축을 이야기 전체의 중심 엔진으로 삼아, 그 축이 어떻게 생겨나고(발단·전개) 심화되며(위기·절정) 해소되는지(결말)로 서사를 구성하라. 앞서 금지한 '오해→재결합' 골격으로 절대 회귀하지 마라.`;
+}
 
 const NOVEL_MOOD_OPTIONS = {
   webnovel: {
@@ -405,7 +440,7 @@ function buildPOVInstruction(selectedPOV) {
   return instructions[pov] ? `[POV Guideline] ${instructions[pov]}` : null;
 }
 
-function buildSystemPrompt({ isNovel, category, subCategory, genre, isSeries = false, episodeType = null, endingStyle, selectedTone, selectedMood, selectedPOV, selectedSpeechTone, selectedDialogueRatio, selectedCliffhangerType = null, essayNarrator = null, essayAngle = null, selfHelpAudience = null, humanitiesStartingPoint = null }) {
+function buildSystemPrompt({ isNovel, category, subCategory, genre, isSeries = false, episodeType = null, endingStyle, selectedTone, selectedMood, selectedPOV, selectedSpeechTone, selectedDialogueRatio, selectedCliffhangerType = null, essayNarrator = null, essayAngle = null, selfHelpAudience = null, humanitiesStartingPoint = null, plotGuide = null }) {
   if (isNovel) {
     const endingGuide = endingStyle
       ? `결말은 반드시 '${endingStyle}' 형태로 끝내며 그 톤을 유지하라.`
@@ -451,6 +486,7 @@ function buildSystemPrompt({ isNovel, category, subCategory, genre, isSeries = f
     return [
       `당신은 ${genre || "소설"} 분야의 최고 작가입니다.`,
       `[장르 지침] ${pickGenreGuideline(genre)}`,
+      plotGuide ? `[전개 유형 지침] ${plotGuide}` : null,
       moodGuide,
       guardRailWarning,
       trackGuide,
@@ -1403,7 +1439,7 @@ exports.generateBookAI = onCall(
         throw new HttpsError("failed-precondition", "Gemini API 키가 설정되지 않았습니다.");
       }
 
-      const { category, subCategory, genre, keywords, isSeries, previousContext, endingStyle, title, selectedTone, selectedMood, selectedPOV, selectedSpeechTone, selectedDialogueRatio, appId, essayNarrator, essayAngle, selfHelpAudience, humanitiesStartingPoint } = request.data;
+      const { category, subCategory, genre, keywords, isSeries, previousContext, endingStyle, title, selectedTone, selectedMood, selectedPOV, selectedSpeechTone, selectedDialogueRatio, appId, essayNarrator, essayAngle, selfHelpAudience, humanitiesStartingPoint, plotType } = request.data;
 
       const uid = request.auth.uid;
       progressRef = (appId && uid)
@@ -1414,6 +1450,13 @@ exports.generateBookAI = onCall(
       const isNovel = category === "webnovel" || category === "novel" || category === "series";
       const temperature = isNovel ? getNovelTemperature(category, subCategory, genre) : 0.5;
 
+      // 로맨스 전개 유형: 선택값 or 미선택 시 무작위(자동 다양화). systemPrompt 생성 전에 한 번만 확정해 시놉시스+전 단계에 동일 적용 → 오해→화해 골격 수렴 방지.
+      const romancePlotArchetype = isNovel ? resolveRomancePlotArchetype(genre, plotType) : null;
+      const plotGuide = buildRomancePlotGuide(romancePlotArchetype);
+      if (romancePlotArchetype) {
+        logger.info(`[generateBookAI] 로맨스 전개유형: ${romancePlotArchetype.id} (${plotType ? "선택" : "랜덤"})`);
+      }
+
       // 시스템 프롬프트
       const systemPrompt = buildSystemPrompt({
         isNovel,
@@ -1421,6 +1464,7 @@ exports.generateBookAI = onCall(
         subCategory,
         genre,
         isSeries: isSeries || false,
+        plotGuide,
         endingStyle,
         selectedTone,
         selectedMood,
