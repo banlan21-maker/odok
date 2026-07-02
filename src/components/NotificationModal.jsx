@@ -32,7 +32,7 @@ const timeAgo = (timestamp) => {
 };
 
 const ITEM_EMOJI = {
-  golden_pen: '🖊️', rainbow_ink: '🌈', magic_eraser: '✨', paint_brush: '🎨', sharp: '✏️',
+  golden_pen: '🖊️', rainbow_ink: '🌈', magic_eraser: '🔮', paint_brush: '🎨', sharp: '✏️',
 };
 
 const NotificationModal = ({ notifications = [], userId, mailboxItems = [], onClose, t = {} }) => {

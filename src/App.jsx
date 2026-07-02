@@ -488,12 +488,13 @@ const App = () => {
                   <section>
                     <h4 className="font-bold text-slate-800 dark:text-slate-100 mb-1">{t.help_section_store}</h4>
                     <ul className="list-disc list-inside space-y-1 text-xs text-slate-600 dark:text-slate-400">
-                      <li><strong>🌈 무지개 잉크 (5개):</strong> 글쓰기 에디터에서 글자 색상 변경.</li>
-                      <li><strong>✨ 마법 지우개 (3개):</strong> 에디터 내 전체 텍스트 초기화.</li>
-                      <li><strong>🖊️ 황금 만년필 (7개):</strong> 글쓰기 글자 수 제한 확장.</li>
-                      <li><strong>🎨 페인트브러시 (8개):</strong> 책 표지 배경색 변경.</li>
-                      <li><strong>✏️ 샤프 (5개):</strong> 책 미리보기에서 AI 소개글 생성·업그레이드.</li>
-                      <li><strong>📢 확성기 (10개):</strong> 내 작품을 홈 화면에 24시간 노출.</li>
+                      <li><strong>🖋️ 황금 만년필:</strong> AI가 문장을 다듬고 묘사·명대사를 더해 작품의 품격을 높여요.</li>
+                      <li><strong>🌈 무지개 잉크:</strong> 내 책을 다른 문체(사투리·사극·고전 명작·트렌디 MZ·사이버네틱)로 AI 변환.</li>
+                      <li><strong>🔮 결말의 수정구:</strong> 책의 결말을 원하는 분위기(해피·새드·반전·열린·수미상관)로 새로 써줘요.</li>
+                      <li><strong>🖌️ 페인트붓:</strong> 소설 분위기에 딱 맞는 AI 표지 이미지를 생성.</li>
+                      <li><strong>✏️ 샤프:</strong> 독자의 시선을 사로잡는 AI 소개글을 작성.</li>
+                      <li><strong>📢 확성기:</strong> 내 작품을 홈 화면에 24시간 노출.</li>
+                      <li><strong>🎨 도화지:</strong> 내가 집필한 책을 PDF 파일로 저장.</li>
                       <li>구매한 아이템은 <strong>내 가방(🎒)</strong>에서 확인·사용 가능.</li>
                     </ul>
                   </section>

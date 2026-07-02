@@ -2034,7 +2034,7 @@ Requirements:
 const STORE_ITEMS_SERVER = {
   golden_pen:   { price: 15, name: '황금만년필' },
   rainbow_ink:  { price: 10, name: '무지개 잉크' },
-  magic_eraser: { price: 10, name: '마법 지우개' },
+  magic_eraser: { price: 10, name: '결말의 수정구' },
   paint_brush:  { price: 50, name: '페인트붓' },
   sharp:        { price: 10, name: '샤프' },
   drawing_paper:{ price: 50, name: '도화지' },

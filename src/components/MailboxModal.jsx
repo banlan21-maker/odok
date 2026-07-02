@@ -10,7 +10,7 @@ const appId = rawAppId.replace(/\//g, '_');
 const ITEM_EMOJI = {
   golden_pen: '🖊️',
   rainbow_ink: '🌈',
-  magic_eraser: '✨',
+  magic_eraser: '🔮',
   paint_brush: '🎨',
   sharp: '✏️',
 };

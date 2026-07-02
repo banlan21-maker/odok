@@ -569,7 +569,7 @@ export const T = {
     saved_subject_suffix: "이",
 
     // MagicEraserModal
-    magic_eraser_title: "마법 지우개",
+    magic_eraser_title: "결말의 수정구",
     magic_select_book: "책 선택",
     magic_select_style: "결말 스타일 선택",
     magic_generating: "생성 중...",
@@ -581,11 +581,11 @@ export const T = {
     magic_in_progress_style: "{style} 스타일로 집필 중입니다",
     magic_no_close: "화면을 닫지 마세요.",
     magic_preview_title: "{style} 결말 미리보기",
-    magic_confirm_desc: "마음에 드시면 저장하세요. 마법 지우개 1개가 차감됩니다.",
+    magic_confirm_desc: "마음에 드시면 저장하세요. 결말의 수정구 1개가 차감됩니다.",
     magic_complete: "새 결말 저장 완료!",
     magic_saved: "내 서재에 저장되었습니다.",
-    magic_used: "🪄 마법 지우개 1개가 사용되었습니다",
-    magic_save_btn: "🪄 이 결말로 저장하기",
+    magic_used: "🔮 결말의 수정구 1개가 사용되었습니다",
+    magic_save_btn: "🔮 이 결말로 저장하기",
     magic_regen_btn: "다시 생성하기",
     magic_gen_btn: "{style}으로 생성하기",
     magic_select_style_plz: "스타일을 선택해 주세요",
@@ -1396,7 +1396,7 @@ export const T = {
     chapter_unit: " ch",
 
     // MagicEraserModal
-    magic_eraser_title: "Magic Eraser",
+    magic_eraser_title: "Ending Rewriter",
     magic_select_book: "Select Book",
     magic_select_style: "Select Ending Style",
     magic_generating: "Generating...",
@@ -1411,8 +1411,8 @@ export const T = {
     magic_confirm_desc: "Save if you like it. 1 Magic Eraser will be deducted.",
     magic_complete: "New Ending Saved!",
     magic_saved: "Saved to your library.",
-    magic_used: "🪄 1 Magic Eraser used",
-    magic_save_btn: "🪄 Save this ending",
+    magic_used: "🔮 1 Ending Rewriter used",
+    magic_save_btn: "🔮 Save this ending",
     magic_regen_btn: "Regenerate",
     magic_gen_btn: "Generate with {style}",
     magic_select_style_plz: "Please select a style",

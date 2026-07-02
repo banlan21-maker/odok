@@ -76,7 +76,7 @@ const BagModal = ({ inventory, onClose, onUseItem, t = {} }) => {
                             item.id === 'rainbow_ink'
                               ? 'text-violet-600 bg-violet-50 dark:bg-violet-950/40 hover:bg-violet-100 dark:hover:bg-violet-900/50'
                               : item.id === 'magic_eraser'
-                              ? 'text-emerald-600 bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100 dark:hover:bg-emerald-900/50'
+                              ? 'text-indigo-600 bg-indigo-50 dark:bg-indigo-950/40 hover:bg-indigo-100 dark:hover:bg-indigo-900/50'
                               : item.id === 'golden_pen'
                               ? 'text-amber-600 bg-amber-50 dark:bg-amber-950/40 hover:bg-amber-100 dark:hover:bg-amber-900/50'
                               : 'text-pink-600 bg-pink-50 dark:bg-pink-950/40 hover:bg-pink-100 dark:hover:bg-pink-900/50'

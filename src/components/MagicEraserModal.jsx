@@ -120,8 +120,8 @@ const MagicEraserModal = ({ user, books, useItem, onClose, t = {} }) => {
         {/* 헤더 */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 dark:border-slate-700 flex-none">
           <div className="flex items-center gap-2">
-            <span className="text-lg">🪄</span>
-            <p className="font-black text-slate-800 dark:text-slate-100">{t.magic_eraser_title || '마법 지우개'}</p>
+            <span className="text-lg">🔮</span>
+            <p className="font-black text-slate-800 dark:text-slate-100">{t.magic_eraser_title || '결말의 수정구'}</p>
             {phase === 'books' && <span className="text-[10px] font-bold text-slate-400">{t.magic_select_book || '책 선택'}</span>}
             {phase === 'style' && <span className="text-[10px] font-bold text-slate-400">{t.magic_select_style || '결말 스타일 선택'}</span>}
             {phase === 'generating' && <span className="text-[10px] font-bold text-emerald-500">{t.magic_generating || '생성 중...'}</span>}
@@ -209,7 +209,7 @@ const MagicEraserModal = ({ user, books, useItem, onClose, t = {} }) => {
           {/* 생성 중 */}
           {phase === 'generating' && (
             <div className="px-5 py-16 text-center space-y-6">
-              <span className="text-6xl animate-bounce inline-block">🪄</span>
+              <span className="text-6xl animate-bounce inline-block">🔮</span>
               <div className="space-y-2">
                 <p className="text-sm font-black text-slate-700 dark:text-slate-200">{t.magic_in_progress || '새로운 결말을 작성 중...'}</p>
                 <p className="text-xs text-slate-400 dark:text-slate-500">
@@ -233,7 +233,7 @@ const MagicEraserModal = ({ user, books, useItem, onClose, t = {} }) => {
                 </p>
               </div>
               <p className="text-[11px] text-slate-400 dark:text-slate-500 text-center">
-                {t.magic_confirm_desc || '마음에 드시면 저장하세요. 마법 지우개 1개가 차감됩니다.'}
+                {t.magic_confirm_desc || '마음에 드시면 저장하세요. 결말의 수정구 1개가 차감됩니다.'}
               </p>
               {error && <p className="text-xs text-red-500 font-bold text-center">{error}</p>}
             </div>
@@ -254,7 +254,7 @@ const MagicEraserModal = ({ user, books, useItem, onClose, t = {} }) => {
               </div>
               <div className="bg-emerald-50 dark:bg-emerald-950/30 rounded-xl px-4 py-3">
                 <p className="text-xs text-emerald-600 dark:text-emerald-400">
-                  {t.magic_used || '🪄 마법 지우개 1개가 사용되었습니다'}
+                  {t.magic_used || '🔮 결말의 수정구 1개가 사용되었습니다'}
                 </p>
               </div>
             </div>
@@ -294,7 +294,7 @@ const MagicEraserModal = ({ user, books, useItem, onClose, t = {} }) => {
                 onClick={handleConfirm}
                 className="w-full py-3.5 rounded-xl text-sm font-black bg-emerald-500 hover:bg-emerald-600 active:scale-95 text-white transition-all"
               >
-                {t.magic_save_btn || '🪄 이 결말로 저장하기'}
+                {t.magic_save_btn || '🔮 이 결말로 저장하기'}
               </button>
               <button
                 onClick={() => handleGenerate()}
