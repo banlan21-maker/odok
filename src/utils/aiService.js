@@ -85,7 +85,8 @@ export const generateBook = async ({
       storySummary: bookData.storySummary || '',
       synopsis: bookData.synopsis || '',
       characterSheet: bookData.characterSheet || '',
-      settingSheet: bookData.settingSheet || ''
+      settingSheet: bookData.settingSheet || '',
+      plotType: bookData.plotType || null
     };
   } catch (error) {
     console.error('[AI Service] 책 생성 오류:', error);
@@ -134,7 +135,8 @@ export const generateSeriesEpisode = async ({
   selectedDialogueRatio,
   endingStyle,
   recentCliffhangerTypes,
-  episodeNum
+  episodeNum,
+  plotType = null
 }) => {
   try {
     const generateSeriesEpisodeFn = httpsCallable(functions, 'generateSeriesEpisode', {
@@ -160,7 +162,8 @@ export const generateSeriesEpisode = async ({
       selectedDialogueRatio: selectedDialogueRatio || null,
       endingStyle,
       recentCliffhangerTypes: recentCliffhangerTypes || [],
-      episodeNum: episodeNum || null
+      episodeNum: episodeNum || null,
+      plotType: plotType || null
     });
 
     const episodeData = result.data;

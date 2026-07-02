@@ -69,12 +69,12 @@ const GENRE_SPECIFIC_INSTRUCTIONS = {
   "로맨스": "두 주인공 사이의 감정 변화를 세밀하게 추적하십시오. 대화 속 숨겨진 감정(말하지 못한 고백, 눈빛, 손끝의 떨림)을 살려 독자가 두 사람의 설렘을 함께 느끼게 하십시오. '나 지금 심장이 쿵' 같은 직접 서술보다 상대방의 행동 하나에 멈춰버리는 장면으로 감정을 전달하십시오. [매우 중요 - 갈등 다양성] 두 사람 사이의 갈등을 '단순한 오해나 소통 실패'로 만들지 마십시오. 5분만 솔직히 대화하면 풀릴 문제를 핵심 장애물로 삼는 것을 금지합니다. 특히 '주인공이 상대에게 다른 연인이 있는 줄 오해했다가, 알고 보니 아니어서 다시 사랑하게 된다'는 진부한 골격을 절대 기본값으로 사용하지 마십시오. 갈등은 두 인물의 실재하는 목표·가치관·처지·구조(신분 차이, 시간·운명, 경쟁하는 목표, 과거의 상처, 계약·이해관계, 외부의 압력 등)에서 비롯되어야 하며, 대화만으로는 쉽게 해소되지 않아야 합니다.",
   "로맨스 판타지": "서양풍 귀족 세계의 화려함과 냉혹한 권력 다툼을 동시에 그리십시오. 남주인공은 차갑고 위압적이지만 여주인공 앞에서만 균열이 생기는 순간을 포착하십시오. 회귀·빙의·환생 요소가 있다면 전생의 기억이 현재 선택에 미치는 긴장감을 극대화하십시오. 무도회 드레스, 촛불이 흔들리는 성관 홀, 마차 안의 침묵 등 시각·촉각적 배경 묘사로 몰입감을 높이십시오. 여주인공은 수동적 피해자가 아닌 자신의 운명을 개척하는 능동적 인물로 그리십시오. [갈등 다양성] 두 사람 사이의 갈등을 '단순한 오해나 소통 실패'로 만들지 말고, 신분·권력 다툼, 회귀·운명, 경쟁하는 목표, 가치관 충돌 등 실재하는 축에서 긴장을 뽑아내십시오.",
   "판타지": "세계관의 규칙(마법 체계, 종족 갈등, 지리)을 초반부터 자연스럽게 독자에게 보여주되 설명 덩어리가 되지 않게 하십시오. 전투 장면은 마법의 시각적 이펙트와 인물의 신체 감각(호흡, 땀, 근육의 긴장)을 함께 묘사해 박진감을 살리십시오. 주인공의 성장은 단순한 능력 상승이 아닌 내면의 갈등과 선택을 통해 보여주십시오. 동료와의 관계에 균열과 신뢰 회복의 감동을 담아 이야기에 깊이를 더하십시오.",
-  "현대 판타지": "현실의 평범한 일상과 초자연적 요소의 충돌을 생생하게 그리십시오. '각성' 후 주인공이 시스템 창(UI)을 처음 인식하는 장면을 독자가 함께 낯설고 경이롭게 느끼도록 묘사하십시오. '사이다' 전개를 위해 기존 강자들이 주인공을 무시하다 충격을 받는 장면을 명확하고 통쾌하게 연출하십시오. 던전·몬스터의 위협은 구체적인 감각(냄새, 공기 압박, 소리)으로 현실감 있게 묘사하십시오. 답답한 전개를 피하고 주인공이 문제를 능동적으로 해결하게 하십시오.",
+  "현대 판타지": "현실의 평범한 일상과 초자연적 요소의 충돌을 생생하게 그리십시오. '각성' 후 주인공이 시스템 창(UI)을 처음 인식하는 장면을 독자가 함께 낯설고 경이롭게 느끼도록 묘사하십시오. '사이다' 전개를 위해 기존 강자들이 주인공을 무시하다 충격을 받는 장면을 명확하고 통쾌하게 연출하십시오. 던전·몬스터의 위협은 구체적인 감각(냄새, 공기 압박, 소리)으로 현실감 있게 묘사하십시오. 답답한 전개를 피하고 주인공이 문제를 능동적으로 해결하게 하십시오. 단, 매번 똑같은 '각성→무시당함→강자들이 충격받는 반전' 공식을 판박이로 반복하지 말고, 각성의 계기·사이다의 형태·주인공이 인정받는 방식을 작품마다 다르게 변주하십시오.",
   "무협": "중원 강호의 정사(正邪) 대립과 문파 간 세력 다툼을 배경으로 삼으십시오. 무공 대결은 초식의 이름과 기세, 대지를 울리는 내공의 충돌을 고풍스러운 어조와 긴장감 있는 문장으로 묘사하십시오. '협(俠)'의 정신—의리, 약자 보호, 불의에 대한 분노—이 주인공의 행동 동기로 드러나게 하십시오. 복수의 서사라면 원한이 쌓이게 된 과거 장면과 현재의 침묵을 교차하며 비장감을 높이십시오. 대화에는 무림인 특유의 격식체와 자존심을 녹이십시오.",
   "미스터리/공포": "공포는 눈에 보이는 것보다 '보이지 않는 것'에서 시작하십시오. 주인공이 이상함을 처음 느끼는 작은 균열(어긋난 물건, 낯선 냄새, 이유 없는 한기)에서 공포를 쌓아올리십시오. 독자가 도망쳐야 한다고 느낄 때 주인공은 이유를 알 수 없어 머뭇거리는 심리적 딜레마를 반복하십시오. 공포의 실체는 최후까지 아껴두고, 주인공의 심박수와 체온 변화, 호흡 패턴을 통해 절박함을 전달하십시오. 결말에서 모든 것이 설명되지 않아도 됩니다—불확실한 잔상이 가장 무섭습니다.",
   "SF": "미래 세계의 기술은 설명하지 말고 일상처럼 사용하게 하십시오(독자가 맥락으로 파악하도록). 과학적 변화가 인간 관계·감정·도덕에 어떤 균열을 만드는지에 집중하십시오. AI·유전공학·우주 이주 등의 요소가 단순한 배경이 아닌 갈등의 핵심 원인이 되게 하십시오. 디스토피아라면 사회 감시 체계나 계급 분화를 주인공의 일상 속 소소한 장면으로 보여주십시오. 과학적 개념은 이야기 흐름을 방해하지 않는 수준에서만 언급하십시오.",
   "드라마": "갈등의 핵심은 선악이 아닌 각자의 입장이 모두 이해되는 상황에서 벌어지게 하십시오. 주인공이 옳다고 생각하는 선택이 누군가를 다치게 하는 아이러니를 활용하십시오. 가족·직장·꿈이라는 현실적 소재 안에 독자가 자신의 삶을 투영할 수 있는 보편적 정서를 담으십시오. 대화에서 직접 말하지 못하는 감정(원망, 사랑, 죄책감)을 행동이나 침묵으로 표현하십시오. 감동은 과장하지 않고 담담하게 서술할 때 더 깊이 전달됩니다.",
-  "미스터리/추리": "독자가 탐정과 함께 추리할 수 있도록 단서를 공정하게 배치하십시오(단서는 있지만 독자가 간과하기 쉽게). 범인은 초반부터 등장하되 의심받지 않아야 하며, 나중에 돌아봤을 때 '아, 그 장면이!' 하는 복선을 심어두십시오. 탐정의 추리 과정은 논리의 비약 없이 관찰→가설→검증의 흐름을 따르십시오. 범인의 심리와 동기는 단순한 악이 아닌 이해 가능한 내면을 갖추게 하십시오. 결말의 반전 이후 독자가 첫 장면을 다시 읽고 싶어지게 만드십시오.",
+  "미스터리/추리": "독자가 탐정과 함께 추리할 수 있도록 단서를 공정하게 배치하십시오(단서는 있지만 독자가 간과하기 쉽게). 범인은 초반부터 등장하되 의심받지 않아야 하며, 나중에 돌아봤을 때 '아, 그 장면이!' 하는 복선을 심어두십시오. 탐정의 추리 과정은 논리의 비약 없이 관찰→가설→검증의 흐름을 따르십시오. 범인의 심리와 동기는 단순한 악이 아닌 이해 가능한 내면을 갖추게 하십시오. 결말의 반전 이후 독자가 첫 장면을 다시 읽고 싶어지게 만드십시오. 단, 범인의 정체·동기·트릭·반전 방식을 매번 같은 공식으로 찍어내지 말고 작품마다 다르게 설계하십시오.",
   "스릴러": "첫 장면부터 독자를 위협감 속에 던져넣으십시오. 주인공이 알고 있는 것보다 독자가 조금 더 알게 하거나(아이러니), 반대로 독자보다 정보가 적어 답답하게 만드는 두 가지 전략을 의도적으로 사용하십시오. 타임리밋(시간 압박)과 물리적 추격을 교차하며 호흡을 끊지 마십시오. 주인공의 판단 실수가 위기를 키우는 구조로 독자가 함께 긴장하게 하십시오. 반전은 개연성 있는 복선 위에서만 작동합니다.",
   "역사": "역사적 사실을 배경으로 삼되 인물의 내면과 선택에 집중하십시오. 당시 언어·복식·생활상을 과도하지 않게 녹여 현장감을 살리십시오. 역사의 거대한 흐름(전쟁, 왕조 교체) 앞에 놓인 평범한 개인의 선택이 갖는 무게를 비장미 있게 그리십시오. 고증 오류가 될 수 있는 현대적 표현이나 개념은 피하십시오. 독자가 이미 아는 역사적 결말을 향해 달려가는 인물의 운명에 비극적 아름다움을 부여하십시오.",
   "힐링": "사건보다 감각과 분위기로 이야기를 이끄십시오. 장소의 냄새, 음식의 온도, 창밖의 빗소리처럼 구체적인 감각 묘사가 독자를 그 공간으로 데려가야 합니다. 갈등은 있되 극단적이지 않게, 상처는 있되 지나치게 무겁지 않게 다루십시오. 주인공이 작은 것에서 위로를 발견하는 순간—낯선 사람의 친절, 오랜 취미의 재발견—을 섬세하게 포착하십시오. 마지막 장면은 모든 것이 해결되지 않아도 독자가 숨을 내쉬며 미소 지을 수 있게 마무리하십시오."
@@ -99,7 +99,7 @@ const ROMANCE_PLOT_ARCHETYPES = [
 const ROMANCE_GENRES = new Set(["로맨스", "로맨스 판타지"]);
 
 // 로맨스 전개 유형 결정: 사용자 선택값(id/name) 우선, 미선택 시 무작위(자동 다양화)
-function resolveRomancePlotArchetype(genre, plotType) {
+function resolveRomancePlotArchetype(genre, plotType, allowRandom = true) {
   const g = (genre || "").toString().trim();
   if (!ROMANCE_GENRES.has(g)) return null; // 로맨스 계열에만 적용
   const requested = (plotType || "").toString().trim();
@@ -107,6 +107,8 @@ function resolveRomancePlotArchetype(genre, plotType) {
     const found = ROMANCE_PLOT_ARCHETYPES.find((a) => a.id === requested || a.name === requested);
     if (found) return found;
   }
+  // 이어쓰기 등 랜덤 폴백을 원치 않는 경우(allowRandom=false)엔 확정값 없으면 null
+  if (!allowRandom) return null;
   return ROMANCE_PLOT_ARCHETYPES[Math.floor(Math.random() * ROMANCE_PLOT_ARCHETYPES.length)];
 }
 
@@ -176,6 +178,31 @@ const NONFICTION_TONE_OPTIONS = {
 
 function pickNonfictionGuide(category) {
   return NONFICTION_CATEGORY_STYLES[category] || "논리적 흐름과 근거를 갖춘 깊이 있는 설명을 제공하라.";
+}
+
+// 비소설 결말 유형 (매번 '여운 질문'으로 수렴하는 것 방지) — 서버가 자동 무작위 배정
+const NONFICTION_CONCLUSION_TYPES = [
+  { id: "lingering",   guide: "여운이 남는 질문이나 이미지로 열어두며 마무리하라. 독자가 곱씹을 여지를 남겨라." },
+  { id: "action",      guide: "독자가 지금 당장 실천할 수 있는 구체적인 한 걸음을 제시하며 마무리하라. 추상적 다짐이 아니라 명확한 행동으로." },
+  { id: "declaration", guide: "글 전체를 관통하는 핵심 통찰을 한 문장으로 단호하게 못박으며 마무리하라. 흐릿하게 끝내지 마라." },
+  { id: "reframe",     guide: "서두에서 독자가 당연하게 여겼던 전제를 뒤집는, 반전된 시각으로 마무리하라." },
+  { id: "circular",    guide: "서두에 등장한 장면·이미지·문장으로 되돌아와 수미상관으로 매듭지어라. 처음과 끝이 호응하게." },
+  { id: "vista",       guide: "개인적·구체적 이야기에서 한 걸음 물러나 더 큰 그림·전망으로 시야를 확장하며 마무리하라." },
+];
+
+// 비소설 본론2 전개 방식 (매번 '반전 시각'으로 굳는 것 방지)
+const NONFICTION_BODY2_MODES = [
+  "본론 1과 대비되는 '반대편 시각·반론'을 정면으로 다뤄 입체감을 만들어라.",
+  "본론 1의 통찰을 더 깊이 파고들어 근본 원인·이면을 드러내며 심화하라.",
+  "추상적 통찰을 구체적인 해결책·적용 방법으로 착지시켜라.",
+  "예상을 뒤집는 반전된 관점이나 뜻밖의 사례로 주제를 새롭게 조명하라.",
+];
+
+function pickNonfictionConclusion() {
+  return NONFICTION_CONCLUSION_TYPES[Math.floor(Math.random() * NONFICTION_CONCLUSION_TYPES.length)];
+}
+function pickNonfictionBody2Mode() {
+  return NONFICTION_BODY2_MODES[Math.floor(Math.random() * NONFICTION_BODY2_MODES.length)];
 }
 
 function pickGenreGuideline(genre) {
@@ -1498,6 +1525,23 @@ exports.generateBookAI = onCall(
           { name: "결론",  instruction: "핵심 메시지를 독자의 가슴에 남기세요. '결론적으로' 같은 형식적 표현 없이, 여운이 남는 문장으로 자연스럽게 마무리하세요.", maxTokens: 2100, targetChars: 700,  accumulatedAfter: 3450, totalChars: 3500, role: "핵심 메시지 착지. 형식적 결론 표현 금지.", nextStepName: null }
         ];
 
+      // 비소설 결말·전개 다양화: 매번 '반전 시각 본론2 + 여운 질문 결말'로 굳는 수렴을 서버가 무작위로 깬다.
+      if (!isNovel) {
+        const conclusion = pickNonfictionConclusion();
+        const body2Mode = pickNonfictionBody2Mode();
+        const body2Step = steps.find((s) => s.name === "본론 2");
+        const conclusionStep = steps.find((s) => s.name === "결론");
+        if (body2Step) {
+          body2Step.instruction = `${body2Mode} 본론 1과 다른 각도에서 주제를 조명하되, 논리적으로 연결되게 하세요.`;
+          body2Step.role = "본론 1과 다른 각도로 전개(지정된 방식 준수).";
+        }
+        if (conclusionStep) {
+          conclusionStep.instruction = `${conclusion.guide} '결론적으로', '마지막으로' 같은 형식적 표현은 쓰지 마세요.`;
+          conclusionStep.role = `결론 유형(${conclusion.id})으로 착지. 형식적 결론 표현 금지.`;
+        }
+        logger.info(`[generateBookAI] 비소설 다양화 — 결말:${conclusion.id}`);
+      }
+
       if (progressRef) {
         progressRef.set({ status: "preparing", stepName: null, stepIndex: 0, totalSteps: 0, updatedAt: admin.firestore.FieldValue.serverTimestamp() }).catch(() => {});
       }
@@ -1615,7 +1659,8 @@ exports.generateBookAI = onCall(
         storySummary: storySummary,
         synopsis: staticContext.synopsis,
         characterSheet: staticContext.characterSheet,
-        settingSheet: staticContext.settingSheet
+        settingSheet: staticContext.settingSheet,
+        plotType: romancePlotArchetype ? romancePlotArchetype.id : null
       };
     } catch (error) {
       logger.error("[generateBookAI] 에러:", {
@@ -1670,7 +1715,8 @@ exports.generateSeriesEpisode = onCall(
         selectedDialogueRatio,
         endingStyle,
         recentCliffhangerTypes,
-        episodeNum
+        episodeNum,
+        plotType
       } = request.data;
 
       if (!seriesId || !continuationType) {
@@ -1680,6 +1726,9 @@ exports.generateSeriesEpisode = onCall(
       const isNovel = true;
       const temperature = getNovelTemperature(category, subCategory, genre);
       const isFinalize = continuationType === 'finalize';
+
+      // 1화에서 확정된 전개 유형을 이어쓰기에도 유지 (로맨스 계열). 확정값 없으면 null → 미적용(랜덤 폴백 안 함).
+      const seriesPlotGuide = buildRomancePlotGuide(resolveRomancePlotArchetype(genre, plotType, false));
 
       // Cliffhanger 유형 자동 선택 (이어쓰기 화에만 적용)
       const chosenCliffhangerType = (!isFinalize)
@@ -1700,7 +1749,8 @@ exports.generateSeriesEpisode = onCall(
         selectedPOV: selectedPOV || null,
         selectedSpeechTone: selectedSpeechTone || null,
         selectedDialogueRatio: selectedDialogueRatio || null,
-        selectedCliffhangerType: chosenCliffhangerType
+        selectedCliffhangerType: chosenCliffhangerType,
+        plotGuide: seriesPlotGuide
       });
 
       const topic = `${keywords || ""} ${genre || ""}`.trim();

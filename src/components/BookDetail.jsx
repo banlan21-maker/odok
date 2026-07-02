@@ -705,7 +705,8 @@ const BookDetail = ({ book, onClose, onBookUpdate, fontSize = 'text-base', user,
         selectedDialogueRatio: book.selectedDialogueRatio || null,
         endingStyle,
         recentCliffhangerTypes,
-        episodeNum: episodes.length + 1
+        episodeNum: episodes.length + 1,
+        plotType: book.plotType || null
       });
 
       const newEpisode = {

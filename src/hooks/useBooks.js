@@ -457,6 +457,7 @@ export const useBooks = ({ user, userProfile, setError, deductInk, addInk, setSh
                 bookDocumentData.seriesId = crypto.randomUUID();
                 bookDocumentData.status = 'ongoing';
                 if (bookData.seriesSubType) bookDocumentData.seriesSubType = bookData.seriesSubType;
+                if (bookData.plotType) bookDocumentData.plotType = bookData.plotType; // 로맨스 전개유형: 이어쓰기 일관성용
                 bookDocumentData.episodes = [{
                     ep_number: 1,
                     title: bookData.title,
